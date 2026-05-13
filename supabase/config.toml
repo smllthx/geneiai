@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.buscar-testigos]
 verify_jwt = true
+
+[functions.run-agent]
+verify_jwt = true

@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_runs: {
+        Row: {
+          contexto: Json
+          created_at: string
+          duracion_ms: number | null
+          error: string | null
+          id: string
+          modelo: string
+          persona_id: string | null
+          prompt: string
+          provider: Database["public"]["Enums"]["agent_provider"]
+          resultado: string | null
+          status: Database["public"]["Enums"]["agent_status"]
+          titulo: string
+          tokens_in: number | null
+          tokens_out: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contexto?: Json
+          created_at?: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          modelo: string
+          persona_id?: string | null
+          prompt: string
+          provider: Database["public"]["Enums"]["agent_provider"]
+          resultado?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          titulo: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contexto?: Json
+          created_at?: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          modelo?: string
+          persona_id?: string | null
+          prompt?: string
+          provider?: Database["public"]["Enums"]["agent_provider"]
+          resultado?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
+          titulo?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_config: {
+        Row: {
+          acento: string
+          asistente_voz: boolean
+          configurado: boolean
+          idioma: string
+          investigacion_auto: boolean
+          modelo_default: string
+          proveedor_default: Database["public"]["Enums"]["agent_provider"]
+          proveedores_activos: Json
+          region_busqueda: string | null
+          tema: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acento?: string
+          asistente_voz?: boolean
+          configurado?: boolean
+          idioma?: string
+          investigacion_auto?: boolean
+          modelo_default?: string
+          proveedor_default?: Database["public"]["Enums"]["agent_provider"]
+          proveedores_activos?: Json
+          region_busqueda?: string | null
+          tema?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acento?: string
+          asistente_voz?: boolean
+          configurado?: boolean
+          idioma?: string
+          investigacion_auto?: boolean
+          modelo_default?: string
+          proveedor_default?: Database["public"]["Enums"]["agent_provider"]
+          proveedores_activos?: Json
+          region_busqueda?: string | null
+          tema?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       busquedas_externas: {
         Row: {
           created_at: string
@@ -814,6 +916,8 @@ export type Database = {
       }
     }
     Enums: {
+      agent_provider: "gemini" | "openai" | "anthropic"
+      agent_status: "queued" | "running" | "done" | "error" | "cancelled"
       app_role: "admin" | "editor" | "lector"
       certeza_nivel: "comprobado" | "probable" | "hipotesis" | "descartado"
       coincidencia_estado:
@@ -989,6 +1093,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agent_provider: ["gemini", "openai", "anthropic"],
+      agent_status: ["queued", "running", "done", "error", "cancelled"],
       app_role: ["admin", "editor", "lector"],
       certeza_nivel: ["comprobado", "probable", "hipotesis", "descartado"],
       coincidencia_estado: [

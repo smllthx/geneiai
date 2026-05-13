@@ -4,14 +4,17 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, GitBranch, FileText, Search, Globe, Sparkles,
   Compass, Lightbulb, Brain, MapPin, Clock, Settings, LogOut, Upload, Bot, Dna,
+  Wand2, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SiriAssistant from "@/components/SiriAssistant";
 
 const nav = [
   { to: "/dashboard", label: "Panel", icon: LayoutDashboard },
   { to: "/personas", label: "Personas", icon: Users },
   { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
   { to: "/documentos", label: "Documentos", icon: FileText },
+  { to: "/agentes-paralelo", label: "Agentes en paralelo", icon: Layers },
   { to: "/agente", label: "Agente IA", icon: Bot },
   { to: "/estimacion-etnica", label: "Estimación étnica", icon: Dna },
   { to: "/buscar", label: "Buscar", icon: Search },
@@ -23,6 +26,7 @@ const nav = [
   { to: "/inferencias", label: "Inferencias", icon: Brain },
   { to: "/lugares", label: "Lugares", icon: MapPin },
   { to: "/linea-de-tiempo", label: "Línea de tiempo", icon: Clock },
+  { to: "/configurar-app", label: "Auto-configurar", icon: Wand2 },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
@@ -32,47 +36,57 @@ export default function AppLayout() {
   const handleLogout = async () => { await signOut(); navigate("/login"); };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar md:flex md:flex-col">
-        <div className="border-b border-sidebar-border px-5 py-5">
-          <h1 className="font-serif text-xl leading-tight text-sidebar-foreground">Archivo Familiar</h1>
-          <p className="text-xs italic text-muted-foreground">Sanguineti · Aeschlimann</p>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
-          {nav.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                )
-              }
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="border-t border-sidebar-border p-3">
-          <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
-          <Button variant="outline" size="sm" className="w-full justify-start" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" /> Cerrar sesión
-          </Button>
+    <div className="relative flex min-h-screen">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 p-3 md:flex md:flex-col">
+        <div className="glass-strong flex h-full flex-col rounded-3xl">
+          <div className="px-5 pt-5 pb-4">
+            <div className="flex items-center gap-2">
+              <div className="siri-orb h-7 w-7 rounded-full" />
+              <h1 className="font-display text-lg font-semibold tracking-tight">Archivo</h1>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
+          </div>
+          <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
+            {nav.map(({ to, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all",
+                    isActive
+                      ? "bg-primary/15 font-medium text-foreground shadow-[0_1px_0_0_hsla(var(--glass-highlight))_inset]"
+                      : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
+                  )
+                }
+              >
+                <Icon className="h-4 w-4 shrink-0" /> <span className="truncate">{label}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <div className="m-2 rounded-2xl bg-foreground/5 p-3">
+            <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" /> Cerrar sesión
+            </Button>
+          </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-3 md:hidden">
-          <h1 className="font-serif text-lg">Archivo Familiar</h1>
+        <header className="glass sticky top-0 z-20 mx-3 mt-3 flex items-center justify-between rounded-2xl px-4 py-2.5 md:hidden">
+          <div className="flex items-center gap-2">
+            <div className="siri-orb h-6 w-6 rounded-full" />
+            <h1 className="font-display text-base font-semibold">Archivo</h1>
+          </div>
           <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="h-4 w-4" /></Button>
         </header>
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
           <Outlet />
         </main>
       </div>
+
+      <SiriAssistant />
     </div>
   );
 }

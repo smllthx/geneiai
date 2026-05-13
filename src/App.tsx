@@ -24,6 +24,8 @@ import Inferencias from "./pages/Inferencias";
 import Lugares from "./pages/Lugares";
 import LineaDeTiempo from "./pages/LineaDeTiempo";
 import Configuracion from "./pages/Configuracion";
+import AgentesParalelo from "./pages/AgentesParalelo";
+import ConfigurarApp from "./pages/ConfigurarApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,8 @@ const App = () => (
               <Route path="/lugares" element={<Lugares />} />
               <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
               <Route path="/configuracion" element={<Configuracion />} />
+              <Route path="/agentes-paralelo" element={<AgentesParalelo />} />
+              <Route path="/configurar-app" element={<ConfigurarApp />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

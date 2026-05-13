@@ -14,8 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ['"Cormorant Garamond"', "Georgia", "serif"],
-        sans: ['Inter', "system-ui", "sans-serif"],
+        serif: ['"Instrument Serif"', "Georgia", "serif"],
+        sans: ['Inter', '-apple-system', '"SF Pro Display"', "system-ui", "sans-serif"],
+        display: ['Inter', '-apple-system', '"SF Pro Display"', "system-ui", "sans-serif"],
       },
       colors: {
         link: "hsl(var(--link))",
