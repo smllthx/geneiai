@@ -507,3 +507,39 @@ function TimelinePanel({ eventos, persona }: any) {
     </ol>
   );
 }
+
+function Field({ label, value }: { label: string; value: any }) {
+  const empty = value === null || value === undefined || value === "";
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5">{empty ? ND : value}</div>
+    </div>
+  );
+}
+
+function FamilyList({ label, people, onClick }: { label: string; people: any[]; onClick: (id: string) => void }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      {people.length === 0 ? (
+        <div className="mt-0.5">{ND}</div>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {people.map((x) => (
+            <li key={x.id}>
+              <button onClick={() => onClick(x.id)} className="text-left text-link underline-offset-2 hover:underline">
+                {x.nombres} {x.apellidos}
+                {x.nac_fecha || x.defuncion_fecha ? (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({yearOf(x.nac_fecha) ?? "?"}–{yearOf(x.defuncion_fecha) ?? (x.viva === "si" ? "vive" : "?")})
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
