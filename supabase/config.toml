@@ -1,1 +1,7 @@
 project_id = "vkzofofafjvbazvrhhyj"
+
+[functions.investigar-persona]
+verify_jwt = true
+
+[functions.buscar-testigos]
+verify_jwt = true

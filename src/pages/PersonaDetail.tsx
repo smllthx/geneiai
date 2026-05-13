@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles } from "lucide-react";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 
@@ -109,6 +109,16 @@ export default function PersonaDetail() {
         subtitle={isNew ? "Registrar nombre, fechas y datos básicos." : undefined}
         actions={<>
           <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
+          {!isNew && <Button variant="secondary" onClick={async () => {
+            const t = toast.loading("Investigando con IA…");
+            try {
+              const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
+              toast.dismiss(t);
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
+              toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
+            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+          }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
           {!isNew && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         </>}
       />
