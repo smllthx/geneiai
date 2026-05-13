@@ -32,7 +32,7 @@ export function parseTabular(rows: TabularRow[]): { personas: ImportPersona[]; f
       bautismo_fecha: r.bautismo_fecha || null,
       ocupacion: r.ocupacion || null,
       notas: r.notas || null,
-      viva: r.defuncion_fecha ? "fallecida" : "desconocido",
+      viva: r.defuncion_fecha ? "no" : "desconocido",
     });
     if (r.padre_id || r.madre_id) {
       childToParents.set(xref, { padre: r.padre_id || undefined, madre: r.madre_id || undefined });

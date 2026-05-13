@@ -1,9 +1,8 @@
 // GEDCOM importer — parses .ged files into our schema-friendly shape.
-// Uses parse-gedcom (returns the raw GEDCOM tree) and walks it.
 import { parse as parseGed } from "parse-gedcom";
 
 export type ImportPersona = {
-  xref: string; // GEDCOM @I1@
+  xref: string;
   nombres: string;
   apellidos: string;
   sexo?: "M" | "F" | null;
@@ -14,7 +13,7 @@ export type ImportPersona = {
   bautismo_fecha?: string | null;
   ocupacion?: string | null;
   notas?: string | null;
-  viva?: "viva" | "fallecida" | "desconocido";
+  viva?: "si" | "no" | "desconocido";
 };
 
 export type ImportFamilia = {
@@ -26,18 +25,16 @@ export type ImportFamilia = {
   marr_lugar?: string | null;
 };
 
-export type ImportResult = {
-  personas: ImportPersona[];
-  familias: ImportFamilia[];
-};
+export type ImportResult = { personas: ImportPersona[]; familias: ImportFamilia[] };
 
-const get = (node: any, tag: string) =>
-  node?.tree?.find((c: any) => c.tag === tag);
-const getAll = (node: any, tag: string) =>
-  node?.tree?.filter((c: any) => c.tag === tag) ?? [];
-const val = (node: any) => (node ? (node.data ?? "").trim() : "");
+type Node = { type: string; value?: string; data?: any; children?: Node[] };
 
-// GEDCOM date: keep as text — too many formats. Try ISO if obvious.
+const child = (n: Node | undefined, type: string): Node | undefined =>
+  n?.children?.find((c) => c.type === type);
+const childrenOf = (n: Node | undefined, type: string): Node[] =>
+  n?.children?.filter((c) => c.type === type) ?? [];
+const v = (n: Node | undefined): string => (n?.value ?? "").toString().trim();
+
 function normDate(s: string): string | null {
   if (!s) return null;
   const m = s.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/i);
@@ -49,13 +46,21 @@ function normDate(s: string): string | null {
     const mm = months[m[2].toUpperCase()];
     if (mm) return `${m[3]}-${mm}-${m[1].padStart(2, "0")}`;
   }
+  const my = s.match(/^([A-Z]{3})\s+(\d{4})$/i);
+  if (my) {
+    const months: Record<string, string> = {
+      JAN: "01", FEB: "02", MAR: "03", APR: "04", MAY: "05", JUN: "06",
+      JUL: "07", AUG: "08", SEP: "09", OCT: "10", NOV: "11", DEC: "12",
+    };
+    const mm = months[my[1].toUpperCase()];
+    if (mm) return `${my[2]}-${mm}-01`;
+  }
   const y = s.match(/^(\d{4})$/);
   if (y) return `${y[1]}-01-01`;
-  return null; // we'll keep raw in notes
+  return null;
 }
 
 function splitName(fullName: string): { nombres: string; apellidos: string } {
-  // GEDCOM: "John /Smith/"
   const m = fullName.match(/^(.*?)\/([^/]*)\/(.*)$/);
   if (m) {
     return {
@@ -69,55 +74,54 @@ function splitName(fullName: string): { nombres: string; apellidos: string } {
 }
 
 export function parseGedcom(text: string): ImportResult {
-  const tree = parseGed(text);
+  const tree = parseGed(text) as unknown as { children: Node[] };
   const personas: ImportPersona[] = [];
   const familias: ImportFamilia[] = [];
 
-  for (const node of tree) {
-    if (node.tag === "INDI") {
-      const nameNode = get(node, "NAME");
-      const fullName = val(nameNode) || "";
+  for (const node of tree.children ?? []) {
+    if (node.type === "INDI") {
+      const xref = node.data?.xref_id ?? "";
+      const fullName = v(child(node, "NAME"));
       const { nombres, apellidos } = splitName(fullName);
-      const sex = val(get(node, "SEX")) as "M" | "F" | "";
-      const birt = get(node, "BIRT");
-      const deat = get(node, "DEAT");
-      const bapm = get(node, "BAPM") || get(node, "CHR");
-      const occu = val(get(node, "OCCU"));
-      const noteNodes = getAll(node, "NOTE");
-      const notes = noteNodes.map((n: any) => val(n)).filter(Boolean).join("\n");
+      const sex = v(child(node, "SEX")) as "M" | "F" | "";
+      const birt = child(node, "BIRT");
+      const deat = child(node, "DEAT");
+      const bapm = child(node, "BAPM") ?? child(node, "CHR");
+      const occu = v(child(node, "OCCU"));
+      const noteText = childrenOf(node, "NOTE").map(v).filter(Boolean).join("\n");
 
-      const birthDateRaw = val(get(birt, "DATE"));
-      const deathDateRaw = val(get(deat, "DATE"));
-      const baptDateRaw = val(get(bapm, "DATE"));
+      const birthDateRaw = v(child(birt, "DATE"));
+      const deathDateRaw = v(child(deat, "DATE"));
+      const baptDateRaw = v(child(bapm, "DATE"));
 
       const extraNotes: string[] = [];
       if (birthDateRaw && !normDate(birthDateRaw)) extraNotes.push(`Nac. (texto): ${birthDateRaw}`);
       if (deathDateRaw && !normDate(deathDateRaw)) extraNotes.push(`Def. (texto): ${deathDateRaw}`);
-      if (notes) extraNotes.push(notes);
+      if (noteText) extraNotes.push(noteText);
 
       personas.push({
-        xref: node.pointer,
+        xref,
         nombres,
         apellidos,
         sexo: sex === "M" || sex === "F" ? sex : null,
         nac_fecha: normDate(birthDateRaw),
-        nac_lugar: val(get(birt, "PLAC")) || null,
+        nac_lugar: v(child(birt, "PLAC")) || null,
         defuncion_fecha: normDate(deathDateRaw),
-        defuncion_lugar: val(get(deat, "PLAC")) || null,
+        defuncion_lugar: v(child(deat, "PLAC")) || null,
         bautismo_fecha: normDate(baptDateRaw),
         ocupacion: occu || null,
         notas: extraNotes.join("\n") || null,
-        viva: deat ? "fallecida" : "desconocido",
+        viva: deat ? "no" : "desconocido",
       });
-    } else if (node.tag === "FAM") {
-      const marr = get(node, "MARR");
+    } else if (node.type === "FAM") {
+      const marr = child(node, "MARR");
       familias.push({
-        xref: node.pointer,
-        husband: val(get(node, "HUSB")) || undefined,
-        wife: val(get(node, "WIFE")) || undefined,
-        children: getAll(node, "CHIL").map((c: any) => val(c)).filter(Boolean),
-        marr_fecha: normDate(val(get(marr, "DATE"))),
-        marr_lugar: val(get(marr, "PLAC")) || null,
+        xref: node.data?.xref_id ?? "",
+        husband: v(child(node, "HUSB")) || undefined,
+        wife: v(child(node, "WIFE")) || undefined,
+        children: childrenOf(node, "CHIL").map(v).filter(Boolean),
+        marr_fecha: normDate(v(child(marr, "DATE"))),
+        marr_lugar: v(child(marr, "PLAC")) || null,
       });
     }
   }
