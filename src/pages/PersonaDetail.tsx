@@ -1,19 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil } from "lucide-react";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
+const fmtDate = (d: string | null | undefined) => {
+  if (!d) return null;
+  try { return new Date(d).toLocaleDateString("es", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }); }
+  catch { return d; }
+};
+const yearOf = (d: string | null | undefined) => (d ? new Date(d).getUTCFullYear() : null);
 
 const empty: any = {
   nombres: "", apellidos: "", variantes_nombre: [], sexo: "",
@@ -26,7 +38,9 @@ const empty: any = {
 export default function PersonaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isNew = id === "nueva";
+  const idValid = isNew || (!!id && UUID_RE.test(id));
   const [p, setP] = useState<any>(empty);
   const [eventos, setEventos] = useState<any[]>([]);
   const [docs, setDocs] = useState<any[]>([]);
@@ -35,25 +49,37 @@ export default function PersonaDetail() {
   const [inferences, setInferences] = useState<any[]>([]);
   const [hipos, setHipos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(!isNew);
+  const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(isNew);
 
   useEffect(() => {
+    if (!idValid) { setFetching(false); return; }
     (async () => {
-      const { data: ap } = await supabase.from("personas").select("*").order("apellidos");
-      setAllPersonas(ap ?? []);
-      if (isNew) return;
-      const { data } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-      if (data) setP(data);
-      const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
-        supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
-        supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
-        supabase.from("hipotesis").select("*").contains("personas", [id!]),
-        supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
-      ]);
-      setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
-      const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
-      setDocs(d ?? []);
+      try {
+        setFetching(true); setFetchError(null); setNotFound(false);
+        const { data: ap } = await supabase.from("personas").select("*").order("apellidos");
+        setAllPersonas(ap ?? []);
+        if (isNew) { setFetching(false); return; }
+        const { data, error } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+        if (error) throw error;
+        if (!data) { setNotFound(true); setFetching(false); return; }
+        setP(data);
+        const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
+          supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
+          supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
+          supabase.from("hipotesis").select("*").contains("personas", [id!]),
+          supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
+        ]);
+        setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
+        const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
+        setDocs(d ?? []);
+      } catch (e: any) {
+        setFetchError(e?.message ?? "Error al cargar la persona");
+      } finally { setFetching(false); }
     })();
-  }, [id, isNew]);
+  }, [id, isNew, idValid]);
 
   const save = async () => {
     setLoading(true);
@@ -101,14 +127,98 @@ export default function PersonaDetail() {
 
   const set = (k: string, v: any) => setP({ ...p, [k]: v });
 
+  const fam = useMemo(() => {
+    const padres: any[] = [], conyuges: any[] = [], hijos: any[] = [], hermanos: any[] = [], otros: any[] = [];
+    for (const r of relaciones) {
+      const otherIsCenter = r.persona_id === id;
+      const other = r.pariente; if (!other) continue;
+      const t = r.tipo;
+      if (otherIsCenter && (t === "padre" || t === "madre")) padres.push(other);
+      else if (!otherIsCenter && (t === "padre" || t === "madre")) hijos.push(other);
+      else if (t === "conyuge") conyuges.push(other);
+      else if (t === "hijo") otherIsCenter ? hijos.push(other) : padres.push(other);
+      else if (t === "hermano") hermanos.push(other);
+      else otros.push(other);
+    }
+    return { padres, conyuges, hijos, hermanos, otros };
+  }, [relaciones, id]);
+
+  if (!idValid) {
+    return (
+      <div className="mx-auto max-w-xl pt-10 text-center">
+        <h1 className="font-serif text-2xl">Identificador inválido</h1>
+        <p className="mt-2 text-sm text-muted-foreground">El enlace de esta persona no es válido.</p>
+        <Button className="mt-4" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Ir a Personas</Button>
+      </div>
+    );
+  }
+  if (fetching) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+  if (fetchError) {
+    return (
+      <div className="mx-auto max-w-xl pt-10 text-center">
+        <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
+        <h1 className="mt-2 font-serif text-2xl">No se pudo cargar la persona</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{fetchError}</p>
+        <Button className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
+      </div>
+    );
+  }
+  if (notFound) {
+    return (
+      <div className="mx-auto max-w-xl pt-10 text-center">
+        <h1 className="font-serif text-2xl">Persona no encontrada</h1>
+        <p className="mt-2 text-sm text-muted-foreground">No existe ninguna persona con este identificador, o no tienes acceso.</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
+          <Button onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const fullName = `${p.nombres ?? ""} ${p.apellidos ?? ""}`.trim() || "Persona";
+  const yNac = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
+  const yDef = yearOf(p.defuncion_fecha) ?? null;
+  const lifespan = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? (p.viva === "si" ? "vive" : "?")}` : "";
+  const metaTitle = isNew ? "Nueva persona · Archivo Familiar" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · Archivo Familiar`;
+  const metaDesc = isNew
+    ? "Registra una nueva persona en tu árbol genealógico privado."
+    : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);
+
   return (
     <div>
-      <Button variant="ghost" size="sm" onClick={() => navigate("/personas")} className="mb-2"><ArrowLeft className="h-4 w-4" /> Volver</Button>
+      <Helmet>
+        <title>{metaTitle.slice(0, 60)}</title>
+        <meta name="description" content={metaDesc} />
+        <meta property="og:title" content={metaTitle.slice(0, 60)} />
+        <meta property="og:description" content={metaDesc} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c837b2d1-3870-4dad-ac8f-e594a4860870/id-preview-dbbd0c7e--76800f21-c27b-4c9d-a323-3eeaee3d31e1.lovable.app-1778682759895.png" />
+      </Helmet>
+
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
+      </div>
+
       <PageHeader
-        title={isNew ? "Nueva persona" : `${p.nombres} ${p.apellidos}`.trim() || "Persona"}
-        subtitle={isNew ? "Registrar nombre, fechas y datos básicos." : undefined}
+        title={isNew ? "Nueva persona" : fullName}
+        subtitle={isNew ? "Registrar nombre, fechas y datos básicos." : (lifespan || undefined)}
         actions={<>
-          <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
+          {user && !editMode && !isNew && (
+            <Button variant="outline" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
+          )}
+          {user && (editMode || isNew) && (
+            <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
+          )}
           {!isNew && <Button variant="secondary" onClick={async () => {
             const t = toast.loading("Investigando con IA…");
             try {
@@ -129,11 +239,35 @@ export default function PersonaDetail() {
               toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
             } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
           }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
-          {!isNew && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+          {user && !isNew && editMode && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         </>}
       />
 
-      {!isNew && <div className="mb-4 flex items-center gap-2"><CertezaBadge value={p.certeza} />{p.viva === "si" && <span className="archivo-chip">Persona viva — privada</span>}</div>}
+      {!isNew && <div className="mb-4 flex flex-wrap items-center gap-2"><CertezaBadge value={p.certeza} />{p.viva === "si" && <span className="archivo-chip">Persona viva — privada</span>}</div>}
+
+      {!isNew && (
+        <Card className="archivo-card mb-4">
+          <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
+          <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            <Field label="Nombres" value={p.nombres} />
+            <Field label="Apellidos" value={p.apellidos} />
+            <Field label="Sexo" value={p.sexo} />
+            <Field label="Nacionalidad" value={p.nacionalidad} />
+            <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
+            <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
+            <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
+            <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
+            <Field label="Ocupación" value={p.ocupacion} />
+            <Field label="Religión" value={p.religion} />
+            <div className="sm:col-span-2 grid gap-3 pt-2 sm:grid-cols-2">
+              <FamilyList label="Padres" people={fam.padres} onClick={(pid) => navigate(`/personas/${pid}`)} />
+              <FamilyList label="Cónyuge(s)" people={fam.conyuges} onClick={(pid) => navigate(`/personas/${pid}`)} />
+              <FamilyList label="Hijos/as" people={fam.hijos} onClick={(pid) => navigate(`/personas/${pid}`)} />
+              <FamilyList label="Hermanos/as" people={fam.hermanos} onClick={(pid) => navigate(`/personas/${pid}`)} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="resumen">
         <TabsList className="flex flex-wrap h-auto">
@@ -371,5 +505,41 @@ function TimelinePanel({ eventos, persona }: any) {
         </li>
       ))}
     </ol>
+  );
+}
+
+function Field({ label, value }: { label: string; value: any }) {
+  const empty = value === null || value === undefined || value === "";
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5">{empty ? ND : value}</div>
+    </div>
+  );
+}
+
+function FamilyList({ label, people, onClick }: { label: string; people: any[]; onClick: (id: string) => void }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      {people.length === 0 ? (
+        <div className="mt-0.5">{ND}</div>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {people.map((x) => (
+            <li key={x.id}>
+              <button onClick={() => onClick(x.id)} className="text-left text-link underline-offset-2 hover:underline">
+                {x.nombres} {x.apellidos}
+                {x.nac_fecha || x.defuncion_fecha ? (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({yearOf(x.nac_fecha) ?? "?"}–{yearOf(x.defuncion_fecha) ?? (x.viva === "si" ? "vive" : "?")})
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
