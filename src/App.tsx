@@ -15,6 +15,8 @@ import Documentos from "./pages/Documentos";
 import Buscar from "./pages/Buscar";
 import InvestigacionExterna from "./pages/InvestigacionExterna";
 import Importar from "./pages/Importar";
+import Agente from "./pages/Agente";
+import EstimacionEtnica from "./pages/EstimacionEtnica";
 import Coincidencias from "./pages/Coincidencias";
 import Pistas from "./pages/Pistas";
 import Hipotesis from "./pages/Hipotesis";
@@ -46,6 +48,8 @@ const App = () => (
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/investigacion-externa" element={<InvestigacionExterna />} />
               <Route path="/importar" element={<Importar />} />
+              <Route path="/agente" element={<Agente />} />
+              <Route path="/estimacion-etnica" element={<EstimacionEtnica />} />
               <Route path="/coincidencias" element={<Coincidencias />} />
               <Route path="/pistas" element={<Pistas />} />
               <Route path="/hipotesis" element={<Hipotesis />} />
