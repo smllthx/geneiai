@@ -38,7 +38,9 @@ const empty: any = {
 export default function PersonaDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const isNew = id === "nueva";
+  const idValid = isNew || (!!id && UUID_RE.test(id));
   const [p, setP] = useState<any>(empty);
   const [eventos, setEventos] = useState<any[]>([]);
   const [docs, setDocs] = useState<any[]>([]);
@@ -47,25 +49,37 @@ export default function PersonaDetail() {
   const [inferences, setInferences] = useState<any[]>([]);
   const [hipos, setHipos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(!isNew);
+  const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(isNew);
 
   useEffect(() => {
+    if (!idValid) { setFetching(false); return; }
     (async () => {
-      const { data: ap } = await supabase.from("personas").select("*").order("apellidos");
-      setAllPersonas(ap ?? []);
-      if (isNew) return;
-      const { data } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-      if (data) setP(data);
-      const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
-        supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
-        supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
-        supabase.from("hipotesis").select("*").contains("personas", [id!]),
-        supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
-      ]);
-      setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
-      const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
-      setDocs(d ?? []);
+      try {
+        setFetching(true); setFetchError(null); setNotFound(false);
+        const { data: ap } = await supabase.from("personas").select("*").order("apellidos");
+        setAllPersonas(ap ?? []);
+        if (isNew) { setFetching(false); return; }
+        const { data, error } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+        if (error) throw error;
+        if (!data) { setNotFound(true); setFetching(false); return; }
+        setP(data);
+        const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
+          supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
+          supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
+          supabase.from("hipotesis").select("*").contains("personas", [id!]),
+          supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
+        ]);
+        setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
+        const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
+        setDocs(d ?? []);
+      } catch (e: any) {
+        setFetchError(e?.message ?? "Error al cargar la persona");
+      } finally { setFetching(false); }
     })();
-  }, [id, isNew]);
+  }, [id, isNew, idValid]);
 
   const save = async () => {
     setLoading(true);
