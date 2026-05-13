@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, GitBranch, FileText, Search, Globe, Sparkles,
-  Compass, Lightbulb, Brain, MapPin, Clock, Settings, LogOut,
+  Compass, Lightbulb, Brain, MapPin, Clock, Settings, LogOut, Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ const nav = [
   { to: "/documentos", label: "Documentos", icon: FileText },
   { to: "/buscar", label: "Buscar", icon: Search },
   { to: "/investigacion-externa", label: "Investigación externa", icon: Globe },
+  { to: "/importar", label: "Importar árbol", icon: Upload },
   { to: "/coincidencias", label: "Coincidencias", icon: Sparkles },
   { to: "/pistas", label: "Pistas", icon: Compass },
   { to: "/hipotesis", label: "Hipótesis", icon: Lightbulb },
