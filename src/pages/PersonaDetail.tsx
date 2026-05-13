@@ -119,6 +119,16 @@ export default function PersonaDetail() {
               toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
             } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
           }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
+          {!isNew && <Button variant="secondary" onClick={async () => {
+            const t = toast.loading("Generando hipótesis de contexto histórico…");
+            try {
+              const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
+              toast.dismiss(t);
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
+              toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
+            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+          }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
           {!isNew && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         </>}
       />
