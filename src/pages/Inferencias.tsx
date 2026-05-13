@@ -42,7 +42,7 @@ export default function Inferencias() {
     setRecalc(false); load();
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: "pending" | "accepted_as_hypothesis" | "rejected" | "confirmed") => {
     await supabase.from("generated_inferences").update({ status }).eq("id", id);
     load();
   };
