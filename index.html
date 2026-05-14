@@ -1,29 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Archivo Familiar: una app web para investigar y organizar tu genealogía privada.">
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Archivo Familiar Vivo — Genealogía con IA</title>
+    <meta name="description" content="Construye tu árbol familiar ilimitado e investiga ancestros con IA. Privado y seguro.">
+    <meta name="author" content="Archivo Familiar Vivo" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    
-    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#007aff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0e1a" media="(prefers-color-scheme: dark)" />
+
+    <!-- iOS standalone (Add to Home Screen) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Archivo" />
+    <link rel="apple-touch-icon" href="/app-icon-512.png" />
+    <link rel="icon" type="image/png" href="/app-icon-512.png" />
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="Archivo Familiar Vivo">
+    <meta property="og:description" content="Construye tu árbol familiar ilimitado e investiga ancestros con IA.">
     <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c837b2d1-3870-4dad-ac8f-e594a4860870/id-preview-dbbd0c7e--76800f21-c27b-4c9d-a323-3eeaee3d31e1.lovable.app-1778682759895.png">
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:title" content="Archivo Familiar Vivo">
+    <meta name="twitter:description" content="Construye tu árbol familiar ilimitado e investiga ancestros con IA.">
     <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c837b2d1-3870-4dad-ac8f-e594a4860870/id-preview-dbbd0c7e--76800f21-c27b-4c9d-a323-3eeaee3d31e1.lovable.app-1778682759895.png">
-    <meta property="og:title" content="Lovable App">
-  <meta name="twitter:title" content="Lovable App">
-  <meta property="og:description" content="Archivo Familiar: una app web para investigar y organizar tu genealogía privada.">
-  <meta name="twitter:description" content="Archivo Familiar: una app web para investigar y organizar tu genealogía privada.">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-</head>
-
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

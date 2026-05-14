@@ -17,6 +17,7 @@ import CertezaBadge from "@/components/CertezaBadge";
 import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil } from "lucide-react";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
+import QuickAddRelative from "@/components/QuickAddRelative";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -406,25 +407,35 @@ function RelacionesPanel({ personaId, relaciones, allPersonas, reload, disabled 
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero para añadir relaciones.</p>;
   return (
     <Card className="archivo-card"><CardContent className="space-y-4 pt-6">
-      <div className="grid gap-2 md:grid-cols-[160px,1fr,auto]">
-        <Select value={tipo} onValueChange={setTipo}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="padre">Padre</SelectItem><SelectItem value="madre">Madre</SelectItem>
-            <SelectItem value="conyuge">Cónyuge</SelectItem><SelectItem value="hijo">Hijo/a</SelectItem>
-            <SelectItem value="hermano">Hermano/a</SelectItem><SelectItem value="otro">Otro</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={pariente} onValueChange={setPariente}>
-          <SelectTrigger><SelectValue placeholder="Elegir pariente…" /></SelectTrigger>
-          <SelectContent>{allPersonas.filter((x: any) => x.id !== personaId).map((x: any) =>
-            <SelectItem key={x.id} value={x.id}>{x.nombres} {x.apellidos}</SelectItem>)}</SelectContent>
-        </Select>
-        <Button onClick={add}>Añadir</Button>
+      <div className="flex flex-wrap gap-2">
+        <QuickAddRelative personaId={personaId} defaultTipo="padre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Padre</Button>} />
+        <QuickAddRelative personaId={personaId} defaultTipo="madre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Madre</Button>} />
+        <QuickAddRelative personaId={personaId} defaultTipo="conyuge" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Cónyuge</Button>} />
+        <QuickAddRelative personaId={personaId} defaultTipo="hijo" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hijo/a</Button>} />
+        <QuickAddRelative personaId={personaId} defaultTipo="hermano" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hermano/a</Button>} />
+      </div>
+      <div className="border-t border-border pt-4">
+        <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Vincular persona ya existente</p>
+        <div className="grid gap-2 md:grid-cols-[160px,1fr,auto]">
+          <Select value={tipo} onValueChange={setTipo}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="padre">Padre</SelectItem><SelectItem value="madre">Madre</SelectItem>
+              <SelectItem value="conyuge">Cónyuge</SelectItem><SelectItem value="hijo">Hijo/a</SelectItem>
+              <SelectItem value="hermano">Hermano/a</SelectItem><SelectItem value="otro">Otro</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={pariente} onValueChange={setPariente}>
+            <SelectTrigger><SelectValue placeholder="Elegir pariente…" /></SelectTrigger>
+            <SelectContent>{allPersonas.filter((x: any) => x.id !== personaId).map((x: any) =>
+              <SelectItem key={x.id} value={x.id}>{x.nombres} {x.apellidos}</SelectItem>)}</SelectContent>
+          </Select>
+          <Button onClick={add}>Vincular</Button>
+        </div>
       </div>
       <ul className="divide-y divide-border">{relaciones.map((r: any) => (
         <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-          <span><strong>{r.tipo}</strong>: {r.pariente?.nombres} {r.pariente?.apellidos}</span>
+          <span><strong className="capitalize">{r.tipo}</strong>: {r.pariente?.nombres} {r.pariente?.apellidos}</span>
           <Button size="sm" variant="ghost" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
         </li>
       ))}</ul>

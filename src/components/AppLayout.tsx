@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const nav = [
   { to: "/dashboard", label: "Panel", icon: LayoutDashboard },
@@ -81,12 +82,13 @@ export default function AppLayout() {
           </div>
           <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="h-4 w-4" /></Button>
         </header>
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">
           <Outlet />
         </main>
       </div>
 
       <SiriAssistant />
+      <MobileBottomNav />
     </div>
   );
 }
