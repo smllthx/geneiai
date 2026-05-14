@@ -1,0 +1,16 @@
+{
+  "name": "Archivo Familiar Vivo",
+  "short_name": "Archivo",
+  "description": "Tu árbol genealógico privado con investigación asistida por IA.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f5f9",
+  "theme_color": "#007aff",
+  "lang": "es",
+  "icons": [
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
