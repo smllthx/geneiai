@@ -202,7 +202,8 @@ export default function PersonaDetail() {
         <meta property="og:title" content={metaTitle.slice(0, 60)} />
         <meta property="og:description" content={metaDesc} />
         <meta property="og:type" content="profile" />
-        <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c837b2d1-3870-4dad-ac8f-e594a4860870/id-preview-dbbd0c7e--76800f21-c27b-4c9d-a323-3eeaee3d31e1.lovable.app-1778682759895.png" />
+        {p.foto_url && <meta property="og:image" content={p.foto_url} />}
+        <link rel="canonical" href={`https://archivo-familiar-vivo.lovable.app/personas/${id}`} />
       </Helmet>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
