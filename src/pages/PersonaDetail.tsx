@@ -219,81 +219,74 @@ export default function PersonaDetail() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
       </div>
 
-      <PageHeader
-        title={isNew ? "Nueva persona" : fullName}
-        subtitle={isNew ? "Registrar nombre, fechas y datos básicos." : (lifespan || undefined)}
-        actions={<>
-          {user && !editMode && !isNew && (
-            <Button variant="outline" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
-          )}
-          {user && (editMode || isNew) && (
-            <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
-          )}
-          {!isNew && <Button variant="secondary" onClick={async () => {
-            const t = toast.loading("Investigando con IA…");
-            try {
-              const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
-              toast.dismiss(t);
-              if (error) throw error;
-              if (data?.error) throw new Error(data.error);
-              toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
-            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-          }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
-          {!isNew && <Button variant="secondary" onClick={async () => {
-            const t = toast.loading("Generando hipótesis de contexto histórico…");
-            try {
-              const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
-              toast.dismiss(t);
-              if (error) throw error;
-              if (data?.error) throw new Error(data.error);
-              toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
-            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-          }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
-          {user && !isNew && editMode && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
-        </>}
-      />
+      {!isNew && <PersonaHero p={p} />}
 
-      {!isNew && <div className="mb-4 flex flex-wrap items-center gap-2"><CertezaBadge value={p.certeza} />{p.viva === "si" && <span className="archivo-chip">Persona viva — privada</span>}</div>}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {user && !editMode && !isNew && (
+          <Button variant="outline" size="sm" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
+        )}
+        {user && (editMode || isNew) && (
+          <Button size="sm" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
+        )}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Investigando con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Generando hipótesis de contexto histórico…");
+          try {
+            const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
+        {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+        <Button size="sm" variant="ghost" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Ver en árbol</Button>
+      </div>
 
-      {!isNew && (
-        <Card className="archivo-card mb-4">
-          <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
-          <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <Field label="Nombres" value={p.nombres} />
-            <Field label="Apellidos" value={p.apellidos} />
-            <Field label="Sexo" value={p.sexo} />
-            <Field label="Nacionalidad" value={p.nacionalidad} />
-            <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
-            <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
-            <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
-            <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
-            <Field label="Ocupación" value={p.ocupacion} />
-            <Field label="Religión" value={p.religion} />
-            <div className="sm:col-span-2 grid gap-3 pt-2 sm:grid-cols-2">
-              <FamilyList label="Padres" people={fam.padres} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Cónyuge(s)" people={fam.conyuges} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Hijos/as" people={fam.hijos} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Hermanos/as" people={fam.hermanos} onClick={(pid) => navigate(`/personas/${pid}`)} />
-            </div>
-          </CardContent>
-        </Card>
+      {isNew && (
+        <h1 className="mb-4 font-display text-3xl font-bold tracking-tight">Nueva persona</h1>
       )}
 
       <Tabs defaultValue="resumen">
-        <TabsList className="flex flex-wrap h-auto">
+        <TabsList className="flex flex-wrap h-auto glass-strong rounded-2xl p-1">
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="familia">Familia</TabsTrigger>
-          <TabsTrigger value="eventos">Eventos</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="fotos">Fotos {fotos.length > 0 && <span className="ml-1 text-xs opacity-70">{fotos.length}</span>}</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos {docs.length > 0 && <span className="ml-1 text-xs opacity-70">{docs.length}</span>}</TabsTrigger>
           <TabsTrigger value="fuentes">Fuentes</TabsTrigger>
-          <TabsTrigger value="busquedas">Búsquedas</TabsTrigger>
-          <TabsTrigger value="hipotesis">Hipótesis</TabsTrigger>
-          <TabsTrigger value="inferencias">Inferencias</TabsTrigger>
-          <TabsTrigger value="timeline">Línea de tiempo</TabsTrigger>
+          <TabsTrigger value="investigacion">Investigación</TabsTrigger>
+          <TabsTrigger value="coincidencias">Coincidencias {coincidencias.length > 0 && <span className="ml-1 text-xs opacity-70">{coincidencias.length}</span>}</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen">
-          <Card className="archivo-card"><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+          {!isNew && (
+            <Card className="archivo-card mb-3">
+              <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
+              <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                <Field label="Nombres" value={p.nombres} />
+                <Field label="Apellidos" value={p.apellidos} />
+                <Field label="Sexo" value={p.sexo} />
+                <Field label="Nacionalidad" value={p.nacionalidad} />
+                <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
+                <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
+                <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
+                <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
+                <Field label="Ocupación" value={p.ocupacion} />
+                <Field label="Religión" value={p.religion} />
+              </CardContent>
+            </Card>
+          )}
             <div><Label>Nombres</Label><Input value={p.nombres ?? ""} onChange={(e) => set("nombres", e.target.value)} /></div>
             <div><Label>Apellidos</Label><Input value={p.apellidos ?? ""} onChange={(e) => set("apellidos", e.target.value)} /></div>
             <div><Label>Variantes de nombre/apellido (separadas por coma)</Label>
