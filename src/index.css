@@ -121,17 +121,30 @@
 @layer base {
   * { @apply border-border; }
   html, body, #root { height: 100%; }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
     font-feature-settings: "ss01", "cv11", "cv02";
     letter-spacing: -0.01em;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
     background-image:
       radial-gradient(at 12% 8%, hsl(var(--mesh-1) / 0.18) 0px, transparent 55%),
       radial-gradient(at 88% 18%, hsl(var(--mesh-2) / 0.18) 0px, transparent 55%),
       radial-gradient(at 75% 92%, hsl(var(--mesh-3) / 0.16) 0px, transparent 55%),
       radial-gradient(at 8% 88%, hsl(var(--mesh-4) / 0.14) 0px, transparent 55%);
     background-attachment: fixed;
+  }
+  input, textarea, [contenteditable="true"], p, h1, h2, h3, h4, h5, h6, span, li, td, th, blockquote, pre, code, a {
+    -webkit-user-select: text;
+    user-select: text;
   }
   h1, h2, h3, .font-display {
     font-family: 'Inter', -apple-system, system-ui, sans-serif;
