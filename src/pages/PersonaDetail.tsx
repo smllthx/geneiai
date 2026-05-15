@@ -78,8 +78,12 @@ export default function PersonaDetail() {
           supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
         ]);
         setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
-        const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
-        setDocs(d ?? []);
+        const [{ data: d }, { data: ft }, { data: co }] = await Promise.all([
+          supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]),
+          supabase.from("fotos").select("*").contains("personas_ids", [id!]).order("created_at", { ascending: false }),
+          supabase.from("coincidencias").select("*").or(`ref_a.eq.${id},ref_b.eq.${id}`),
+        ]);
+        setDocs(d ?? []); setFotos(ft ?? []); setCoincidencias(co ?? []);
       } catch (e: any) {
         setFetchError(e?.message ?? "Error al cargar la persona");
       } finally { setFetching(false); }
