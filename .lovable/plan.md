@@ -1,70 +1,69 @@
-## Alcance
+# Rediseño integral + nuevo logo + IA potente
 
-Cierro de una sola pasada los puntos ❌ y ⚠️. MyHeritage automático queda fuera: **no existe API pública**, sólo import GEDCOM manual (ya está). Lo dejo documentado en pantalla en lugar de prometer algo imposible.
+Petición muy amplia. Propongo dividirla en **5 tandas** para mantener calidad. Empezamos por lo visual (logo + paleta + nav) y luego avanzamos a las funcionalidades de IA y módulos avanzados.
 
-## 1. PersonaDetail rehecho (9 tabs + metadata) ⚠️
+---
 
-- Componentes nuevos en `src/components/persona/`: `PersonaHero`, `TabResumen`, `TabFamilia`, `TabTimeline`, `TabFotos`, `TabDocumentos`, `TabFuentes`, `TabInvestigacion`, `TabCoincidencias`, `TabNotas`, `TimelineEvent`, `SourceCard`, `MatchCard`, `PhotoCard`, `BiographyCard`.
-- Estados loading / error / "no encontrada" con glass cards.
-- Metadata dinámica vía `<PersonaMeta>` que actualiza `document.title`, `<meta name="description">`, `og:title`, `og:description`, `og:image` (foto de la persona o fallback).
-- Botones "Volver al árbol", "Editar", "Investigar", "Compartir".
-- `CertezaBadge` aplicado consistentemente.
+## Tanda 1 — Identidad visual (logo + paleta + tipografía)
 
-## 2. Investigación unificada ⚠️
+1. **Eliminar branding Lovable**: quitar badge "Edit with Lovable" y referencias del `index.html` / `manifest`.
+2. **Nuevo logo "Árbol de raíces"**:
+   - SVG inline (no imagen) con árbol simétrico: raíces abajo, ramas arriba, ambas entrelazadas formando un círculo.
+   - 4 colores de acento unidos en gradiente continuo:
+     - 🇨🇭 Suiza → rojo `#DA291C`
+     - 🇪🇸 España → amarillo dorado `#F1BF00`
+     - 🇨🇱 Chile → azul `#0033A0`
+     - 🇮🇹 Italia → verde `#008C45`
+   - Las ramas/raíces se funden de un color al siguiente, simbolizando linaje unido.
+3. **Paleta minimalista**: fondo neutro (off-white / charcoal), un único acento (azul profundo) y los 4 colores patrios reservados solo para el logo y badges de origen.
+4. **Tipografía única**: Inter (regular 400, semibold 600, bold 700). Eliminar Instrument Serif salvo en hero del logo.
+5. Reducir gradientes pastel y sombras del mesh global → fondo plano con un único radial sutil.
 
-- `Investigacion.tsx` pasa a contener pestañas internas: Agente, Paralelo, Búsquedas externas, Pistas, Hipótesis, Inferencias.
-- Las páginas viejas (`/agente`, `/pistas`, etc.) siguen accesibles pero redirigen a `/investigacion?tab=...` para no romper enlaces.
+## Tanda 2 — Navegación y fichas más limpias
 
-## 3. Edge function `detectar-coincidencias` ⚠️
+1. **Sidebar agrupado** (ya está parcialmente):
+   - **Archivo**: Árbol, Personas, Familias, Documentos, Fotos
+   - **Investigación**: Investigación, ADN, Coincidencias, Fuentes
+   - **Herramientas**: Importar, Agente IA, Configuración
+   Colapsables en móvil.
+2. **Ficha persona**:
+   - Ocultar campos vacíos por defecto + botón "+ Agregar dato".
+   - Barra de completitud (0–100%) con color sin datos / parcial / completo.
+   - Escala de confianza explícita por campo: "Muy seguro · Algo seguro · Dudoso".
+   - Resaltar línea directa del usuario con borde de color configurable.
 
-- Nueva función Deno que:
-  - Compara personas del usuario por nombre normalizado + fechas próximas (±3 años) + lugar.
-  - Calcula score 0-100 con razones (`["mismo apellido","fecha ±2 años","mismo lugar"]`).
-  - Hace upsert en `coincidencias` evitando duplicados (par ordenado `ref_a < ref_b`).
-- Botón "Detectar coincidencias" en `Coincidencias.tsx` que la invoca.
+## Tanda 3 — IA potente y omnipresente
 
-## 4. Edición visual del árbol con drag ❌
+1. **Edge function `ai-genealogy`** con AI Gateway de Lovable usando `google/gemini-3.1-pro-preview` (la última disponible) con fallback a `openai/gpt-5.5-pro`.
+2. **Extracción automática** al subir documento / GEDCOM / foto:
+   - OCR + parsing → propuesta de personas, fechas, lugares.
+   - Apartado nuevo **"Sugeridos"** en sidebar donde la IA lista entidades a añadir al árbol con un clic.
+3. **IA con permisos de escritura**: tool-calling para crear/editar personas, relaciones, notas, fuentes. Confirmación del usuario antes de aplicar.
+4. **Chat global** flotante (mejora del SiriAssistant): contexto de la persona / página actual.
+5. **Búsqueda fuzzy** (Levenshtein) para nombres/apellidos/lugares con typos.
 
-- En `Arbol.tsx`, modo "Editar relaciones": al arrastrar una persona sobre otra aparece menú: padre/madre, hijo, cónyuge, hermano.
-- Crea/elimina filas en `relaciones` (con su par inverso) usando el cliente Supabase.
-- Confirmación toast + undo (5 s) usando snapshot del estado anterior.
+## Tanda 4 — Investigación externa automatizada
 
-## 5. Tagging interactivo en fotos ❌
+1. **Conector credenciales**: tabla `external_credentials` (cifrada) para MyHeritage, FamilySearch, Ancestry, Geneanet. Form en Configuración.
+2. **Edge function `external-search`**: dado un nombre/fecha/lugar, consulta APIs / scrapea resultados públicos y devuelve coincidencias con score.
+3. **Modo manual y automático**: cron diario que sugiere nuevas pistas por persona.
+4. **Notificaciones** in-app de coincidencias nuevas (ADN + parientes).
 
-- Nueva tabla `foto_tags` (foto_id, persona_id, x, y, w, h en %, user_id, RLS estándar).
-- En `Fotos.tsx` modal de detalle: click & drag dibuja rectángulo, selector de persona, guarda tag. Hover muestra etiqueta con nombre y enlace a su ficha.
+## Tanda 5 — Módulos avanzados
 
-## 6. Mapa real de ADN con Leaflet ❌
+1. **Estimación étnica interactiva**: gráfico de dona (Recharts) por región + evolución por generación.
+2. **Analizador de fotos**: Gemini Vision para detectar rostros, agrupar por similitud, sugerir rasgos heredados.
+3. **Mapa migratorio animado**: timeline con play/pause, filtros por fecha y línea.
+4. **Vista abanico mejorada**: zoom + pan + control de generaciones.
+5. **Gestión masiva**: añadir múltiples hijos en una sola tabla.
+6. **Contexto histórico** en timeline de cada persona.
 
-- `bun add leaflet react-leaflet @types/leaflet`.
-- `ADN.tsx`: vista doble (Lista | Mapa). Mapa con polígonos/markers aproximados por región (GeoJSON simple bundleado en `src/lib/dna-regions.ts` con 30-40 regiones principales y sus centroides). Opacidad ∝ porcentaje.
+---
 
-## 7. FamilySearch — sync periódica + push ❌
+## Decisiones que necesito de ti
 
-- **Push**: nueva edge function `familysearch-push` que toma personas locales con `ids_externos.familysearch_id` faltante y crea `Person` en FS vía `POST /platform/tree/persons` (GEDCOM-X), guardando el id devuelto. Sólo personas marcadas con flag `sync_to_fs = true` (nuevo bool en `personas`).
-- **Periódica**: habilitar `pg_cron` + `pg_net`, programar `familysearch-sync` cada 24 h por usuario que tenga `external_accounts.metadata->>auto_sync = 'true'`. Toggle en Configuración.
+1. **¿Empiezo por la Tanda 1** (logo + paleta + quitar Lovable) y vamos avanzando, o prefieres otro orden?
+2. **Credenciales externas**: ¿guardamos cifradas en la base de datos del proyecto, o usamos los conectores oficiales de Lovable cuando existan?
+3. **Modelo IA por defecto**: ¿`google/gemini-3.1-pro-preview` (más reciente Gemini) o `openai/gpt-5.5-pro` (top reasoning)? Puedo dejar selector en Configuración.
 
-## 8. Cambios de BD (1 migración)
-
-```
-ALTER TABLE personas ADD COLUMN sync_to_fs boolean NOT NULL DEFAULT false;
-CREATE TABLE foto_tags (id, user_id, foto_id, persona_id, x, y, w, h, created_at) + RLS;
-```
-
-`pg_cron` se programa con `supabase--insert` (no migración) porque incluye URL y anon key específicos del proyecto.
-
-## 9. Lo que NO entra (y por qué)
-
-- **MyHeritage automático**: sin API pública. Mantengo el import manual de GEDCOM.
-- Reconocimiento facial automático en fotos: fuera de alcance esta tanda.
-
-## Detalles técnicos
-
-- Todo en español. Tokens semánticos (`bg-background`, `text-foreground`, glass classes existentes), sin colores hardcodeados.
-- Edge functions con CORS y validación JWT en código.
-- Re-uso de `GlassCard`, `SectionHeader`, `StatPill`, `CertezaBadge`.
-- Sin tocar `client.ts` ni `types.ts`.
-
-## Riesgo
-
-Tanda grande (~15-20 archivos nuevos, 1 migración, 2 edge functions nuevas, 1 cron). Si algo falla en producción lo arreglo en la siguiente iteración sin tocar lo demás.
+Confírmame y arranco con la Tanda 1.
