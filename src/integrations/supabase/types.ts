@@ -235,6 +235,39 @@ export type Database = {
         }
         Relationships: []
       }
+      credenciales_externas: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          password_cifrado: string
+          proveedor: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          password_cifrado: string
+          proveedor: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          password_cifrado?: string
+          proveedor?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       dna_estimates: {
         Row: {
           created_at: string
@@ -1102,8 +1135,10 @@ export type Database = {
           payload: Json
           persona_id: string | null
           tipo: string
+          tipo_externo: string | null
           titulo: string
           updated_at: string
+          url_externa: string | null
           user_id: string
         }
         Insert: {
@@ -1116,8 +1151,10 @@ export type Database = {
           payload?: Json
           persona_id?: string | null
           tipo: string
+          tipo_externo?: string | null
           titulo: string
           updated_at?: string
+          url_externa?: string | null
           user_id: string
         }
         Update: {
@@ -1130,8 +1167,10 @@ export type Database = {
           payload?: Json
           persona_id?: string | null
           tipo?: string
+          tipo_externo?: string | null
           titulo?: string
           updated_at?: string
+          url_externa?: string | null
           user_id?: string
         }
         Relationships: []
