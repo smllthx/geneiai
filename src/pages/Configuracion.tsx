@@ -18,8 +18,55 @@ const SEED_VARIANTES: [string, string][] = [
 export default function Configuracion() {
   const [variantes, setVariantes] = useState<any[]>([]);
   const [d, setD] = useState({ apellido_base: "", variante: "" });
-  const load = async () => { const { data } = await supabase.from("variantes_apellido").select("*").order("apellido_base"); setVariantes(data ?? []); };
+  const [fsAccount, setFsAccount] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const [{ data: v }, { data: a }] = await Promise.all([
+      supabase.from("variantes_apellido").select("*").order("apellido_base"),
+      supabase.from("external_accounts").select("*").eq("provider", "familysearch").maybeSingle(),
+    ]);
+    setVariantes(v ?? []);
+    setFsAccount(a);
+  };
   useEffect(() => { load(); }, []);
+
+  const toggleAutoSync = async (on: boolean) => {
+    if (!fsAccount) return;
+    const newMeta = { ...(fsAccount.metadata ?? {}), auto_sync: on };
+    const { error } = await supabase.from("external_accounts")
+      .update({ metadata: newMeta }).eq("id", fsAccount.id);
+    if (error) return toast.error(error.message);
+    setFsAccount({ ...fsAccount, metadata: newMeta });
+    toast.success(on ? "Sincronización automática activada (cada 24 h)" : "Sincronización automática desactivada");
+  };
+
+  const pushAhora = async () => {
+    setBusy(true);
+    const t = toast.loading("Subiendo a FamilySearch…");
+    try {
+      const { data, error } = await supabase.functions.invoke("familysearch-push");
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.subidas} de ${data.total} personas subidas`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const sincronizarAhora = async () => {
+    setBusy(true);
+    const t = toast.loading("Descargando de FamilySearch…");
+    try {
+      const { data, error } = await supabase.functions.invoke("familysearch-sync",
+        { body: { generaciones_asc: 4, generaciones_desc: 2 } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.creadas} personas, ${data.relsCreadas} relaciones`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
+    finally { setBusy(false); }
+  };
 
   const seed = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
