@@ -76,6 +76,24 @@ export default function Asistente() {
       } else if (s.tipo === "actualizar_persona" && s.persona_id) {
         const { error } = await supabase.from("personas").update(s.payload ?? {}).eq("id", s.persona_id);
         if (error) throw error;
+      } else if (s.tipo === "fuente_externa") {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("no auth");
+        const p = s.payload ?? {};
+        const url = p.url ?? (s as any).url_externa;
+        const { error } = await supabase.from("documentos").insert({
+          user_id: user.id,
+          titulo: s.titulo,
+          tipo: "otro",
+          url,
+          repositorio: p.plataforma ?? (s as any).tipo_externo ?? null,
+          cita: p.query ?? null,
+          personas_mencionadas: s.persona_id ? [s.persona_id] : [],
+          estado: "pendiente",
+          resumen: s.descripcion ?? null,
+        });
+        if (error) throw error;
+        toast.success("Fuente añadida a Documentos");
       } else {
         toast.message("Tipo de sugerencia aún no aplicable automáticamente — marcada como aceptada.");
       }
