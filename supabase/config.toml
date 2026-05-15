@@ -33,3 +33,6 @@ verify_jwt = false
 [functions.buscar-externo-cron]
 verify_jwt = false
 
+[functions.analizar-rostro-cron]
+verify_jwt = false
+
