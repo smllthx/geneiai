@@ -21,6 +21,7 @@ import Importar from "./pages/Importar";
 import Agente from "./pages/Agente";
 import Asistente from "./pages/Asistente";
 import Credenciales from "./pages/Credenciales";
+import Parecidos from "./pages/Parecidos";
 import EstimacionEtnica from "./pages/EstimacionEtnica";
 import ADN from "./pages/ADN";
 import Coincidencias from "./pages/Coincidencias";
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="/agente" element={<Agente />} />
               <Route path="/asistente" element={<Asistente />} />
               <Route path="/credenciales" element={<Credenciales />} />
+              <Route path="/parecidos" element={<Parecidos />} />
               <Route path="/agentes-paralelo" element={<AgentesParalelo />} />
               <Route path="/pistas" element={<Pistas />} />
               <Route path="/hipotesis" element={<Hipotesis />} />
