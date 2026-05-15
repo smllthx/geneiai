@@ -20,6 +20,7 @@ import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
+import LugarSelect, { useLugares } from "@/components/LugarSelect";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -58,6 +59,7 @@ export default function PersonaDetail() {
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(isNew);
+  const [lugares, setLugares] = useLugares();
 
   useEffect(() => {
     if (!idValid) { setFetching(false); return; }

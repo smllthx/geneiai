@@ -36,3 +36,6 @@ verify_jwt = false
 [functions.analizar-rostro-cron]
 verify_jwt = false
 
+
+[functions.parecidos-cron]
+verify_jwt = false
