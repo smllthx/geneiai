@@ -8,53 +8,53 @@
 
 @layer base {
   :root {
-    /* Light: soft pearl with cool tints */
-    --background: 220 30% 97%;
-    --foreground: 222 25% 12%;
+    /* Minimalist warm paper */
+    --background: 36 25% 97%;
+    --foreground: 222 20% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 25% 12%;
+    --card-foreground: 222 20% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 25% 12%;
+    --popover-foreground: 222 20% 12%;
 
-    /* iOS blue */
-    --primary: 211 100% 50%;
+    /* Single warm accent (rooted tone) */
+    --primary: 18 70% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 18% 93%;
-    --secondary-foreground: 222 25% 18%;
+    --secondary: 36 18% 92%;
+    --secondary-foreground: 222 20% 18%;
 
-    --muted: 220 16% 94%;
-    --muted-foreground: 220 10% 42%;
+    --muted: 36 14% 93%;
+    --muted-foreground: 222 8% 42%;
 
-    /* Vivid purple-pink accent */
-    --accent: 280 90% 60%;
+    /* Same family as primary, just lighter */
+    --accent: 18 70% 56%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 4 90% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 88%;
-    --input: 220 16% 88%;
-    --ring: 211 100% 50%;
+    --border: 36 14% 86%;
+    --input: 36 14% 88%;
+    --ring: 18 70% 48%;
 
-    --link: 211 100% 50%;
+    --link: 18 70% 42%;
 
-    --radius: 1rem;
+    --radius: 0.875rem;
 
-    /* Glass tokens */
-    --glass-bg: 0 0% 100% / 0.55;
-    --glass-bg-strong: 0 0% 100% / 0.78;
-    --glass-border: 220 25% 80% / 0.4;
-    --glass-shadow: 220 40% 30% / 0.10;
-    --glass-highlight: 0 0% 100% / 0.6;
+    /* Glass tokens — softer */
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-bg-strong: 0 0% 100% / 0.85;
+    --glass-border: 36 16% 82% / 0.5;
+    --glass-shadow: 222 30% 20% / 0.06;
+    --glass-highlight: 0 0% 100% / 0.7;
 
-    /* Ambient gradient mesh */
-    --mesh-1: 211 100% 60%;
-    --mesh-2: 280 90% 65%;
-    --mesh-3: 340 90% 65%;
-    --mesh-4: 180 80% 55%;
+    /* Subtle single radial — no rainbow mesh */
+    --mesh-1: 18 60% 70%;
+    --mesh-2: 36 50% 80%;
+    --mesh-3: 18 40% 75%;
+    --mesh-4: 36 30% 85%;
 
     --sidebar-background: 220 30% 97%;
     --sidebar-foreground: 222 25% 18%;
@@ -136,10 +136,8 @@
     user-select: none;
     -webkit-touch-callout: none;
     background-image:
-      radial-gradient(at 12% 8%, hsl(var(--mesh-1) / 0.18) 0px, transparent 55%),
-      radial-gradient(at 88% 18%, hsl(var(--mesh-2) / 0.18) 0px, transparent 55%),
-      radial-gradient(at 75% 92%, hsl(var(--mesh-3) / 0.16) 0px, transparent 55%),
-      radial-gradient(at 8% 88%, hsl(var(--mesh-4) / 0.14) 0px, transparent 55%);
+      radial-gradient(at 50% 0%, hsl(var(--mesh-1) / 0.10) 0px, transparent 60%),
+      radial-gradient(at 100% 100%, hsl(var(--mesh-2) / 0.08) 0px, transparent 60%);
     background-attachment: fixed;
   }
   input, textarea, [contenteditable="true"], p, h1, h2, h3, h4, h5, h6, span, li, td, th, blockquote, pre, code, a {
