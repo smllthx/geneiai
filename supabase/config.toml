@@ -26,3 +26,7 @@ verify_jwt = true
 
 [functions.detectar-coincidencias]
 verify_jwt = true
+
+[functions.familysearch-cron-sync]
+verify_jwt = false
+
