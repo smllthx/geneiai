@@ -327,6 +327,7 @@ export default function PersonaDetail() {
             <div className="md:col-span-2"><Label>Notas biográficas</Label>
               <Textarea rows={4} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)} /></div>
           </CardContent></Card>
+          )}
         </TabsContent>
 
         <TabsContent value="familia">
@@ -334,6 +335,110 @@ export default function PersonaDetail() {
             const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
             setRelaciones(data ?? []);
           }} disabled={isNew} />
+        </TabsContent>
+
+        <TabsContent value="fotos">
+          {fotos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin fotos vinculadas. Sube y etiqueta esta persona en la sección Fotos.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {fotos.map((f: any) => (
+                <div key={f.id} className="glass overflow-hidden rounded-2xl">
+                  <div className="aspect-square overflow-hidden">
+                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                  </div>
+                  {(f.titulo || f.fecha_aprox) && (
+                    <div className="p-2">
+                      {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
+                      {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="documentos">
+          <EventosPanel personaId={id!} eventos={eventos} reload={async () => {
+            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha");
+            setEventos(data ?? []);
+          }} disabled={isNew} />
+        </TabsContent>
+
+        <TabsContent value="coincidencias">
+          {coincidencias.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin coincidencias detectadas para esta persona.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {coincidencias.map((c: any) => {
+                const otraId = c.ref_a === id ? c.ref_b : c.ref_a;
+                const otra = allPersonas.find((x: any) => x.id === otraId);
+                return (
+                  <li key={c.id} className="archivo-card px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <Link to={`/personas/${otraId}`} className="font-medium hover:text-primary">
+                        {otra ? `${otra.nombres} ${otra.apellidos}` : otraId}
+                      </Link>
+                      <span className="archivo-chip">Score {c.score}/100 · {c.estado}</span>
+                    </div>
+                    {Array.isArray(c.razones) && c.razones.length > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">{c.razones.join(" · ")}</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </TabsContent>
+
+        <TabsContent value="investigacion">
+          <div className="space-y-4">
+            <div>
+              <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Búsquedas externas sugeridas</h3>
+              <BusquedasSugeridas persona={p} disabled={isNew} />
+            </div>
+            <div>
+              <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Hipótesis</h3>
+              {hipos.length === 0 ? <p className="text-sm text-muted-foreground">Sin hipótesis vinculadas.</p> :
+                <ul className="grid gap-2">{hipos.map((h) => (
+                  <li key={h.id} className="archivo-card px-4 py-3"><div className="font-medium">{h.titulo}</div>
+                    <div className="text-xs text-muted-foreground">Estado: {h.estado} · Probabilidad: {h.probabilidad}%</div></li>
+                ))}</ul>}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Inferencias</h3>
+                <Button size="sm" variant="outline" onClick={recalcularInferencias} disabled={isNew}>Recalcular</Button>
+              </div>
+              <Card className="archivo-card mb-2 border-accent/30 bg-accent/5">
+                <CardContent className="flex items-start gap-3 pt-4 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  <p>Información inferida automáticamente. No comprobada hasta asociar fuente documental.</p>
+                </CardContent>
+              </Card>
+              {inferences.length === 0 ? <p className="text-sm text-muted-foreground">Sin inferencias.</p> :
+                <div className="grid gap-2">{inferences.map((i) => (
+                  <Card key={i.id} className="archivo-card">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-serif text-lg">{i.inferred_value}</div>
+                        <span className="archivo-chip">{i.rule_code} · {i.confidence_score}/100</span>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{i.explanation}</p>
+                    </CardContent>
+                  </Card>
+                ))}</div>}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="fuentes">
+          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Sin documentos vinculados aún.</p> :
+            <ul className="grid gap-2">{docs.map((d) => (
+              <li key={d.id} className="archivo-card px-4 py-3"><div className="font-medium">{d.titulo}</div>
+                <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div></li>
+            ))}</ul>}
         </TabsContent>
 
         <TabsContent value="eventos">
