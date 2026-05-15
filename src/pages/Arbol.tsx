@@ -172,8 +172,28 @@ export default function Arbol() {
       <SectionHeader
         eyebrow="Genealogía visual"
         title="Árbol familiar"
-        subtitle="Persona central abajo, ancestros hacia arriba. Activa Editar para conectar personas arrastrando."
+        subtitle="Elige una vista: ascendientes clásica, abanico radial o dinástica generacional. Activa Editar para conectar personas arrastrando."
       />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="glass inline-flex rounded-2xl p-1">
+          {([
+            ["ascendientes", GitBranch, "Ascendientes"],
+            ["abanico", Sparkles, "Abanico"],
+            ["dinastica", LayoutGrid, "Dinástica"],
+          ] as [Vista, any, string][]).map(([k, Icon, label]) => (
+            <button
+              key={k}
+              onClick={() => setVista(k)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
+                vista === k ? "bg-primary text-primary-foreground" : "text-foreground/70 hover:bg-foreground/5"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="min-w-[220px] flex-1">
