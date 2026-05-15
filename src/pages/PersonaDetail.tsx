@@ -199,7 +199,7 @@ export default function PersonaDetail() {
   const yNac = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
   const yDef = yearOf(p.defuncion_fecha) ?? null;
   const lifespan = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? (p.viva === "si" ? "vive" : "?")}` : "";
-  const metaTitle = isNew ? "Nueva persona · Archivo Familiar" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · Archivo Familiar`;
+  const metaTitle = isNew ? "Nueva persona · GenAI" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GenAI`;
   const metaDesc = isNew
     ? "Registra una nueva persona en tu árbol genealógico privado."
     : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);
