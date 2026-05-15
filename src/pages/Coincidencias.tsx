@@ -119,7 +119,7 @@ export default function Coincidencias() {
                     <Button size="sm" variant="outline" onClick={() => cambiarEstado(c.id, "confirmada")}>
                       <Check className="h-3 w-3" /> Confirmar
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => cambiarEstado(c.id, "descartada")}>
+                    <Button size="sm" variant="ghost" onClick={() => cambiarEstado(c.id, "rechazada")}>
                       <X className="h-3 w-3" /> Descartar
                     </Button>
                   </div>
