@@ -35,26 +35,26 @@
     --destructive: 4 90% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 88%;
-    --input: 220 16% 88%;
-    --ring: 211 100% 50%;
+    --border: 36 14% 86%;
+    --input: 36 14% 88%;
+    --ring: 18 70% 48%;
 
-    --link: 211 100% 50%;
+    --link: 18 70% 42%;
 
-    --radius: 1rem;
+    --radius: 0.875rem;
 
-    /* Glass tokens */
-    --glass-bg: 0 0% 100% / 0.55;
-    --glass-bg-strong: 0 0% 100% / 0.78;
-    --glass-border: 220 25% 80% / 0.4;
-    --glass-shadow: 220 40% 30% / 0.10;
-    --glass-highlight: 0 0% 100% / 0.6;
+    /* Glass tokens — softer */
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-bg-strong: 0 0% 100% / 0.85;
+    --glass-border: 36 16% 82% / 0.5;
+    --glass-shadow: 222 30% 20% / 0.06;
+    --glass-highlight: 0 0% 100% / 0.7;
 
-    /* Ambient gradient mesh */
-    --mesh-1: 211 100% 60%;
-    --mesh-2: 280 90% 65%;
-    --mesh-3: 340 90% 65%;
-    --mesh-4: 180 80% 55%;
+    /* Subtle single radial — no rainbow mesh */
+    --mesh-1: 18 60% 70%;
+    --mesh-2: 36 50% 80%;
+    --mesh-3: 18 40% 75%;
+    --mesh-4: 36 30% 85%;
 
     --sidebar-background: 220 30% 97%;
     --sidebar-foreground: 222 25% 18%;
