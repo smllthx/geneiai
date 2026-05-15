@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import BrandLogo from "@/components/BrandLogo";
+import NotificationBell from "@/components/NotificationBell";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
@@ -88,6 +89,7 @@ export default function AppLayout() {
             <div className="flex items-center gap-2.5">
               <BrandLogo size={30} />
               <h1 className="font-display text-lg font-semibold tracking-tight">Archivo</h1>
+              <div className="ml-auto"><NotificationBell /></div>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
           </div>
