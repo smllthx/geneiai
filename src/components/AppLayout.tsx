@@ -20,6 +20,7 @@ const primaryNav = [
   { to: "/fotos", label: "Fotos", icon: ImageIcon },
 ];
 const investigationNav = [
+  { to: "/asistente", label: "Asistente IA", icon: Bot },
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/coincidencias", label: "Coincidencias", icon: Compass },
   { to: "/adn", label: "ADN / Origen", icon: Dna },

@@ -1091,6 +1091,51 @@ export type Database = {
           },
         ]
       }
+      sugerencias: {
+        Row: {
+          confianza: number
+          created_at: string
+          descripcion: string | null
+          estado: Database["public"]["Enums"]["sugerencia_estado"]
+          id: string
+          origen: string | null
+          payload: Json
+          persona_id: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confianza?: number
+          created_at?: string
+          descripcion?: string | null
+          estado?: Database["public"]["Enums"]["sugerencia_estado"]
+          id?: string
+          origen?: string | null
+          payload?: Json
+          persona_id?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confianza?: number
+          created_at?: string
+          descripcion?: string | null
+          estado?: Database["public"]["Enums"]["sugerencia_estado"]
+          id?: string
+          origen?: string | null
+          payload?: Json
+          persona_id?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1188,6 +1233,7 @@ export type Database = {
         | "confirmed"
       relacion_naturaleza: "biologica" | "adoptiva" | "desconocida"
       relacion_tipo: "padre" | "madre" | "conyuge" | "hijo" | "hermano" | "otro"
+      sugerencia_estado: "pendiente" | "aceptada" | "rechazada"
       tarea_estado: "pendiente" | "en_proceso" | "encontrado" | "descartado"
       tarea_tipo:
         | "buscar_matrimonio"
@@ -1369,6 +1415,7 @@ export const Constants = {
       ],
       relacion_naturaleza: ["biologica", "adoptiva", "desconocida"],
       relacion_tipo: ["padre", "madre", "conyuge", "hijo", "hermano", "otro"],
+      sugerencia_estado: ["pendiente", "aceptada", "rechazada"],
       tarea_estado: ["pendiente", "en_proceso", "encontrado", "descartado"],
       tarea_tipo: [
         "buscar_matrimonio",
