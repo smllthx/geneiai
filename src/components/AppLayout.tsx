@@ -64,8 +64,8 @@ export default function AppLayout() {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 p-3 md:flex md:flex-col">
         <div className="glass-strong flex h-full flex-col rounded-3xl">
           <div className="px-5 pt-5 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="siri-orb h-7 w-7 rounded-full" />
+            <div className="flex items-center gap-2.5">
+              <BrandLogo size={30} />
               <h1 className="font-display text-lg font-semibold tracking-tight">Archivo</h1>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
