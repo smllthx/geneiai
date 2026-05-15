@@ -287,6 +287,8 @@ export default function PersonaDetail() {
               </CardContent>
             </Card>
           )}
+          {(editMode || isNew) && (
+          <Card className="archivo-card"><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
             <div><Label>Nombres</Label><Input value={p.nombres ?? ""} onChange={(e) => set("nombres", e.target.value)} /></div>
             <div><Label>Apellidos</Label><Input value={p.apellidos ?? ""} onChange={(e) => set("apellidos", e.target.value)} /></div>
             <div><Label>Variantes de nombre/apellido (separadas por coma)</Label>
