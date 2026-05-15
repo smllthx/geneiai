@@ -541,19 +541,34 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
 function BusquedasSugeridas({ persona, disabled }: any) {
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero.</p>;
   const sugs = generateExternalSearches(persona);
+  const [running, setRunning] = useState(false);
+  const auto = async () => {
+    setRunning(true);
+    const { data, error } = await supabase.functions.invoke("buscar-externo-auto", { body: { persona_id: persona.id } });
+    setRunning(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${data?.sugerencias ?? 0} sugerencias creadas. Revísalas en el Asistente IA.`);
+  };
   return (
-    <div className="grid gap-2 md:grid-cols-2">{sugs.map((s, i) => (
-      <Card key={i} className="archivo-card"><CardHeader className="pb-2">
-        <CardTitle className="font-serif text-base">{s.plataforma}</CardTitle>
-      </CardHeader><CardContent className="space-y-2 pt-0">
-        <p className="text-xs text-muted-foreground">{s.objetivo}</p>
-        <code className="block break-all rounded bg-muted px-2 py-1 text-xs">{s.query}</code>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(s.query); toast.success("Copiado"); }}>Copiar</Button>
-          <Button size="sm" asChild><a href={s.url} target="_blank" rel="noopener noreferrer"><Globe className="h-3.5 w-3.5" /> Abrir</a></Button>
-        </div>
-      </CardContent></Card>
-    ))}</div>
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={auto} disabled={running}>
+          <Sparkles className="h-4 w-4" /> {running ? "Buscando…" : "Buscar en sitios externos"}
+        </Button>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">{sugs.map((s, i) => (
+        <Card key={i} className="archivo-card"><CardHeader className="pb-2">
+          <CardTitle className="font-serif text-base">{s.plataforma}</CardTitle>
+        </CardHeader><CardContent className="space-y-2 pt-0">
+          <p className="text-xs text-muted-foreground">{s.objetivo}</p>
+          <code className="block break-all rounded bg-muted px-2 py-1 text-xs">{s.query}</code>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(s.query); toast.success("Copiado"); }}>Copiar</Button>
+            <Button size="sm" asChild><a href={s.url} target="_blank" rel="noopener noreferrer"><Globe className="h-3.5 w-3.5" /> Abrir</a></Button>
+          </div>
+        </CardContent></Card>
+      ))}</div>
+    </div>
   );
 }
 
