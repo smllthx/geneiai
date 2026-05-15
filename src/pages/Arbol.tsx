@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2 } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import FanChart from "@/components/FanChart";
+import DynastyView from "@/components/DynastyView";
 
 type RelTipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
+type Vista = "ascendientes" | "abanico" | "dinastica";
 
 export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
@@ -20,6 +23,7 @@ export default function Arbol() {
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
+  const [vista, setVista] = useState<Vista>("ascendientes");
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
 
