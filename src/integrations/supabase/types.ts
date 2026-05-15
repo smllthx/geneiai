@@ -866,6 +866,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notificaciones: {
+        Row: {
+          created_at: string
+          id: string
+          leida: boolean
+          mensaje: string | null
+          metadata: Json
+          tipo: string
+          titulo: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leida?: boolean
+          mensaje?: string | null
+          metadata?: Json
+          tipo?: string
+          titulo: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leida?: boolean
+          mensaje?: string | null
+          metadata?: Json
+          tipo?: string
+          titulo?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       parecidos: {
         Row: {
           created_at: string
@@ -1055,6 +1091,33 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          keys: Json
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          keys?: Json
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          keys?: Json
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
