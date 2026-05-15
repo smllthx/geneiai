@@ -18,6 +18,8 @@ import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pen
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
+import PersonaHero from "@/components/PersonaHero";
+import { Link } from "react-router-dom";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -49,6 +51,8 @@ export default function PersonaDetail() {
   const [allPersonas, setAllPersonas] = useState<any[]>([]);
   const [inferences, setInferences] = useState<any[]>([]);
   const [hipos, setHipos] = useState<any[]>([]);
+  const [fotos, setFotos] = useState<any[]>([]);
+  const [coincidencias, setCoincidencias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!isNew);
   const [notFound, setNotFound] = useState(false);
@@ -74,8 +78,12 @@ export default function PersonaDetail() {
           supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
         ]);
         setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
-        const { data: d } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
-        setDocs(d ?? []);
+        const [{ data: d }, { data: ft }, { data: co }] = await Promise.all([
+          supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]),
+          supabase.from("fotos").select("*").contains("personas_ids", [id!]).order("created_at", { ascending: false }),
+          supabase.from("coincidencias").select("*").or(`ref_a.eq.${id},ref_b.eq.${id}`),
+        ]);
+        setDocs(d ?? []); setFotos(ft ?? []); setCoincidencias(co ?? []);
       } catch (e: any) {
         setFetchError(e?.message ?? "Error al cargar la persona");
       } finally { setFetching(false); }
@@ -211,80 +219,75 @@ export default function PersonaDetail() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
       </div>
 
-      <PageHeader
-        title={isNew ? "Nueva persona" : fullName}
-        subtitle={isNew ? "Registrar nombre, fechas y datos básicos." : (lifespan || undefined)}
-        actions={<>
-          {user && !editMode && !isNew && (
-            <Button variant="outline" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
-          )}
-          {user && (editMode || isNew) && (
-            <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
-          )}
-          {!isNew && <Button variant="secondary" onClick={async () => {
-            const t = toast.loading("Investigando con IA…");
-            try {
-              const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
-              toast.dismiss(t);
-              if (error) throw error;
-              if (data?.error) throw new Error(data.error);
-              toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
-            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-          }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
-          {!isNew && <Button variant="secondary" onClick={async () => {
-            const t = toast.loading("Generando hipótesis de contexto histórico…");
-            try {
-              const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
-              toast.dismiss(t);
-              if (error) throw error;
-              if (data?.error) throw new Error(data.error);
-              toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
-            } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-          }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
-          {user && !isNew && editMode && <Button variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
-        </>}
-      />
+      {!isNew && <PersonaHero p={p} />}
 
-      {!isNew && <div className="mb-4 flex flex-wrap items-center gap-2"><CertezaBadge value={p.certeza} />{p.viva === "si" && <span className="archivo-chip">Persona viva — privada</span>}</div>}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {user && !editMode && !isNew && (
+          <Button variant="outline" size="sm" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
+        )}
+        {user && (editMode || isNew) && (
+          <Button size="sm" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
+        )}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Investigando con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Generando hipótesis de contexto histórico…");
+          try {
+            const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
+        {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+        <Button size="sm" variant="ghost" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Ver en árbol</Button>
+      </div>
 
-      {!isNew && (
-        <Card className="archivo-card mb-4">
-          <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
-          <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <Field label="Nombres" value={p.nombres} />
-            <Field label="Apellidos" value={p.apellidos} />
-            <Field label="Sexo" value={p.sexo} />
-            <Field label="Nacionalidad" value={p.nacionalidad} />
-            <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
-            <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
-            <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
-            <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
-            <Field label="Ocupación" value={p.ocupacion} />
-            <Field label="Religión" value={p.religion} />
-            <div className="sm:col-span-2 grid gap-3 pt-2 sm:grid-cols-2">
-              <FamilyList label="Padres" people={fam.padres} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Cónyuge(s)" people={fam.conyuges} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Hijos/as" people={fam.hijos} onClick={(pid) => navigate(`/personas/${pid}`)} />
-              <FamilyList label="Hermanos/as" people={fam.hermanos} onClick={(pid) => navigate(`/personas/${pid}`)} />
-            </div>
-          </CardContent>
-        </Card>
+      {isNew && (
+        <h1 className="mb-4 font-display text-3xl font-bold tracking-tight">Nueva persona</h1>
       )}
 
       <Tabs defaultValue="resumen">
-        <TabsList className="flex flex-wrap h-auto">
+        <TabsList className="flex flex-wrap h-auto glass-strong rounded-2xl p-1">
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="familia">Familia</TabsTrigger>
-          <TabsTrigger value="eventos">Eventos</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="fotos">Fotos {fotos.length > 0 && <span className="ml-1 text-xs opacity-70">{fotos.length}</span>}</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos {docs.length > 0 && <span className="ml-1 text-xs opacity-70">{docs.length}</span>}</TabsTrigger>
           <TabsTrigger value="fuentes">Fuentes</TabsTrigger>
-          <TabsTrigger value="busquedas">Búsquedas</TabsTrigger>
-          <TabsTrigger value="hipotesis">Hipótesis</TabsTrigger>
-          <TabsTrigger value="inferencias">Inferencias</TabsTrigger>
-          <TabsTrigger value="timeline">Línea de tiempo</TabsTrigger>
+          <TabsTrigger value="investigacion">Investigación</TabsTrigger>
+          <TabsTrigger value="coincidencias">Coincidencias {coincidencias.length > 0 && <span className="ml-1 text-xs opacity-70">{coincidencias.length}</span>}</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen">
+          {!isNew && (
+            <Card className="archivo-card mb-3">
+              <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
+              <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                <Field label="Nombres" value={p.nombres} />
+                <Field label="Apellidos" value={p.apellidos} />
+                <Field label="Sexo" value={p.sexo} />
+                <Field label="Nacionalidad" value={p.nacionalidad} />
+                <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
+                <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
+                <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
+                <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
+                <Field label="Ocupación" value={p.ocupacion} />
+                <Field label="Religión" value={p.religion} />
+              </CardContent>
+            </Card>
+          )}
+          {(editMode || isNew) && (
           <Card className="archivo-card"><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
             <div><Label>Nombres</Label><Input value={p.nombres ?? ""} onChange={(e) => set("nombres", e.target.value)} /></div>
             <div><Label>Apellidos</Label><Input value={p.apellidos ?? ""} onChange={(e) => set("apellidos", e.target.value)} /></div>
@@ -324,6 +327,7 @@ export default function PersonaDetail() {
             <div className="md:col-span-2"><Label>Notas biográficas</Label>
               <Textarea rows={4} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)} /></div>
           </CardContent></Card>
+          )}
         </TabsContent>
 
         <TabsContent value="familia">
@@ -331,6 +335,110 @@ export default function PersonaDetail() {
             const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
             setRelaciones(data ?? []);
           }} disabled={isNew} />
+        </TabsContent>
+
+        <TabsContent value="fotos">
+          {fotos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin fotos vinculadas. Sube y etiqueta esta persona en la sección Fotos.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {fotos.map((f: any) => (
+                <div key={f.id} className="glass overflow-hidden rounded-2xl">
+                  <div className="aspect-square overflow-hidden">
+                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                  </div>
+                  {(f.titulo || f.fecha_aprox) && (
+                    <div className="p-2">
+                      {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
+                      {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="documentos">
+          <EventosPanel personaId={id!} eventos={eventos} reload={async () => {
+            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha");
+            setEventos(data ?? []);
+          }} disabled={isNew} />
+        </TabsContent>
+
+        <TabsContent value="coincidencias">
+          {coincidencias.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin coincidencias detectadas para esta persona.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {coincidencias.map((c: any) => {
+                const otraId = c.ref_a === id ? c.ref_b : c.ref_a;
+                const otra = allPersonas.find((x: any) => x.id === otraId);
+                return (
+                  <li key={c.id} className="archivo-card px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <Link to={`/personas/${otraId}`} className="font-medium hover:text-primary">
+                        {otra ? `${otra.nombres} ${otra.apellidos}` : otraId}
+                      </Link>
+                      <span className="archivo-chip">Score {c.score}/100 · {c.estado}</span>
+                    </div>
+                    {Array.isArray(c.razones) && c.razones.length > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">{c.razones.join(" · ")}</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </TabsContent>
+
+        <TabsContent value="investigacion">
+          <div className="space-y-4">
+            <div>
+              <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Búsquedas externas sugeridas</h3>
+              <BusquedasSugeridas persona={p} disabled={isNew} />
+            </div>
+            <div>
+              <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Hipótesis</h3>
+              {hipos.length === 0 ? <p className="text-sm text-muted-foreground">Sin hipótesis vinculadas.</p> :
+                <ul className="grid gap-2">{hipos.map((h) => (
+                  <li key={h.id} className="archivo-card px-4 py-3"><div className="font-medium">{h.titulo}</div>
+                    <div className="text-xs text-muted-foreground">Estado: {h.estado} · Probabilidad: {h.probabilidad}%</div></li>
+                ))}</ul>}
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Inferencias</h3>
+                <Button size="sm" variant="outline" onClick={recalcularInferencias} disabled={isNew}>Recalcular</Button>
+              </div>
+              <Card className="archivo-card mb-2 border-accent/30 bg-accent/5">
+                <CardContent className="flex items-start gap-3 pt-4 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  <p>Información inferida automáticamente. No comprobada hasta asociar fuente documental.</p>
+                </CardContent>
+              </Card>
+              {inferences.length === 0 ? <p className="text-sm text-muted-foreground">Sin inferencias.</p> :
+                <div className="grid gap-2">{inferences.map((i) => (
+                  <Card key={i.id} className="archivo-card">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-serif text-lg">{i.inferred_value}</div>
+                        <span className="archivo-chip">{i.rule_code} · {i.confidence_score}/100</span>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{i.explanation}</p>
+                    </CardContent>
+                  </Card>
+                ))}</div>}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="fuentes">
+          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Sin documentos vinculados aún.</p> :
+            <ul className="grid gap-2">{docs.map((d) => (
+              <li key={d.id} className="archivo-card px-4 py-3"><div className="font-medium">{d.titulo}</div>
+                <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div></li>
+            ))}</ul>}
         </TabsContent>
 
         <TabsContent value="eventos">

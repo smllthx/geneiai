@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2 } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import FanChart from "@/components/FanChart";
+import DynastyView from "@/components/DynastyView";
 
 type RelTipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
+type Vista = "ascendientes" | "abanico" | "dinastica";
 
 export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
@@ -20,6 +23,7 @@ export default function Arbol() {
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
+  const [vista, setVista] = useState<Vista>("ascendientes");
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
 
@@ -168,8 +172,28 @@ export default function Arbol() {
       <SectionHeader
         eyebrow="Genealogía visual"
         title="Árbol familiar"
-        subtitle="Persona central abajo, ancestros hacia arriba. Activa Editar para conectar personas arrastrando."
+        subtitle="Elige una vista: ascendientes clásica, abanico radial o dinástica generacional. Activa Editar para conectar personas arrastrando."
       />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="glass inline-flex rounded-2xl p-1">
+          {([
+            ["ascendientes", GitBranch, "Ascendientes"],
+            ["abanico", Sparkles, "Abanico"],
+            ["dinastica", LayoutGrid, "Dinástica"],
+          ] as [Vista, any, string][]).map(([k, Icon, label]) => (
+            <button
+              key={k}
+              onClick={() => setVista(k)}
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all ${
+                vista === k ? "bg-primary text-primary-foreground" : "text-foreground/70 hover:bg-foreground/5"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="min-w-[220px] flex-1">
@@ -212,6 +236,22 @@ export default function Arbol() {
 
       {!persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
+      ) : vista === "abanico" ? (
+        <div className="overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
+            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 6)} size={760} />
+          </div>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> línea paterna ·{" "}
+            <span className="inline-block h-2 w-2 rounded-full bg-pink-500" /> línea materna
+          </p>
+        </div>
+      ) : vista === "dinastica" ? (
+        <div className="overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
+            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 5)} />
+          </div>
+        </div>
       ) : (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div
