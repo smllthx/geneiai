@@ -4,7 +4,9 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Trash2, RefreshCw, Upload, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const SEED_VARIANTES: [string, string][] = [
@@ -16,8 +18,55 @@ const SEED_VARIANTES: [string, string][] = [
 export default function Configuracion() {
   const [variantes, setVariantes] = useState<any[]>([]);
   const [d, setD] = useState({ apellido_base: "", variante: "" });
-  const load = async () => { const { data } = await supabase.from("variantes_apellido").select("*").order("apellido_base"); setVariantes(data ?? []); };
+  const [fsAccount, setFsAccount] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const [{ data: v }, { data: a }] = await Promise.all([
+      supabase.from("variantes_apellido").select("*").order("apellido_base"),
+      supabase.from("external_accounts").select("*").eq("provider", "familysearch").maybeSingle(),
+    ]);
+    setVariantes(v ?? []);
+    setFsAccount(a);
+  };
   useEffect(() => { load(); }, []);
+
+  const toggleAutoSync = async (on: boolean) => {
+    if (!fsAccount) return;
+    const newMeta = { ...(fsAccount.metadata ?? {}), auto_sync: on };
+    const { error } = await supabase.from("external_accounts")
+      .update({ metadata: newMeta }).eq("id", fsAccount.id);
+    if (error) return toast.error(error.message);
+    setFsAccount({ ...fsAccount, metadata: newMeta });
+    toast.success(on ? "Sincronización automática activada (cada 24 h)" : "Sincronización automática desactivada");
+  };
+
+  const pushAhora = async () => {
+    setBusy(true);
+    const t = toast.loading("Subiendo a FamilySearch…");
+    try {
+      const { data, error } = await supabase.functions.invoke("familysearch-push");
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.subidas} de ${data.total} personas subidas`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const sincronizarAhora = async () => {
+    setBusy(true);
+    const t = toast.loading("Descargando de FamilySearch…");
+    try {
+      const { data, error } = await supabase.functions.invoke("familysearch-sync",
+        { body: { generaciones_asc: 4, generaciones_desc: 2 } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.creadas} personas, ${data.relsCreadas} relaciones`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
+    finally { setBusy(false); }
+  };
 
   const seed = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
@@ -45,7 +94,44 @@ export default function Configuracion() {
 
   return (
     <div>
-      <PageHeader title="Configuración" subtitle="Variantes de apellidos y datos de ejemplo." />
+      <PageHeader title="Configuración" subtitle="Conexiones, variantes de apellido y datos de ejemplo." />
+
+      <Card className="archivo-card mb-6">
+        <CardHeader><CardTitle className="font-serif text-xl">FamilySearch</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {!fsAccount ? (
+            <div className="text-sm text-muted-foreground">
+              No conectado. Ve a <a href="/importar" className="underline text-link">Importar</a> para conectar tu cuenta de FamilySearch.
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <LinkIcon className="h-4 w-4 text-primary" />
+                <span>Conectado{fsAccount.account_ref ? ` como ${fsAccount.account_ref}` : ""}.</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-border p-3">
+                <div>
+                  <Label className="font-medium">Sincronización automática diaria</Label>
+                  <p className="text-xs text-muted-foreground">Descarga ascendencia y descendencia de FamilySearch cada 24 h.</p>
+                </div>
+                <Switch checked={!!fsAccount.metadata?.auto_sync} onCheckedChange={toggleAutoSync} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={sincronizarAhora} disabled={busy}>
+                  <RefreshCw className="h-4 w-4" /> Sincronizar ahora (pull)
+                </Button>
+                <Button variant="outline" onClick={pushAhora} disabled={busy}>
+                  <Upload className="h-4 w-4" /> Subir personas marcadas (push)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                El push sólo sube personas con la opción "Sincronizar con FamilySearch" activada en su ficha.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="font-serif text-xl">Variantes de apellido</CardTitle></CardHeader>
         <CardContent className="space-y-3">

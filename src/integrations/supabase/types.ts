@@ -518,6 +518,42 @@ export type Database = {
         }
         Relationships: []
       }
+      foto_tags: {
+        Row: {
+          created_at: string
+          foto_id: string
+          h: number
+          id: string
+          persona_id: string
+          user_id: string
+          w: number
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          foto_id: string
+          h?: number
+          id?: string
+          persona_id: string
+          user_id: string
+          w?: number
+          x?: number
+          y?: number
+        }
+        Update: {
+          created_at?: string
+          foto_id?: string
+          h?: number
+          id?: string
+          persona_id?: string
+          user_id?: string
+          w?: number
+          x?: number
+          y?: number
+        }
+        Relationships: []
+      }
       fotos: {
         Row: {
           created_at: string
@@ -825,6 +861,7 @@ export type Database = {
           ocupacion: string | null
           religion: string | null
           sexo: string | null
+          sync_to_fs: boolean
           updated_at: string
           user_id: string
           variantes_nombre: string[] | null
@@ -857,6 +894,7 @@ export type Database = {
           ocupacion?: string | null
           religion?: string | null
           sexo?: string | null
+          sync_to_fs?: boolean
           updated_at?: string
           user_id: string
           variantes_nombre?: string[] | null
@@ -889,6 +927,7 @@ export type Database = {
           ocupacion?: string | null
           religion?: string | null
           sexo?: string | null
+          sync_to_fs?: boolean
           updated_at?: string
           user_id?: string
           variantes_nombre?: string[] | null
