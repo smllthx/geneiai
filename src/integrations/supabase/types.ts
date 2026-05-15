@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      actividad: {
+        Row: {
+          created_at: string
+          descripcion: string
+          id: string
+          metadata: Json
+          ref_id: string | null
+          ref_tipo: string | null
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion: string
+          id?: string
+          metadata?: Json
+          ref_id?: string | null
+          ref_tipo?: string | null
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string
+          id?: string
+          metadata?: Json
+          ref_id?: string | null
+          ref_tipo?: string | null
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_runs: {
         Row: {
           contexto: Json
@@ -202,6 +235,45 @@ export type Database = {
         }
         Relationships: []
       }
+      dna_estimates: {
+        Row: {
+          created_at: string
+          fuente: string | null
+          id: string
+          notas: string | null
+          persona_id: string | null
+          porcentaje: number
+          rama: string | null
+          region: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fuente?: string | null
+          id?: string
+          notas?: string | null
+          persona_id?: string | null
+          porcentaje?: number
+          rama?: string | null
+          region: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fuente?: string | null
+          id?: string
+          notas?: string | null
+          persona_id?: string | null
+          porcentaje?: number
+          rama?: string | null
+          region?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           archivo_path: string | null
@@ -373,6 +445,123 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      external_accounts: {
+        Row: {
+          access_token: string | null
+          account_ref: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          metadata: Json
+          provider: string
+          refresh_token: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_ref?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          provider: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          account_ref?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          provider?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      familias: {
+        Row: {
+          created_at: string
+          head_persona_id: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          head_persona_id?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          head_persona_id?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fotos: {
+        Row: {
+          created_at: string
+          descripcion: string | null
+          fecha: string | null
+          fecha_aprox: string | null
+          id: string
+          lugar_id: string | null
+          personas_ids: string[]
+          storage_path: string | null
+          titulo: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string | null
+          fecha_aprox?: string | null
+          id?: string
+          lugar_id?: string | null
+          personas_ids?: string[]
+          storage_path?: string | null
+          titulo?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string | null
+          fecha_aprox?: string | null
+          id?: string
+          lugar_id?: string | null
+          personas_ids?: string[]
+          storage_path?: string | null
+          titulo?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       generated_inferences: {
         Row: {
@@ -620,6 +809,7 @@ export type Database = {
           enlaces: Json
           entierro_fecha: string | null
           entierro_lugar_id: string | null
+          foto_url: string | null
           id: string
           ids_externos: Json
           matrimonio_fecha: string | null
@@ -651,6 +841,7 @@ export type Database = {
           enlaces?: Json
           entierro_fecha?: string | null
           entierro_lugar_id?: string | null
+          foto_url?: string | null
           id?: string
           ids_externos?: Json
           matrimonio_fecha?: string | null
@@ -682,6 +873,7 @@ export type Database = {
           enlaces?: Json
           entierro_fecha?: string | null
           entierro_lugar_id?: string | null
+          foto_url?: string | null
           id?: string
           ids_externos?: Json
           matrimonio_fecha?: string | null
