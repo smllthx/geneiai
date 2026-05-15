@@ -39,3 +39,9 @@ verify_jwt = false
 
 [functions.parecidos-cron]
 verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.vapid-public]
+verify_jwt = false
