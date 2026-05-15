@@ -341,21 +341,40 @@ export default function PersonaDetail() {
           {fotos.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sin fotos vinculadas. Sube y etiqueta esta persona en la sección Fotos.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {fotos.map((f: any) => (
-                <div key={f.id} className="glass overflow-hidden rounded-2xl">
-                  <div className="aspect-square overflow-hidden">
-                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
-                  </div>
-                  {(f.titulo || f.fecha_aprox) && (
-                    <div className="p-2">
+            <>
+              <div className="mb-3 flex justify-end">
+                <Button size="sm" variant="outline" onClick={async () => {
+                  toast.message(`Analizando ${fotos.length} foto(s)…`);
+                  let ok = 0;
+                  for (const f of fotos) {
+                    const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
+                    if (!error) ok++;
+                  }
+                  toast.success(`Analizadas ${ok}/${fotos.length}. Revisa en Rasgos & Parecidos.`);
+                }}>
+                  <Sparkles className="mr-1 h-3.5 w-3.5" /> Analizar todas
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {fotos.map((f: any) => (
+                  <div key={f.id} className="glass overflow-hidden rounded-2xl">
+                    <div className="aspect-square overflow-hidden">
+                      <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                    <div className="space-y-1 p-2">
                       {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
                       {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                      <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
+                        const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
+                        if (error) toast.error(error.message); else toast.success("Rasgos extraídos");
+                      }}>
+                        <Sparkles className="mr-1 h-3 w-3" /> Analizar rasgos
+                      </Button>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </TabsContent>
 
