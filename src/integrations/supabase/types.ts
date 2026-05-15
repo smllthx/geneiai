@@ -866,6 +866,42 @@ export type Database = {
         }
         Relationships: []
       }
+      parecidos: {
+        Row: {
+          created_at: string
+          estimacion_genetica: number | null
+          id: string
+          notas: string | null
+          persona_a: string
+          persona_b: string
+          rasgos_comunes: Json
+          score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          estimacion_genetica?: number | null
+          id?: string
+          notas?: string | null
+          persona_a: string
+          persona_b: string
+          rasgos_comunes?: Json
+          score?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          estimacion_genetica?: number | null
+          id?: string
+          notas?: string | null
+          persona_a?: string
+          persona_b?: string
+          rasgos_comunes?: Json
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       personas: {
         Row: {
           apellidos: string
@@ -1019,6 +1055,48 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      rasgos_faciales: {
+        Row: {
+          created_at: string
+          foto_id: string | null
+          foto_url: string | null
+          id: string
+          modelo: string | null
+          persona_id: string
+          rasgos: Json
+          resumen: string | null
+          updated_at: string
+          user_id: string
+          vector: number[] | null
+        }
+        Insert: {
+          created_at?: string
+          foto_id?: string | null
+          foto_url?: string | null
+          id?: string
+          modelo?: string | null
+          persona_id: string
+          rasgos?: Json
+          resumen?: string | null
+          updated_at?: string
+          user_id: string
+          vector?: number[] | null
+        }
+        Update: {
+          created_at?: string
+          foto_id?: string | null
+          foto_url?: string | null
+          id?: string
+          modelo?: string | null
+          persona_id?: string
+          rasgos?: Json
+          resumen?: string | null
+          updated_at?: string
+          user_id?: string
+          vector?: number[] | null
         }
         Relationships: []
       }
