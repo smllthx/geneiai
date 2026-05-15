@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -29,6 +29,7 @@ const investigationNav = [
 const utilityNav = [
   { to: "/importar", label: "Importar / Exportar", icon: Upload },
   { to: "/agente", label: "Agente IA", icon: Bot },
+  { to: "/credenciales", label: "Credenciales", icon: KeyRound },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 

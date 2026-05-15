@@ -50,7 +50,7 @@ export default function Credenciales() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Credenciales externas" subtitle="MyHeritage, FamilySearch, Ancestry, Geneanet. Cifradas con AES‑GCM." icon={KeyRound} />
+      <PageHeader title="Credenciales externas" subtitle="MyHeritage, FamilySearch, Ancestry, Geneanet. Cifradas con AES‑GCM." />
 
       <GlassCard className="p-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
