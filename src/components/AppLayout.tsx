@@ -89,9 +89,9 @@ export default function AppLayout() {
             <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
-            <NavSection items={primaryNav} />
-            <NavSection items={investigationNav} label="Investigación" />
-            <NavSection items={utilityNav} label="Herramientas" />
+            <NavItems items={primaryNav} />
+            <NavGroup label="Investigación" items={investigationNav} />
+            <NavGroup label="Herramientas" items={utilityNav} />
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
             <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
