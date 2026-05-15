@@ -11,6 +11,7 @@ import SiriAssistant from "@/components/SiriAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
+import AdaptiveViewport from "@/components/AdaptiveViewport";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
@@ -128,6 +129,7 @@ export default function AppLayout() {
 
       <SiriAssistant />
       <MobileBottomNav />
+      <AdaptiveViewport />
     </div>
   );
 }
