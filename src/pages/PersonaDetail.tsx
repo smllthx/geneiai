@@ -441,55 +441,6 @@ export default function PersonaDetail() {
             ))}</ul>}
         </TabsContent>
 
-        <TabsContent value="eventos">
-          <EventosPanel personaId={id!} eventos={eventos} reload={async () => {
-            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha");
-            setEventos(data ?? []);
-          }} disabled={isNew} />
-        </TabsContent>
-
-        <TabsContent value="fuentes">
-          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Sin documentos vinculados aún.</p> :
-            <ul className="grid gap-2">{docs.map((d) => (
-              <li key={d.id} className="archivo-card px-4 py-3"><div className="font-medium">{d.titulo}</div>
-                <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div></li>
-            ))}</ul>}
-        </TabsContent>
-
-        <TabsContent value="busquedas">
-          <BusquedasSugeridas persona={p} disabled={isNew} />
-        </TabsContent>
-
-        <TabsContent value="hipotesis">
-          {hipos.length === 0 ? <p className="text-sm text-muted-foreground">Sin hipótesis vinculadas.</p> :
-            <ul className="grid gap-2">{hipos.map((h) => (
-              <li key={h.id} className="archivo-card px-4 py-3"><div className="font-medium">{h.titulo}</div>
-                <div className="text-xs text-muted-foreground">Estado: {h.estado} · Probabilidad: {h.probabilidad}%</div></li>
-            ))}</ul>}
-        </TabsContent>
-
-        <TabsContent value="inferencias">
-          <Card className="archivo-card border-accent/30 bg-accent/5">
-            <CardContent className="flex items-start gap-3 pt-4 text-sm">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              <p>Esta información es inferida automáticamente. No debe considerarse comprobada hasta asociarla a una fuente documental.</p>
-            </CardContent>
-          </Card>
-          <div className="my-3"><Button size="sm" onClick={recalcularInferencias} disabled={isNew}>Recalcular inferencias</Button></div>
-          {inferences.length === 0 ? <p className="text-sm text-muted-foreground">Sin inferencias para esta persona.</p> :
-            <div className="grid gap-2">{inferences.map((i) => (
-              <Card key={i.id} className="archivo-card">
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="font-serif text-lg">{i.inferred_value}</div>
-                    <span className="archivo-chip">{i.rule_code} · {i.confidence_score}/100</span>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{i.explanation}</p>
-                </CardContent>
-              </Card>
-            ))}</div>}
-        </TabsContent>
-
         <TabsContent value="timeline">
           <TimelinePanel eventos={eventos} persona={p} />
         </TabsContent>
