@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.trigger_send_push() FROM PUBLIC, anon, authenticated;
