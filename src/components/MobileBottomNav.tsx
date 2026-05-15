@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { GitBranch, Users, Sparkles, FileText, MoreHorizontal } from "lucide-react";
+import { Home, GitBranch, Users, Image as ImageIcon, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
+  { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/arbol", label: "Árbol", icon: GitBranch },
   { to: "/personas", label: "Personas", icon: Users },
-  { to: "/investigacion-externa", label: "Investigar", icon: Sparkles },
-  { to: "/documentos", label: "Fuentes", icon: FileText },
-  { to: "/dashboard", label: "Más", icon: MoreHorizontal },
+  { to: "/fotos", label: "Fotos", icon: ImageIcon },
+  { to: "/investigacion", label: "Investigar", icon: Sparkles },
 ];
 
 export default function MobileBottomNav() {

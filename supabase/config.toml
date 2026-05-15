@@ -11,3 +11,12 @@ verify_jwt = true
 
 [functions.contexto-historico]
 verify_jwt = true
+
+[functions.familysearch-auth]
+verify_jwt = true
+
+[functions.familysearch-sync]
+verify_jwt = true
+
+[functions.familysearch-export]
+verify_jwt = true
