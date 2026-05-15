@@ -67,6 +67,7 @@ const App = () => (
               <Route path="/estimacion-etnica" element={<Navigate to="/adn" replace />} />
               <Route path="/importar" element={<Importar />} />
               <Route path="/agente" element={<Agente />} />
+              <Route path="/asistente" element={<Asistente />} />
               <Route path="/agentes-paralelo" element={<AgentesParalelo />} />
               <Route path="/pistas" element={<Pistas />} />
               <Route path="/hipotesis" element={<Hipotesis />} />
