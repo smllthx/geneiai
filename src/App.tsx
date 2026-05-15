@@ -19,6 +19,7 @@ import Investigacion from "./pages/Investigacion";
 import InvestigacionExterna from "./pages/InvestigacionExterna";
 import Importar from "./pages/Importar";
 import Agente from "./pages/Agente";
+import Asistente from "./pages/Asistente";
 import EstimacionEtnica from "./pages/EstimacionEtnica";
 import ADN from "./pages/ADN";
 import Coincidencias from "./pages/Coincidencias";
