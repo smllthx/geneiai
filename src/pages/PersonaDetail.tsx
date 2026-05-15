@@ -301,13 +301,24 @@ export default function PersonaDetail() {
                 <SelectContent><SelectItem value="masculino">Masculino</SelectItem><SelectItem value="femenino">Femenino</SelectItem><SelectItem value="otro">Otro</SelectItem></SelectContent>
               </Select></div>
             <div><Label>Fecha de nacimiento</Label><Input type="date" value={p.nac_fecha ?? ""} onChange={(e) => set("nac_fecha", e.target.value || null)} /></div>
-            <div><Label>Fecha aproximada (texto)</Label><Input value={p.nac_fecha_aprox ?? ""} onChange={(e) => set("nac_fecha_aprox", e.target.value)} placeholder="hacia 1880" /></div>
+            <div><Label>Lugar de nacimiento</Label>
+              <LugarSelect value={p.nac_lugar_id} onChange={(v) => set("nac_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
+            <div><Label>Fecha aprox. nacimiento</Label><Input value={p.nac_fecha_aprox ?? ""} onChange={(e) => set("nac_fecha_aprox", e.target.value)} placeholder="hacia 1880" /></div>
             <div><Label>Rango de nacimiento (años)</Label>
               <div className="flex gap-2"><Input type="number" placeholder="desde" value={p.nac_rango_ini ?? ""} onChange={(e) => set("nac_rango_ini", e.target.value ? parseInt(e.target.value) : null)} />
                 <Input type="number" placeholder="hasta" value={p.nac_rango_fin ?? ""} onChange={(e) => set("nac_rango_fin", e.target.value ? parseInt(e.target.value) : null)} /></div></div>
-            <div><Label>Fecha de defunción</Label><Input type="date" value={p.defuncion_fecha ?? ""} onChange={(e) => set("defuncion_fecha", e.target.value || null)} /></div>
             <div><Label>Fecha de bautismo</Label><Input type="date" value={p.bautismo_fecha ?? ""} onChange={(e) => set("bautismo_fecha", e.target.value || null)} /></div>
+            <div><Label>Lugar de bautismo</Label>
+              <LugarSelect value={p.bautismo_lugar_id} onChange={(v) => set("bautismo_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
             <div><Label>Fecha de matrimonio</Label><Input type="date" value={p.matrimonio_fecha ?? ""} onChange={(e) => set("matrimonio_fecha", e.target.value || null)} /></div>
+            <div><Label>Lugar de matrimonio</Label>
+              <LugarSelect value={p.matrimonio_lugar_id} onChange={(v) => set("matrimonio_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
+            <div><Label>Fecha de defunción</Label><Input type="date" value={p.defuncion_fecha ?? ""} onChange={(e) => set("defuncion_fecha", e.target.value || null)} /></div>
+            <div><Label>Lugar de defunción</Label>
+              <LugarSelect value={p.defuncion_lugar_id} onChange={(v) => set("defuncion_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
+            <div><Label>Fecha de entierro</Label><Input type="date" value={p.entierro_fecha ?? ""} onChange={(e) => set("entierro_fecha", e.target.value || null)} /></div>
+            <div><Label>Lugar de entierro</Label>
+              <LugarSelect value={p.entierro_lugar_id} onChange={(v) => set("entierro_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
             <div><Label>Ocupación</Label><Input value={p.ocupacion ?? ""} onChange={(e) => set("ocupacion", e.target.value)} /></div>
             <div><Label>Nacionalidad / origen</Label><Input value={p.nacionalidad ?? ""} onChange={(e) => set("nacionalidad", e.target.value)} /></div>
             <div><Label>Religión / rito</Label><Input value={p.religion ?? ""} onChange={(e) => set("religion", e.target.value)} /></div>
