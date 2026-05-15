@@ -84,14 +84,20 @@ export default function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="glass sticky top-0 z-20 mx-3 mt-3 flex items-center justify-between rounded-2xl px-4 py-2.5 md:hidden">
-          <div className="flex items-center gap-2">
-            <div className="siri-orb h-6 w-6 rounded-full" />
-            <h1 className="font-display text-base font-semibold">Archivo</h1>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="h-4 w-4" /></Button>
-        </header>
-        <main className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-8">
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-0 z-30 md:hidden"
+          style={{
+            height: "env(safe-area-inset-top, 0px)",
+            background: "hsl(var(--background) / 0.85)",
+            backdropFilter: "saturate(180%) blur(20px)",
+            WebkitBackdropFilter: "saturate(180%) blur(20px)",
+          }}
+        />
+        <main
+          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-8"
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1rem)" }}
+        >
           <Outlet />
         </main>
       </div>
