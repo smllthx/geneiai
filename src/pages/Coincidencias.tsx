@@ -36,7 +36,7 @@ export default function Coincidencias() {
     finally { setLoading(false); }
   };
 
-  const cambiarEstado = async (id: string, estado: string) => {
+  const cambiarEstado = async (id: string, estado: "confirmada" | "rechazada") => {
     await supabase.from("coincidencias").update({ estado }).eq("id", id);
     load();
   };
