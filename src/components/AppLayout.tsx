@@ -88,7 +88,7 @@ export default function AppLayout() {
           <div className="px-5 pt-5 pb-3">
             <div className="flex items-center gap-2.5">
               <BrandLogo size={30} />
-              <h1 className="font-display text-lg font-semibold tracking-tight">Archivo</h1>
+              <h1 className="font-display text-lg font-semibold tracking-tight">GenAI</h1>
               <div className="ml-auto"><NotificationBell /></div>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
