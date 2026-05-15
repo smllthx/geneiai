@@ -4,7 +4,9 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Trash2, RefreshCw, Upload, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 const SEED_VARIANTES: [string, string][] = [
