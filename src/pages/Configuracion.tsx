@@ -94,7 +94,44 @@ export default function Configuracion() {
 
   return (
     <div>
-      <PageHeader title="Configuración" subtitle="Variantes de apellidos y datos de ejemplo." />
+      <PageHeader title="Configuración" subtitle="Conexiones, variantes de apellido y datos de ejemplo." />
+
+      <Card className="archivo-card mb-6">
+        <CardHeader><CardTitle className="font-serif text-xl">FamilySearch</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {!fsAccount ? (
+            <div className="text-sm text-muted-foreground">
+              No conectado. Ve a <a href="/importar" className="underline text-link">Importar</a> para conectar tu cuenta de FamilySearch.
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm">
+                <LinkIcon className="h-4 w-4 text-primary" />
+                <span>Conectado{fsAccount.account_ref ? ` como ${fsAccount.account_ref}` : ""}.</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-border p-3">
+                <div>
+                  <Label className="font-medium">Sincronización automática diaria</Label>
+                  <p className="text-xs text-muted-foreground">Descarga ascendencia y descendencia de FamilySearch cada 24 h.</p>
+                </div>
+                <Switch checked={!!fsAccount.metadata?.auto_sync} onCheckedChange={toggleAutoSync} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={sincronizarAhora} disabled={busy}>
+                  <RefreshCw className="h-4 w-4" /> Sincronizar ahora (pull)
+                </Button>
+                <Button variant="outline" onClick={pushAhora} disabled={busy}>
+                  <Upload className="h-4 w-4" /> Subir personas marcadas (push)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                El push sólo sube personas con la opción "Sincronizar con FamilySearch" activada en su ficha.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="font-serif text-xl">Variantes de apellido</CardTitle></CardHeader>
         <CardContent className="space-y-3">
