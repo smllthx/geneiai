@@ -107,7 +107,8 @@ export default function Arbol() {
 
   return (
     <div>
-      <PageHeader
+      <SectionHeader
+        eyebrow="Genealogía visual"
         title="Árbol familiar"
         subtitle="Persona central abajo, ancestros hacia arriba sin límite de generaciones."
       />
