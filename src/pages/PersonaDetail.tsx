@@ -18,6 +18,8 @@ import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pen
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
+import PersonaHero from "@/components/PersonaHero";
+import { Link } from "react-router-dom";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -49,6 +51,8 @@ export default function PersonaDetail() {
   const [allPersonas, setAllPersonas] = useState<any[]>([]);
   const [inferences, setInferences] = useState<any[]>([]);
   const [hipos, setHipos] = useState<any[]>([]);
+  const [fotos, setFotos] = useState<any[]>([]);
+  const [coincidencias, setCoincidencias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!isNew);
   const [notFound, setNotFound] = useState(false);
