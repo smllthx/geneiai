@@ -236,6 +236,22 @@ export default function Arbol() {
 
       {!persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
+      ) : vista === "abanico" ? (
+        <div className="overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
+            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 6)} size={760} />
+          </div>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> línea paterna ·{" "}
+            <span className="inline-block h-2 w-2 rounded-full bg-pink-500" /> línea materna
+          </p>
+        </div>
+      ) : vista === "dinastica" ? (
+        <div className="overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
+            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 5)} />
+          </div>
+        </div>
       ) : (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div
