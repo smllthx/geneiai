@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import BrandLogo from "@/components/BrandLogo";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
