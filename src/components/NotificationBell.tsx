@@ -4,7 +4,8 @@ import { Bell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { requestNotificationPermission, notificationPermission } from "@/lib/notifications";
+import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
+import { toast } from "sonner";
 
 export default function NotificationBell() {
   const [items, setItems] = useState<any[]>([]);
@@ -31,7 +32,22 @@ export default function NotificationBell() {
     await supabase.from("notificaciones").update({ leida: true }).eq("leida", false);
     load();
   };
-  const pedirPermiso = async () => { setPerm(await requestNotificationPermission()); };
+  const pedirPermiso = async () => {
+    const p = await requestNotificationPermission();
+    setPerm(p);
+    if (p === "granted") {
+      try {
+        const { data } = await supabase.functions.invoke("vapid-public");
+        const key = (data as any)?.key;
+        if (key) {
+          const ok = await subscribeToPush(key);
+          if (ok) toast.success("Avisos push activados en este dispositivo");
+        }
+      } catch (e: any) {
+        toast.error("No se pudo activar push: " + (e?.message ?? e));
+      }
+    }
+  };
 
   return (
     <Popover>
