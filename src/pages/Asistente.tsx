@@ -177,7 +177,7 @@ export default function Asistente() {
           <div key={s.id} className="glass rounded-xl p-3">
             <div className="mb-1 flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.tipo.replaceAll("_", " ")}</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.tipo.replace(/_/g, " ")}</p>
                 <p className="truncate text-sm font-semibold">{s.titulo}</p>
               </div>
               <span className="rounded-full bg-foreground/8 px-1.5 py-0.5 text-[9px] tabular-nums">{s.confianza}%</span>
