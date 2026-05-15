@@ -3,8 +3,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, StatPill, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
+import MigrationMap from "@/components/MigrationMap";
+import FamilyTimeline from "@/components/FamilyTimeline";
 import {
-  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna,
+  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff,
 } from "lucide-react";
 
 export default function Inicio() {
@@ -15,10 +17,12 @@ export default function Inicio() {
   });
   const [actividad, setActividad] = useState<any[]>([]);
   const [recientes, setRecientes] = useState<any[]>([]);
+  const [sinPadres, setSinPadres] = useState<any[]>([]);
+  const [sinFotos, setSinFotos] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [p, l, f, d, c, h, i, r, a] = await Promise.all([
+      const [p, l, f, d, c, h, i, r, a, allPersonas, allRels, fotos] = await Promise.all([
         supabase.from("personas").select("apellidos", { count: "exact" }),
         supabase.from("lugares").select("id", { count: "exact", head: true }),
         supabase.from("fotos").select("id", { count: "exact", head: true }),
@@ -26,8 +30,11 @@ export default function Inicio() {
         supabase.from("coincidencias").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
         supabase.from("hipotesis").select("id", { count: "exact", head: true }).eq("estado", "abierta"),
         supabase.from("generated_inferences").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("personas").select("id,nombres,apellidos,updated_at").order("updated_at", { ascending: false }).limit(8),
-        supabase.from("actividad").select("*").order("created_at", { ascending: false }).limit(8),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url,updated_at").order("updated_at", { ascending: false }).limit(8),
+        supabase.from("actividad").select("*").order("created_at", { ascending: false }).limit(6),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url"),
+        supabase.from("relaciones").select("persona_id,tipo"),
+        supabase.from("fotos").select("personas_ids"),
       ]);
       const ap = new Map<string, number>();
       (p.data ?? []).forEach((row) => {
@@ -41,6 +48,19 @@ export default function Inicio() {
         apellidos: [...ap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([x]) => x),
       });
       setRecientes(r.data ?? []); setActividad(a.data ?? []);
+
+      // Personas sin padres
+      const conPadres = new Set(
+        (allRels.data ?? [])
+          .filter((rl: any) => rl.tipo === "padre" || rl.tipo === "madre")
+          .map((rl: any) => rl.persona_id)
+      );
+      setSinPadres((allPersonas.data ?? []).filter((per: any) => !conPadres.has(per.id)).slice(0, 6));
+
+      // Personas sin fotos
+      const conFotos = new Set<string>();
+      (fotos.data ?? []).forEach((fr: any) => (fr.personas_ids ?? []).forEach((id: string) => conFotos.add(id)));
+      setSinFotos((allPersonas.data ?? []).filter((per: any) => !per.foto_url && !conFotos.has(per.id)).slice(0, 6));
     })();
   }, []);
 
@@ -85,6 +105,71 @@ export default function Inicio() {
         <QuickAction icon={Plus} label="Importar / Exportar" to="/importar" />
       </div>
 
+      {/* Mapa migratorio (ancho completo) */}
+      <GlassCard className="mb-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <MapPin className="h-4 w-4 text-primary" /> Mapa migratorio familiar
+          </h2>
+          <Link to="/lugares" className="text-xs text-link hover:underline">Ver lugares →</Link>
+        </div>
+        <MigrationMap height={320} />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Puntos por lugar de nacimiento y defunción · líneas indican migraciones individuales.
+        </p>
+      </GlassCard>
+
+      <div className="mb-4 grid gap-4 md:grid-cols-2">
+        <GlassCard>
+          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+            <Clock className="h-4 w-4 text-primary" /> Timeline familiar
+          </h2>
+          <div className="max-h-[420px] overflow-y-auto pr-2">
+            <FamilyTimeline />
+          </div>
+        </GlassCard>
+
+        <div className="grid gap-4">
+          <GlassCard>
+            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+              <UserX className="h-4 w-4 text-accent" /> Personas sin padres registrados
+            </h2>
+            {sinPadres.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Todas las personas tienen al menos un padre/madre conectado.</p>
+            ) : (
+              <ul className="space-y-1">
+                {sinPadres.map((x) => (
+                  <li key={x.id}>
+                    <Link to={`/personas/${x.id}`} className="text-sm hover:text-primary">
+                      {x.nombres} {x.apellidos}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassCard>
+
+          <GlassCard>
+            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+              <ImageOff className="h-4 w-4 text-accent" /> Personas sin fotos
+            </h2>
+            {sinFotos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Todas las personas tienen al menos una foto.</p>
+            ) : (
+              <ul className="space-y-1">
+                {sinFotos.map((x) => (
+                  <li key={x.id}>
+                    <Link to={`/personas/${x.id}`} className="text-sm hover:text-primary">
+                      {x.nombres} {x.apellidos}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassCard>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <GlassCard>
           <h2 className="mb-3 font-display text-lg font-semibold">Actividad reciente</h2>
@@ -112,7 +197,12 @@ export default function Inicio() {
               {recientes.map((p) => (
                 <li key={p.id}>
                   <button className="flex w-full items-center gap-2 py-2 text-left text-sm hover:text-accent" onClick={() => navigate(`/personas/${p.id}`)}>
-                    <Users className="h-4 w-4 text-muted-foreground" /> {p.nombres} {p.apellidos}
+                    {p.foto_url ? (
+                      <img src={p.foto_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                    ) : (
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {p.nombres} {p.apellidos}
                   </button>
                 </li>
               ))}
