@@ -75,6 +75,15 @@ Deno.serve(async (req) => {
     }).select().single();
     if (error) throw error;
 
+    // Disparar recálculo de parecidos para esta persona (best-effort, sin esperar)
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/parecidos-auto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+        body: JSON.stringify({ persona_id, user_id: user.id }),
+      });
+    } catch {}
+
     return new Response(JSON.stringify({ ok: true, rasgos: saved }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
