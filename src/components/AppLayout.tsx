@@ -1,9 +1,10 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -30,10 +31,9 @@ const utilityNav = [
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-function NavSection({ items, label }: { items: typeof primaryNav; label?: string }) {
+function NavItems({ items }: { items: typeof primaryNav }) {
   return (
     <div className="space-y-0.5">
-      {label && <p className="mb-1 mt-3 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>}
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
@@ -42,7 +42,7 @@ function NavSection({ items, label }: { items: typeof primaryNav; label?: string
             cn(
               "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all",
               isActive
-                ? "bg-primary/15 font-medium text-foreground shadow-[0_1px_0_0_hsla(var(--glass-highlight))_inset]"
+                ? "bg-primary/12 font-medium text-foreground"
                 : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
             )
           }
@@ -50,6 +50,24 @@ function NavSection({ items, label }: { items: typeof primaryNav; label?: string
           <Icon className="h-4 w-4 shrink-0" /> <span className="truncate">{label}</span>
         </NavLink>
       ))}
+    </div>
+  );
+}
+
+function NavGroup({ label, items }: { label: string; items: typeof primaryNav }) {
+  const { pathname } = useLocation();
+  const containsActive = items.some((i) => pathname.startsWith(i.to));
+  const [open, setOpen] = useState(containsActive);
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <span>{label}</span>
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="mt-1"><NavItems items={items} /></div>}
     </div>
   );
 }
