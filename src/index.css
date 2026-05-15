@@ -205,3 +205,16 @@
     color: transparent;
   }
 }
+
+/* Adaptive density — applied via <html data-density="..."> */
+html { font-size: 16px; }
+html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@supports (height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
+}
+html[data-density="compact"] { --radius: 0.75rem; }
+html[data-density="compact"] body { letter-spacing: -0.005em; }
+html[data-density="compact"] .glass-card { @apply p-3; }
+html[data-density="comfortable"] { --radius: 1rem; }
+html[data-density="comfortable"] .glass-card { @apply p-6; }
+
