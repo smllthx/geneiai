@@ -42,7 +42,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <BrandLogo size={72} withGlow />
+          <BrandLogo size={96} />
           <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground">GenAI</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sanguineti · Aeschlimann</p>
         </div>
