@@ -22,6 +22,14 @@ export default function AdaptiveViewport() {
   const [density, setDensity] = useState<Density>(
     () => (localStorage.getItem(DENSITY_KEY) as Density) || "normal"
   );
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (localStorage.getItem("genai:theme") as "light" | "dark") || "dark"
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("genai:theme", theme);
+  }, [theme]);
 
   // Auto-scale based on device kind + diagonal
   useEffect(() => {
