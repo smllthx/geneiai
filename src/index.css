@@ -218,3 +218,30 @@ html[data-density="compact"] .glass-card { @apply p-3; }
 html[data-density="comfortable"] { --radius: 1rem; }
 html[data-density="comfortable"] .glass-card { @apply p-6; }
 
+/* Refined edges — subtle inner highlight ring on glass surfaces */
+.glass, .glass-strong { position: relative; background-clip: padding-box; }
+.glass::after, .glass-strong::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 0 hsla(var(--glass-highlight)),
+    inset 0 0 0 1px hsla(var(--glass-border));
+}
+
+/* Popover/menu polish — rounded corners + crisp ring */
+[data-radix-popper-content-wrapper] [role="menu"],
+[data-radix-popper-content-wrapper] [role="dialog"],
+[data-radix-popper-content-wrapper] [role="listbox"] {
+  border-radius: 1rem !important;
+  overflow: hidden;
+  box-shadow: 0 16px 48px -12px hsl(var(--glass-shadow)), 0 0 0 1px hsla(var(--glass-border));
+}
+
+/* Prevent floating action buttons from overlapping mobile bottom nav */
+@media (max-width: 767px) {
+  main { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem) !important; }
+}
+
