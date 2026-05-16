@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDevice } from "@/hooks/use-device";
-import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw } from "lucide-react";
+import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SCALE_KEY = "genai:ui-scale";
