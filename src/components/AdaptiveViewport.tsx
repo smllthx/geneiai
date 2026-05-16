@@ -144,6 +144,22 @@ export default function AdaptiveViewport() {
             </div>
           </div>
 
+          <div className="mb-3">
+            <p className="mb-1 text-xs text-muted-foreground">Tema</p>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setTheme("light")}
+                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
+                  theme === "light" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
+              ><Sun className="h-3.5 w-3.5" /> Claro</button>
+              <button
+                onClick={() => setTheme("dark")}
+                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
+                  theme === "dark" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
+              ><Moon className="h-3.5 w-3.5" /> Oscuro</button>
+            </div>
+          </div>
+
           <button
             onClick={reset}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-foreground/5 py-2 text-xs hover:bg-foreground/10"
