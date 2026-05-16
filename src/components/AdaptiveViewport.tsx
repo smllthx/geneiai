@@ -63,13 +63,17 @@ export default function AdaptiveViewport() {
       <button
         aria-label="Ajustar vista"
         onClick={() => setOpen((o) => !o)}
-        className="glass-strong fixed bottom-24 right-3 z-40 grid h-11 w-11 place-items-center rounded-full shadow-lg md:bottom-4 md:right-4"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9.5rem)" }}
+        className="glass-strong fixed right-4 z-40 grid h-11 w-11 place-items-center rounded-full ring-1 ring-border/40 shadow-lg md:!bottom-4 md:right-4"
       >
         <Settings2 className="h-5 w-5" />
       </button>
 
       {open && (
-        <div className="glass-strong fixed bottom-40 right-3 z-40 w-72 rounded-2xl p-4 shadow-xl md:bottom-20 md:right-4">
+        <div
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 14.5rem)" }}
+          className="glass-strong fixed right-3 z-40 w-72 rounded-2xl p-4 ring-1 ring-border/40 shadow-xl md:!bottom-20 md:right-4"
+        >
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon className="h-4 w-4 text-primary" />
