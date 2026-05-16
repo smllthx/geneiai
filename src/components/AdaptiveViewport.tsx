@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDevice } from "@/hooks/use-device";
-import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw } from "lucide-react";
+import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SCALE_KEY = "genai:ui-scale";
@@ -22,6 +22,14 @@ export default function AdaptiveViewport() {
   const [density, setDensity] = useState<Density>(
     () => (localStorage.getItem(DENSITY_KEY) as Density) || "normal"
   );
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (localStorage.getItem("genai:theme") as "light" | "dark") || "dark"
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("genai:theme", theme);
+  }, [theme]);
 
   // Auto-scale based on device kind + diagonal
   useEffect(() => {
@@ -133,6 +141,22 @@ export default function AdaptiveViewport() {
                   )}
                 >{d}</button>
               ))}
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <p className="mb-1 text-xs text-muted-foreground">Tema</p>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setTheme("light")}
+                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
+                  theme === "light" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
+              ><Sun className="h-3.5 w-3.5" /> Claro</button>
+              <button
+                onClick={() => setTheme("dark")}
+                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
+                  theme === "dark" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
+              ><Moon className="h-3.5 w-3.5" /> Oscuro</button>
             </div>
           </div>
 

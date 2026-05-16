@@ -4,6 +4,10 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerSW } from "./lib/pwa";
 
+// Theme bootstrap — dark by default, respects user choice
+const savedTheme = localStorage.getItem("genai:theme") ?? "dark";
+document.documentElement.classList.toggle("dark", savedTheme !== "light");
+
 registerSW();
 
 createRoot(document.getElementById("root")!).render(
