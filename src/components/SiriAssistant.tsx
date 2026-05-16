@@ -28,7 +28,8 @@ export default function SiriAssistant() {
       <button
         aria-label="Asistente"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-30 grid h-14 w-14 place-items-center rounded-full shadow-[0_12px_40px_-8px_hsl(var(--mesh-2)/0.6)] transition-transform hover:scale-105 active:scale-95"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.25rem)" }}
+        className="fixed right-4 z-30 grid h-14 w-14 place-items-center rounded-full shadow-[0_12px_40px_-8px_hsl(var(--mesh-2)/0.6)] ring-1 ring-border/40 transition-transform hover:scale-105 active:scale-95 md:!bottom-6 md:right-6"
       >
         <span className="siri-orb absolute inset-0 rounded-full" />
         <span className="glass absolute inset-1 rounded-full" />
