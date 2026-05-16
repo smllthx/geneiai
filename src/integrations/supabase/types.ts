@@ -403,6 +403,57 @@ export type Database = {
         }
         Relationships: []
       }
+      error_reports: {
+        Row: {
+          applied: boolean
+          contexto: Json
+          created_at: string
+          diagnosis: string | null
+          id: string
+          message: string
+          severity: string | null
+          source: string
+          stack: string | null
+          suggested_action: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string
+          user_message: string | null
+        }
+        Insert: {
+          applied?: boolean
+          contexto?: Json
+          created_at?: string
+          diagnosis?: string | null
+          id?: string
+          message: string
+          severity?: string | null
+          source?: string
+          stack?: string | null
+          suggested_action?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id: string
+          user_message?: string | null
+        }
+        Update: {
+          applied?: boolean
+          contexto?: Json
+          created_at?: string
+          diagnosis?: string | null
+          id?: string
+          message?: string
+          severity?: string | null
+          source?: string
+          stack?: string | null
+          suggested_action?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string
+          user_message?: string | null
+        }
+        Relationships: []
+      }
       eventos: {
         Row: {
           certeza: Database["public"]["Enums"]["certeza_nivel"]
