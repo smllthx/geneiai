@@ -36,16 +36,19 @@ import ConfigurarApp from "./pages/ConfigurarApp";
 import Fuentes from "./pages/Fuentes";
 import FamilySearchCallback from "./pages/FamilySearchCallback";
 import NotFound from "./pages/NotFound";
+import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
+  <AppErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <SelfHealer />
+        <BrowserRouter>
+          <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/familysearch/callback" element={<ProtectedRoute><FamilySearchCallback /></ProtectedRoute>} />
