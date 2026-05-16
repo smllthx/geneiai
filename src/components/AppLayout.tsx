@@ -87,12 +87,14 @@ export default function AppLayout() {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 p-3 md:flex md:flex-col">
         <div className="glass-strong flex h-full flex-col rounded-3xl">
           <div className="px-5 pt-5 pb-3">
-            <div className="flex items-center gap-2.5">
-              <BrandLogo size={30} />
-              <h1 className="font-display text-lg font-semibold tracking-tight">GenAI</h1>
+            <div className="flex items-center gap-3">
+              <BrandLogo size={52} />
+              <div className="min-w-0">
+                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GenAI</h1>
+                <p className="mt-1 text-[11px] text-muted-foreground">Sanguineti · Aeschlimann</p>
+              </div>
               <div className="ml-auto"><NotificationBell /></div>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Sanguineti · Aeschlimann</p>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
             <NavItems items={primaryNav} />
