@@ -45,3 +45,6 @@ verify_jwt = false
 
 [functions.vapid-public]
 verify_jwt = false
+
+[functions.diagnose-error]
+verify_jwt = false
