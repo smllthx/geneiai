@@ -83,6 +83,57 @@ export default function Inicio() {
         </>}
       />
 
+      {/* HERO árbol genealógico — protagonista visual */}
+      <Link
+        to="/arbol"
+        className="group relative mb-6 block overflow-hidden rounded-3xl ring-1 ring-border/40 shadow-xl transition-all hover:scale-[1.005] hover:shadow-2xl"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 0% 0%, hsl(var(--primary)/0.30), transparent 55%), radial-gradient(100% 90% at 100% 100%, hsl(var(--accent)/0.28), transparent 60%), linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)",
+        }}
+      >
+        <div className="relative z-10 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
+          <div className="max-w-xl">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">Tu legado</p>
+            <h2 className="font-display text-2xl font-semibold leading-tight md:text-4xl">
+              Árbol genealógico
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base">
+              {stats.personas} personas · {stats.apellidos.length} apellidos · explora generaciones, ramas y migraciones de tu familia.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/25">
+                <GitBranch className="h-3 w-3" /> Abrir árbol
+              </span>
+              <Link to="/personas/nueva" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1 text-xs font-medium hover:bg-foreground/20">
+                <Plus className="h-3 w-3" /> Añadir persona
+              </Link>
+            </div>
+          </div>
+
+          {/* Mini árbol decorativo */}
+          <div className="relative h-32 w-full shrink-0 md:h-40 md:w-80">
+            <svg viewBox="0 0 320 160" className="h-full w-full" fill="none">
+              <defs>
+                <linearGradient id="branch" x1="0" x2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0.9" />
+                </linearGradient>
+              </defs>
+              {/* ramas */}
+              <path d="M160 150 L160 95 M160 95 L70 50 M160 95 L250 50 M70 50 L30 15 M70 50 L110 15 M250 50 L210 15 M250 50 L290 15" stroke="url(#branch)" strokeWidth="2" strokeLinecap="round" />
+              {/* nodos */}
+              {[
+                [160, 150, 9], [160, 95, 7], [70, 50, 6], [250, 50, 6],
+                [30, 15, 4], [110, 15, 4], [210, 15, 4], [290, 15, 4],
+              ].map(([cx, cy, r], i) => (
+                <circle key={i} cx={cx} cy={cy} r={r} fill="hsl(var(--primary))" className="opacity-90 transition-all group-hover:opacity-100" />
+              ))}
+            </svg>
+          </div>
+        </div>
+      </Link>
+
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatPill label="Personas" value={stats.personas} />
         <StatPill label="Fotos" value={stats.fotos} />
