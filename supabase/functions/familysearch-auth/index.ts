@@ -7,8 +7,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FS_AUTH = "https://ident.familysearch.org/cis-web/oauth2/v3/authorization";
-const FS_TOKEN = "https://ident.familysearch.org/cis-web/oauth2/v3/token";
+// Soporta sandbox (integration) y producción.
+// Configurar FAMILYSEARCH_ENV = "sandbox" | "beta" para usar el entorno de integración.
+const FS_ENV = (Deno.env.get("FAMILYSEARCH_ENV") ?? "production").toLowerCase();
+const FS_HOST = (FS_ENV === "sandbox" || FS_ENV === "beta" || FS_ENV === "integration")
+  ? "https://identbeta.familysearch.org"
+  : "https://ident.familysearch.org";
+const FS_AUTH = `${FS_HOST}/cis-web/oauth2/v3/authorization`;
+const FS_TOKEN = `${FS_HOST}/cis-web/oauth2/v3/token`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
