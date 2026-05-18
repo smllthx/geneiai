@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText } from "lucide-react";
+import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText, Sparkles, Brain, Loader2 } from "lucide-react";
 import { parseGedcom } from "@/lib/import/gedcom";
 import { readCSV, readXLSX, readJSON, parseTabular } from "@/lib/import/tabular";
 import { persistImport, type ImportSummary } from "@/lib/import/persist";
@@ -25,6 +25,49 @@ export default function Importar() {
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [genAsc, setGenAsc] = useState(4);
   const [genDesc, setGenDesc] = useState(2);
+  const [iaFile, setIaFile] = useState<File | null>(null);
+  const [iaBusy, setIaBusy] = useState(false);
+  const [iaResult, setIaResult] = useState<any>(null);
+
+  const fileToBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result ?? "");
+      resolve(s.split(",")[1] ?? "");
+    };
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
+
+  const handleIaLeer = async () => {
+    if (!iaFile) return toast.error("Selecciona un archivo");
+    setIaBusy(true); setIaResult(null);
+    const t = toast.loading("IA leyendo el documento…");
+    try {
+      const mime = iaFile.type || "application/octet-stream";
+      const isText = mime.startsWith("text/") || /\.(txt|csv|json|md|ged|gedcom)$/i.test(iaFile.name);
+      const isVisual = mime.startsWith("image/") || mime === "application/pdf";
+      let payload: any = { filename: iaFile.name, mime_type: mime };
+      if (isVisual) {
+        payload.file_base64 = await fileToBase64(iaFile);
+      } else if (isText) {
+        payload.text_content = await iaFile.text();
+      } else {
+        // intentar como texto igualmente
+        try { payload.text_content = await iaFile.text(); }
+        catch { payload.file_base64 = await fileToBase64(iaFile); }
+      }
+      const { data, error } = await supabase.functions.invoke("leer-documento-ia", { body: payload });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setIaResult(data);
+      toast.success(`+${data.personasCreadas} personas · +${data.eventosCreados} eventos · +${data.relacionesCreadas} relaciones`);
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error de IA");
+    } finally { setIaBusy(false); }
+  };
 
   const loadAccount = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -129,13 +172,63 @@ export default function Importar() {
         <AlertDescription>Los datos importados quedan como certeza «probable» hasta que los verifiques con fuentes documentales.</AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="familysearch" className="space-y-4">
+      <Tabs defaultValue="ia" className="space-y-4">
         <TabsList className="flex flex-wrap h-auto">
+          <TabsTrigger value="ia"><Sparkles className="h-3.5 w-3.5" /> IA: Leer documento</TabsTrigger>
           <TabsTrigger value="familysearch">FamilySearch</TabsTrigger>
           <TabsTrigger value="gedcom">GEDCOM / CSV / JSON</TabsTrigger>
           <TabsTrigger value="exportar">Exportar</TabsTrigger>
           <TabsTrigger value="otros">Otras plataformas</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ia">
+          <GlassCard>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <Brain className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-lg font-semibold">IA experta lee tu documento genealógico</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Subí cualquier archivo (PDF, foto de acta, escaneo, DOCX, TXT, CSV…). La IA extrae personas, fechas,
+                  lugares, eventos y relaciones, y los agrega automáticamente a tu árbol (con certeza "probable" para
+                  que los revises). Los duplicados por nombre+apellido se reusan.
+                </p>
+                <div className="mt-3 space-y-3">
+                  <Input
+                    type="file"
+                    accept="image/*,application/pdf,.pdf,.txt,.csv,.json,.md,.ged,.gedcom,.docx,.doc"
+                    onChange={(e) => { setIaFile(e.target.files?.[0] ?? null); setIaResult(null); }}
+                  />
+                  {iaFile && <p className="text-xs text-muted-foreground">{iaFile.name} · {(iaFile.size / 1024).toFixed(1)} KB</p>}
+                  <Button onClick={handleIaLeer} disabled={!iaFile || iaBusy} className="w-full sm:w-auto">
+                    {iaBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {iaBusy ? "Analizando…" : "Leer con IA y agregar al árbol"}
+                  </Button>
+                </div>
+                {iaResult && (
+                  <div className="mt-4 space-y-2 rounded-2xl bg-foreground/5 p-4 text-sm">
+                    <p className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <strong>+{iaResult.personasCreadas}</strong> personas nuevas
+                      {iaResult.personasReusadas > 0 && <span className="text-muted-foreground">(· {iaResult.personasReusadas} reusadas)</span>}
+                      , <strong>+{iaResult.eventosCreados}</strong> eventos, <strong>+{iaResult.relacionesCreadas}</strong> relaciones.
+                    </p>
+                    {iaResult.tipo_documento && <p className="text-xs text-muted-foreground">Tipo: {iaResult.tipo_documento}</p>}
+                    {iaResult.resumen && <p className="text-xs">{iaResult.resumen}</p>}
+                    {iaResult.transcripcion && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-muted-foreground">Transcripción</summary>
+                        <pre className="mt-2 whitespace-pre-wrap">{iaResult.transcripcion}</pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+        </TabsContent>
+
 
         <TabsContent value="familysearch">
           <GlassCard>
