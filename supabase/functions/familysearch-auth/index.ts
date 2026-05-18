@@ -56,13 +56,20 @@ Deno.serve(async (req) => {
           "Content-Type": "application/x-www-form-urlencoded",
           "Accept": "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          redirect_uri,
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
+      const params: Record<string, string> = {
+        grant_type: "authorization_code",
+        code,
+        redirect_uri,
+        client_id: clientId,
+      };
+      if (clientSecret) params.client_secret = clientSecret;
+      const tokenRes = await fetch(FS_TOKEN, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json",
+        },
+        body: new URLSearchParams(params),
       });
       const tokenData = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(`FS token: ${JSON.stringify(tokenData)}`);
