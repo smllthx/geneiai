@@ -1,33 +1,42 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Check } from "lucide-react";
+import { Bell, Check, Sparkles, FileText, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
 import { toast } from "sonner";
 
 export default function NotificationBell() {
   const [items, setItems] = useState<any[]>([]);
+  const [sugs, setSugs] = useState<any[]>([]);
+  const [infs, setInfs] = useState<any[]>([]);
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
   const load = async () => {
-    const { data } = await supabase.from("notificaciones")
-      .select("*").order("created_at", { ascending: false }).limit(20);
-    setItems(data ?? []);
+    const [{ data: n }, { data: s }, { data: i }] = await Promise.all([
+      supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
+      supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30),
+      supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
+    ]);
+    setItems(n ?? []); setSugs(s ?? []); setInfs(i ?? []);
   };
 
   useEffect(() => {
     setPerm(notificationPermission());
     load();
     const ch = supabase
-      .channel("notif")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notificaciones" }, () => load())
+      .channel("notif-center")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
 
   const noLeidas = items.filter((i) => !i.leida).length;
+  const total = noLeidas + sugs.length + infs.length;
   const marcarTodas = async () => {
     await supabase.from("notificaciones").update({ leida: true }).eq("leida", false);
     load();
@@ -54,14 +63,14 @@ export default function NotificationBell() {
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
           <Bell className="h-4 w-4" />
-          {noLeidas > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{noLeidas}</span>
+          {total > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{total}</span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-[22rem] p-0" align="end">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-semibold">Notificaciones</span>
+          <span className="text-sm font-semibold">Centro de avisos</span>
           {noLeidas > 0 && (
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={marcarTodas}>
               <Check className="mr-1 h-3 w-3" /> Marcar leídas
@@ -74,17 +83,57 @@ export default function NotificationBell() {
             <Button size="sm" className="h-7 text-xs" onClick={pedirPermiso}>Permitir notificaciones</Button>
           </div>
         )}
-        <div className="max-h-80 overflow-y-auto">
-          {items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin notificaciones.</p>
-          ) : items.map((n) => (
-            <Link key={n.id} to={n.url ?? "#"} className={`block border-b px-3 py-2 text-sm hover:bg-foreground/5 ${!n.leida ? "bg-primary/5" : ""}`}>
-              <p className="font-medium">{n.titulo}</p>
-              {n.mensaje && <p className="text-xs text-muted-foreground">{n.mensaje}</p>}
-              <p className="mt-0.5 text-[10px] text-muted-foreground/70">{new Date(n.created_at).toLocaleString("es")}</p>
-            </Link>
-          ))}
-        </div>
+        <Tabs defaultValue="notif" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 rounded-none border-b bg-transparent">
+            <TabsTrigger value="notif" className="text-xs">
+              <FileText className="mr-1 h-3 w-3" /> Avisos {noLeidas > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{noLeidas}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="sug" className="text-xs">
+              <Sparkles className="mr-1 h-3 w-3" /> Sugerencias {sugs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{sugs.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="pred" className="text-xs">
+              <Lightbulb className="mr-1 h-3 w-3" /> Predicciones {infs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{infs.length}</span>}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="notif" className="mt-0 max-h-80 overflow-y-auto">
+            {items.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin notificaciones.</p>
+            ) : items.map((n) => (
+              <Link key={n.id} to={n.url ?? "#"} className={`block border-b px-3 py-2 text-sm hover:bg-foreground/5 ${!n.leida ? "bg-primary/5" : ""}`}>
+                <p className="font-medium">{n.titulo}</p>
+                {n.mensaje && <p className="text-xs text-muted-foreground">{n.mensaje}</p>}
+                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{new Date(n.created_at).toLocaleString("es")}</p>
+              </Link>
+            ))}
+          </TabsContent>
+          <TabsContent value="sug" className="mt-0 max-h-80 overflow-y-auto">
+            {sugs.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin sugerencias pendientes. Pulsa "Investigar con IA" en una persona.</p>
+            ) : sugs.map((s) => (
+              <Link key={s.id} to={s.persona_id ? `/personas/${s.persona_id}` : "/asistente"} className="block border-b px-3 py-2 text-sm hover:bg-foreground/5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium">{s.titulo}</p>
+                  <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{s.confianza}%</span>
+                </div>
+                {s.descripcion && <p className="text-xs text-muted-foreground">{s.descripcion}</p>}
+                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{s.tipo} · {s.origen ?? "ia"}</p>
+              </Link>
+            ))}
+          </TabsContent>
+          <TabsContent value="pred" className="mt-0 max-h-80 overflow-y-auto">
+            {infs.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin predicciones aún. Genera inferencias desde una persona.</p>
+            ) : infs.map((i) => (
+              <Link key={i.id} to={i.person_id ? `/personas/${i.person_id}` : "/inferencias"} className="block border-b px-3 py-2 text-sm hover:bg-foreground/5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium">{i.inferred_field}: {i.inferred_value}</p>
+                  <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{i.confidence_score}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2">{i.explanation}</p>
+              </Link>
+            ))}
+          </TabsContent>
+        </Tabs>
       </PopoverContent>
     </Popover>
   );

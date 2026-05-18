@@ -23,7 +23,7 @@ export default function PersonaHero({ p }: { p: any }) {
             "radial-gradient(at 0% 0%, hsl(var(--mesh-1)/0.25) 0, transparent 50%), radial-gradient(at 100% 100%, hsl(var(--mesh-2)/0.25) 0, transparent 50%)",
         }}
       />
-      <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center">
+      <div className="relative flex flex-col items-center gap-5 text-center">
         <div className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground/5 ring-4 ${ring} md:h-32 md:w-32`}>
           {p?.foto_url ? (
             <img src={p.foto_url} alt={`${p.nombres ?? ""} ${p.apellidos ?? ""}`} className="h-full w-full object-cover" />
@@ -38,12 +38,12 @@ export default function PersonaHero({ p }: { p: any }) {
           <h1 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
             {p?.nombres} {p?.apellidos} {sexoIcon && <span className="ml-1 text-2xl text-muted-foreground">{sexoIcon}</span>}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
             {lifespan && <span>{lifespan}</span>}
             {edad && <><span>·</span><span>{edad}</span></>}
             {p?.ocupacion && <><span>·</span><span>{p.ocupacion}</span></>}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {p?.certeza && <CertezaBadge value={p.certeza} />}
             {p?.viva === "si" && <span className="glass-pill">Persona viva — privada</span>}
             {p?.religion && <span className="glass-pill">{p.religion}</span>}

@@ -90,7 +90,7 @@ export default function AppLayout() {
             <div className="flex items-center gap-3">
               <BrandLogo size={52} />
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GenAI</h1>
+                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENAIA</h1>
                 <p className="mt-1 text-[11px] text-muted-foreground">Sanguineti · Aeschlimann</p>
               </div>
               <div className="ml-auto"><NotificationBell /></div>
@@ -122,7 +122,7 @@ export default function AppLayout() {
           }}
         />
         <main
-          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-8"
+          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1rem)" }}
         >
           <Outlet />

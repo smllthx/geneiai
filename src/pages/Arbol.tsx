@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -26,6 +26,7 @@ export default function Arbol() {
   const [vista, setVista] = useState<Vista>("ascendientes");
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -167,8 +168,22 @@ export default function Arbol() {
     );
   };
 
+  const exportarGedcom = async () => {
+    const { data, error } = await supabase.functions.invoke("familysearch-export", { body: { format: "gedcom" } });
+    if (error || !data) {
+      // Fallback: ir a la página Importar/Exportar
+      toast.info("Abriendo el centro de Importar / Exportar para crear el archivo");
+      window.location.href = "/importar";
+      return;
+    }
+    const blob = new Blob([typeof data === "string" ? data : (data as any).gedcom ?? JSON.stringify(data)], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "arbol.ged"; a.click(); URL.revokeObjectURL(url);
+    toast.success("Archivo GEDCOM descargado");
+  };
+
   return (
-    <div>
+    <div className={fullscreen ? "fixed inset-0 z-[60] bg-background overflow-y-auto p-3 md:p-6" : ""}>
       <SectionHeader
         eyebrow="Genealogía visual"
         title="Árbol familiar"
@@ -220,6 +235,11 @@ export default function Arbol() {
         <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} aria-label="Alejar"><ZoomOut className="h-4 w-4" /></Button>
         <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.min(1.6, z + 0.1))} aria-label="Acercar"><ZoomIn className="h-4 w-4" /></Button>
         <Button variant="outline" size="sm" onClick={() => setZoom(1)}><Crosshair className="h-4 w-4" /> Centrar</Button>
+        <Button variant={fullscreen ? "default" : "outline"} size="sm" onClick={() => setFullscreen((v) => !v)}>
+          {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportarGedcom}><FileDown className="h-4 w-4" /> Crear archivo del árbol</Button>
         {lastUndo && (
           <Button variant="ghost" size="sm" onClick={async () => {
             await supabase.from("relaciones").delete().in("id", lastUndo.ids);
