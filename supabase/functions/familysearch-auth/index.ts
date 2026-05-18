@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const clientId = Deno.env.get("FAMILYSEARCH_CLIENT_ID");
-    const clientSecret = Deno.env.get("FAMILYSEARCH_CLIENT_SECRET");
-    if (!clientId || !clientSecret) throw new Error("FamilySearch no configurado");
+    const clientSecret = Deno.env.get("FAMILYSEARCH_CLIENT_SECRET") ?? "";
+    if (!clientId) throw new Error("FamilySearch Client ID no configurado");
 
     const auth = req.headers.get("Authorization");
     if (!auth) throw new Error("No autenticado");
@@ -50,19 +50,20 @@ Deno.serve(async (req) => {
 
     if (action === "exchange") {
       if (!code || !redirect_uri) throw new Error("Faltan code/redirect_uri");
+      const params: Record<string, string> = {
+        grant_type: "authorization_code",
+        code,
+        redirect_uri,
+        client_id: clientId,
+      };
+      if (clientSecret) params.client_secret = clientSecret;
       const tokenRes = await fetch(FS_TOKEN, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Accept": "application/json",
         },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          redirect_uri,
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
+        body: new URLSearchParams(params),
       });
       const tokenData = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(`FS token: ${JSON.stringify(tokenData)}`);
