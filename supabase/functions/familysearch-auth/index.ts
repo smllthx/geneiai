@@ -50,12 +50,6 @@ Deno.serve(async (req) => {
 
     if (action === "exchange") {
       if (!code || !redirect_uri) throw new Error("Faltan code/redirect_uri");
-      const tokenRes = await fetch(FS_TOKEN, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json",
-        },
       const params: Record<string, string> = {
         grant_type: "authorization_code",
         code,
