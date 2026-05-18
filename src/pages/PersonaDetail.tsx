@@ -250,6 +250,38 @@ export default function PersonaDetail() {
             toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Escribiendo biografía con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success("Biografía generada y guardada en Notas");
+            const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+            if (fresh) setP(fresh);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Biografía automática</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Buscando ascendientes con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "ascendientes" } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.sugerencias_creadas ?? 0} sugerencias de ascendientes`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Buscar ascendientes</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Buscando descendientes con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "descendientes" } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`${data.sugerencias_creadas ?? 0} sugerencias de descendientes`);
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
         {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         <Button size="sm" variant="ghost" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Ver en árbol</Button>
       </div>
@@ -274,8 +306,8 @@ export default function PersonaDetail() {
         <TabsContent value="resumen">
           {!isNew && (
             <Card className="archivo-card mb-3">
-              <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
-              <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+              <CardHeader className="pb-2 text-center"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
+              <CardContent className="mx-auto grid max-w-3xl gap-x-6 gap-y-3 text-center text-sm sm:grid-cols-2">
                 <Field label="Nombres" value={p.nombres} />
                 <Field label="Apellidos" value={p.apellidos} />
                 <Field label="Sexo" value={p.sexo} />
