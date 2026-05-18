@@ -99,6 +99,16 @@ export default function Configuracion() {
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="font-serif text-xl">FamilySearch</CardTitle></CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-xl border border-border p-3 space-y-2">
+            <Label className="font-medium">Credenciales de desarrollador</Label>
+            <p className="text-xs text-muted-foreground">
+              Registra tu app en <a href="https://www.familysearch.org/developers/" target="_blank" rel="noopener noreferrer" className="underline text-link">familysearch.org/developers</a> (tipo Browser/Public — no requiere Client Secret). Redirect URI a usar: <code className="text-xs">{window.location.origin}/familysearch/callback</code>
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Para guardar tu <strong>Client ID</strong> (y opcionalmente el <strong>Secret</strong>) pídeselo al asistente de Lovable diciendo «actualiza mis credenciales de FamilySearch». Se almacenan cifradas en el servidor y nunca quedan expuestas al navegador.
+            </p>
+          </div>
+
           {!fsAccount ? (
             <div className="text-sm text-muted-foreground">
               No conectado. Ve a <a href="/importar" className="underline text-link">Importar</a> para conectar tu cuenta de FamilySearch.
