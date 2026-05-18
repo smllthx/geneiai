@@ -122,7 +122,7 @@ export default function AppLayout() {
           }}
         />
         <main
-          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-8"
+          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1rem)" }}
         >
           <Outlet />
