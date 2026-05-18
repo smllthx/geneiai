@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText } from "lucide-react";
+import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText, Sparkles, Brain, Loader2 } from "lucide-react";
 import { parseGedcom } from "@/lib/import/gedcom";
 import { readCSV, readXLSX, readJSON, parseTabular } from "@/lib/import/tabular";
 import { persistImport, type ImportSummary } from "@/lib/import/persist";
@@ -25,6 +25,49 @@ export default function Importar() {
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [genAsc, setGenAsc] = useState(4);
   const [genDesc, setGenDesc] = useState(2);
+  const [iaFile, setIaFile] = useState<File | null>(null);
+  const [iaBusy, setIaBusy] = useState(false);
+  const [iaResult, setIaResult] = useState<any>(null);
+
+  const fileToBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result ?? "");
+      resolve(s.split(",")[1] ?? "");
+    };
+    r.onerror = reject;
+    r.readAsDataURL(f);
+  });
+
+  const handleIaLeer = async () => {
+    if (!iaFile) return toast.error("Selecciona un archivo");
+    setIaBusy(true); setIaResult(null);
+    const t = toast.loading("IA leyendo el documento…");
+    try {
+      const mime = iaFile.type || "application/octet-stream";
+      const isText = mime.startsWith("text/") || /\.(txt|csv|json|md|ged|gedcom)$/i.test(iaFile.name);
+      const isVisual = mime.startsWith("image/") || mime === "application/pdf";
+      let payload: any = { filename: iaFile.name, mime_type: mime };
+      if (isVisual) {
+        payload.file_base64 = await fileToBase64(iaFile);
+      } else if (isText) {
+        payload.text_content = await iaFile.text();
+      } else {
+        // intentar como texto igualmente
+        try { payload.text_content = await iaFile.text(); }
+        catch { payload.file_base64 = await fileToBase64(iaFile); }
+      }
+      const { data, error } = await supabase.functions.invoke("leer-documento-ia", { body: payload });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setIaResult(data);
+      toast.success(`+${data.personasCreadas} personas · +${data.eventosCreados} eventos · +${data.relacionesCreadas} relaciones`);
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error de IA");
+    } finally { setIaBusy(false); }
+  };
 
   const loadAccount = async () => {
     const user = (await supabase.auth.getUser()).data.user;
