@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const clientId = Deno.env.get("FAMILYSEARCH_CLIENT_ID");
-    const clientSecret = Deno.env.get("FAMILYSEARCH_CLIENT_SECRET");
-    if (!clientId || !clientSecret) throw new Error("FamilySearch no configurado");
+    const clientSecret = Deno.env.get("FAMILYSEARCH_CLIENT_SECRET") ?? "";
+    if (!clientId) throw new Error("FamilySearch Client ID no configurado");
 
     const auth = req.headers.get("Authorization");
     if (!auth) throw new Error("No autenticado");
