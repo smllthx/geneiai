@@ -4,7 +4,7 @@ import logo from "@/assets/logo.png";
 import { Moon, Sun } from "lucide-react";
 
 /**
- * GenAI brand logo — interactivo: click alterna tema oscuro/claro.
+ * GENAIA brand logo — interactivo: click alterna tema oscuro/claro.
  * Halo en gradiente (ámbar → esmeralda → índigo) que se ve bien en ambos modos.
  */
 export default function BrandLogo({
@@ -54,7 +54,7 @@ export default function BrandLogo({
       <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-background/70 backdrop-blur-sm">
         <img
           src={logo}
-          alt="GenAI"
+          alt="GENAIA"
           width={size - 6}
           height={size - 6}
           className="object-contain transition-transform duration-300 group-hover:scale-105"
