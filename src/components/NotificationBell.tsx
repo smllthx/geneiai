@@ -139,7 +139,6 @@ export default function NotificationBell() {
               </Link>
             ))}
           </TabsContent>
-          </TabsContent>
           <TabsContent value="task" className="mt-0 max-h-80 overflow-y-auto">
             {tasks.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">No hay tareas pendientes.</p>
