@@ -139,33 +139,29 @@ export default function PersonaDetail() {
 
   const set = (k: string, v: any) => setP({ ...p, [k]: v });
 
+  // Use the unified kinship helpers so this panel matches the tree, fan chart and dynasty view
   const fam = useMemo(() => {
-    const padres = new Map<string, any>(), conyuges = new Map<string, any>(),
-          hijos = new Map<string, any>(), hermanos = new Map<string, any>(), otros = new Map<string, any>();
-    for (const r of relaciones) {
-      const otherIsCenter = r.persona_id === id;
-      const other = r.pariente; if (!other || !other.id) continue;
-      const t = r.tipo;
-      if (otherIsCenter && (t === "padre" || t === "madre")) padres.set(other.id, other);
-      else if (!otherIsCenter && (t === "padre" || t === "madre")) hijos.set(other.id, other);
-      else if (t === "conyuge") conyuges.set(other.id, other);
-      else if (t === "hijo") otherIsCenter ? hijos.set(other.id, other) : padres.set(other.id, other);
-      else if (t === "hermano") hermanos.set(other.id, other);
-      else otros.set(other.id, other);
-    }
-    const byBirth = (a: any, b: any) => {
-      const ya = a.nac_fecha ? new Date(a.nac_fecha).getUTCFullYear() : (a.nac_rango_ini ?? 9999);
-      const yb = b.nac_fecha ? new Date(b.nac_fecha).getUTCFullYear() : (b.nac_rango_ini ?? 9999);
-      return ya - yb;
-    };
-    return {
-      padres: [...padres.values()].sort(byBirth),
-      conyuges: [...conyuges.values()].sort(byBirth),
-      hijos: [...hijos.values()].sort(byBirth),
-      hermanos: [...hermanos.values()].sort(byBirth),
-      otros: [...otros.values()].sort(byBirth),
-    };
-  }, [relaciones, id]);
+    if (!id) return { padres: [], conyuges: [], hijos: [], hermanos: [], otros: [] };
+    // Build a flat byId map from relaciones.pariente joins + the loaded personas
+    const byId = new Map<string, any>();
+    for (const ap of allPersonas) byId.set(ap.id, ap);
+    for (const r of relaciones) if (r.pariente?.id) byId.set(r.pariente.id, r.pariente);
+    if (p?.id) byId.set(p.id, p);
+    // Normalise rows so helper sees both directions (relaciones returned for this person already include both)
+    const flat = relaciones.map((r: any) => ({ id: r.id, persona_id: r.persona_id, pariente_id: r.pariente_id, tipo: r.tipo }));
+    const padres = kPadresDe(id, flat, byId).all;
+    const conyuges = kConyugesDe(id, flat, byId);
+    const hijos = kHijosDe(id, flat, byId);
+    const hermanos = kHermanosDe(id, flat, byId);
+    // "otros": cualquier persona referenciada en relaciones que no caiga en las categorías anteriores
+    const known = new Set([...padres, ...conyuges, ...hijos, ...hermanos].map((x: any) => x.id));
+    const otros = relaciones
+      .map((r: any) => r.pariente)
+      .filter((x: any) => x?.id && x.id !== id && !known.has(x.id))
+      // dedupe
+      .filter((x: any, i: number, arr: any[]) => arr.findIndex((y) => y.id === x.id) === i);
+    return { padres, conyuges, hijos, hermanos, otros };
+  }, [relaciones, id, p, allPersonas]);
 
   if (!idValid) {
     return (
