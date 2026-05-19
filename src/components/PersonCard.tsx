@@ -94,7 +94,7 @@ export const PersonCard = memo(function PersonCard({
       </div>
     </button>
   );
-}
+});
 
 export function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
   return (
