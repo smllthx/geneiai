@@ -256,6 +256,51 @@ export default function Arbol() {
     toast.success("Archivo GEDCOM descargado");
   };
 
+  const verificarCoherencia = async () => {
+    const t = toast.loading("Verificando coherencia del árbol…");
+    try {
+      const issues = checkCoherence(personas as any, rels as any);
+      toast.dismiss(t);
+      if (issues.length === 0) { toast.success("Árbol coherente: 0 problemas detectados"); return; }
+      const errors = issues.filter((i) => i.severity === "error").length;
+      const warns = issues.filter((i) => i.severity === "warn").length;
+      toast.success(`${issues.length} problema(s) — ${errors} crítico(s), ${warns} aviso(s)`);
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        // Persist as research_tasks so they appear in Tareas + Notificaciones
+        const rows = issues.slice(0, 50).map((i) => ({
+          user_id: user.id,
+          person_id: i.persona_id,
+          tipo: "otro" as const,
+          descripcion: `[${i.severity.toUpperCase()}] ${i.message} (${i.rule})`,
+        }));
+        await supabase.from("research_tasks").insert(rows);
+        notify("Verificación de coherencia", { body: `${issues.length} problemas registrados como tareas`, url: "/arbol" });
+      }
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const agentesEnParalelo = async () => {
+    if (!persona) return;
+    const pid = persona.id;
+    const t = toast.loading("Desplegando 4 agentes en paralelo…");
+    try {
+      const tasks = [
+        supabase.functions.invoke("biografia-auto", { body: { person_id: pid } }),
+        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "ascendientes" } }),
+        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "descendientes" } }),
+        supabase.functions.invoke("investigar-auto", { body: { person_id: pid } }),
+      ];
+      const results = await Promise.allSettled(tasks);
+      toast.dismiss(t);
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      toast.success(`${ok}/4 agentes completados para ${persona.nombres}`);
+      notify("Agentes en paralelo", { body: `${ok}/4 completados para ${persona.nombres} ${persona.apellidos}`, url: `/personas/${pid}` });
+      reload();
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+
   return (
     <div className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto p-3 md:p-6" : ""} style={fullscreen ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" } : undefined}>
       <SectionHeader
