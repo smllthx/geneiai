@@ -12,6 +12,7 @@ import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Downlo
 import { parseGedcom } from "@/lib/import/gedcom";
 import { readCSV, readXLSX, readJSON, parseTabular } from "@/lib/import/tabular";
 import { persistImport, type ImportSummary } from "@/lib/import/persist";
+import { notify } from "@/lib/notifications";
 
 const CSV_TEMPLATE = `id,nombres,apellidos,sexo,nac_fecha,nac_lugar,defuncion_fecha,defuncion_lugar,padre_id,madre_id,conyuge_id,ocupacion,notas
 P1,Giovanni Battista,Sanguineti,M,1850-03-12,Chiavari (Italia),1920-08-01,Buenos Aires,,,P2,,Migrante 1875
@@ -63,6 +64,11 @@ export default function Importar() {
       if (data?.error) throw new Error(data.error);
       setIaResult(data);
       toast.success(`+${data.personasCreadas} personas · +${data.eventosCreados} eventos · +${data.relacionesCreadas} relaciones`);
+      notify("Documento procesado por IA", {
+        body: `+${data.personasCreadas ?? 0} personas · +${data.eventosCreados ?? 0} eventos · +${data.relacionesCreadas ?? 0} relaciones`,
+        url: "/personas",
+        tag: "leer-doc",
+      });
     } catch (e: any) {
       toast.dismiss(t);
       toast.error(e.message ?? "Error de IA");

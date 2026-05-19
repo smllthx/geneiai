@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { notify } from "@/lib/notifications";
 
 export default function InvestigacionExterna() {
   const [personas, setPersonas] = useState<any[]>([]);
@@ -31,6 +32,12 @@ export default function InvestigacionExterna() {
       if (data?.error) throw new Error(data.error);
       setResult(data);
       toast.success(`+${data.hipotesis_creadas} hipótesis · +${data.sugerencias_creadas} sugerencias`);
+      const persona = personas.find((x) => x.id === pid);
+      notify("Investigación IA finalizada", {
+        body: `${persona?.nombres ?? ""} ${persona?.apellidos ?? ""} · +${data.hipotesis_creadas ?? 0} hipótesis · +${data.sugerencias_creadas ?? 0} sugerencias`,
+        url: `/personas/${pid}`,
+        tag: `inv-${pid}`,
+      });
     } catch (e: any) {
       toast.dismiss(t); toast.error(e.message ?? "Error");
     } finally { setBusy(false); }

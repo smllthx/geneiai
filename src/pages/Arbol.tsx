@@ -6,13 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, Focus } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
+import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 
-type RelTipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
 type Vista = "ascendientes" | "abanico" | "dinastica";
 
 export default function Arbol() {
@@ -77,28 +77,10 @@ export default function Arbol() {
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
 
-  const padresDe = (pid: string) => {
-    const padreIds = rels
-      .filter((r) => r.persona_id === pid && (r.tipo === "padre" || r.tipo === "madre"))
-      .map((r) => ({ id: r.pariente_id, tipo: r.tipo }));
-    const padre = padreIds.find((x) => x.tipo === "padre" || (byId.get(x.id)?.sexo === "masculino"));
-    const madre = padreIds.find((x) => x.tipo === "madre" || (byId.get(x.id)?.sexo === "femenino"));
-    return { padre: padre ? byId.get(padre.id) : undefined, madre: madre ? byId.get(madre.id) : undefined };
-  };
-
-  const conyugesDe = (pid: string) =>
-    rels.filter((r) => (r.persona_id === pid || r.pariente_id === pid) && r.tipo === "conyuge")
-      .map((r) => byId.get(r.persona_id === pid ? r.pariente_id : r.persona_id))
-      .filter(Boolean) as PersonaLite[];
-
-  const hijosDe = (pid: string) => {
-    const ids = new Set<string>();
-    for (const r of rels) {
-      if (r.pariente_id === pid && (r.tipo === "padre" || r.tipo === "madre")) ids.add(r.persona_id);
-      if (r.persona_id === pid && r.tipo === "hijo") ids.add(r.pariente_id);
-    }
-    return [...ids].map((i) => byId.get(i)).filter(Boolean) as PersonaLite[];
-  };
+  // Use unified kinship helpers — same logic everywhere in the app
+  const padresDe = (pid: string) => kPadresDe(pid, rels as any, byId);
+  const conyugesDe = (pid: string) => kConyugesDe(pid, rels as any, byId);
+  const hijosDe = (pid: string) => kHijosDe(pid, rels as any, byId);
 
   const reload = () => setReloadKey((k) => k + 1);
 
@@ -152,26 +134,74 @@ export default function Arbol() {
 
   const persona = center ? byId.get(center) : undefined;
 
-  // Wrapper that makes a card draggable+droppable in edit mode
-  const Draggable = ({ p, children }: { p: PersonaLite; children: React.ReactNode }) => {
-    if (!editMode) return <>{children}</>;
-    return (
-      <div
-        draggable
-        onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
-        onDrop={(e) => {
-          e.preventDefault();
-          const src = e.dataTransfer.getData("text/persona");
-          if (!src || src === p.id) return;
-          setDropTarget({ source: src, target: p.id });
-        }}
-        className="ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
-      >
-        {children}
-      </div>
-    );
+  // Relation editor (delete or change type)
+  const [editRel, setEditRel] = useState<{ a: PersonaLite; b: PersonaLite } | null>(null);
+
+  const eliminarRelacionEntre = async (aId: string, bId: string) => {
+    const ids = relacionesEntre(aId, bId, rels as any).map((r) => r.id);
+    if (!ids.length) return;
+    await supabase.from("relaciones").delete().in("id", ids);
+    toast.success("Relación eliminada");
+    setEditRel(null);
+    reload();
   };
+
+  // Wrapper: in edit mode = drag/drop + delete badge; otherwise click focuses on that ancestor
+  const TreeCard = ({ p, focusable = true, children }: { p: PersonaLite; focusable?: boolean; children: React.ReactNode }) => {
+    if (editMode) {
+      const linkedToCenter = persona && p.id !== persona.id && relacionesEntre(persona.id, p.id, rels as any).length > 0;
+      return (
+        <div
+          draggable
+          onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const src = e.dataTransfer.getData("text/persona");
+            if (!src || src === p.id) return;
+            setDropTarget({ source: src, target: p.id });
+          }}
+          className="relative ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
+        >
+          {children}
+          {linkedToCenter && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditRel({ a: persona!, b: p }); }}
+              className="absolute -top-2 -right-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition"
+              aria-label="Editar relación"
+              title="Editar / eliminar esta relación"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      );
+    }
+    if (focusable && p.id !== center) {
+      // override default navigation: single click focuses on this person in the tree
+      return (
+        <div className="relative group">
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCenter(p.id); toast.success(`Centro: ${p.nombres}`, { duration: 1200 }); }}>
+            <PersonCardClickIntercept>{children}</PersonCardClickIntercept>
+          </div>
+          <Link
+            to={`/personas/${p.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute -top-2 -right-2 z-10 hidden group-hover:grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md text-[10px]"
+            title="Abrir ficha completa"
+          >→</Link>
+        </div>
+      );
+    }
+    return <>{children}</>;
+  };
+
+  // Swallows the inner PersonCard's button click so our outer onClick wins
+  const PersonCardClickIntercept = ({ children }: { children: React.ReactNode }) => (
+    <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}>{children}</div>
+  );
+
+  const Draggable = TreeCard; // backwards-compat alias used by older sections below
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
   const Ascendants = ({ pid, gen }: { pid: string; gen: number }) => {
@@ -374,6 +404,39 @@ export default function Arbol() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Editar relación existente */}
+      <Dialog open={!!editRel} onOpenChange={(o) => !o && setEditRel(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar relación</DialogTitle></DialogHeader>
+          {editRel && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Entre <strong>{editRel.a.nombres} {editRel.a.apellidos}</strong> y{" "}
+                <strong>{editRel.b.nombres} {editRel.b.apellidos}</strong>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ["padre", "Cambiar a padre/madre"],
+                  ["hijo", "Cambiar a hijo/a"],
+                  ["conyuge", "Cambiar a cónyuge"],
+                  ["hermano", "Cambiar a hermano/a"],
+                ] as [RelTipo, string][]).map(([t, label]) => (
+                  <Button key={t} variant="outline" size="sm" onClick={async () => {
+                    await eliminarRelacionEntre(editRel.a.id, editRel.b.id);
+                    await crearRelacion(editRel.b.id, editRel.a.id, t);
+                  }}>{label}</Button>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button variant="destructive" size="sm" onClick={() => eliminarRelacionEntre(editRel.a.id, editRel.b.id)}>
+                  <Trash2 className="h-4 w-4" /> Eliminar relación
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
