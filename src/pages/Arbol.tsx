@@ -134,26 +134,74 @@ export default function Arbol() {
 
   const persona = center ? byId.get(center) : undefined;
 
-  // Wrapper that makes a card draggable+droppable in edit mode
-  const Draggable = ({ p, children }: { p: PersonaLite; children: React.ReactNode }) => {
-    if (!editMode) return <>{children}</>;
-    return (
-      <div
-        draggable
-        onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
-        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
-        onDrop={(e) => {
-          e.preventDefault();
-          const src = e.dataTransfer.getData("text/persona");
-          if (!src || src === p.id) return;
-          setDropTarget({ source: src, target: p.id });
-        }}
-        className="ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
-      >
-        {children}
-      </div>
-    );
+  // Relation editor (delete or change type)
+  const [editRel, setEditRel] = useState<{ a: PersonaLite; b: PersonaLite } | null>(null);
+
+  const eliminarRelacionEntre = async (aId: string, bId: string) => {
+    const ids = relacionesEntre(aId, bId, rels as any).map((r) => r.id);
+    if (!ids.length) return;
+    await supabase.from("relaciones").delete().in("id", ids);
+    toast.success("Relación eliminada");
+    setEditRel(null);
+    reload();
   };
+
+  // Wrapper: in edit mode = drag/drop + delete badge; otherwise click focuses on that ancestor
+  const TreeCard = ({ p, focusable = true, children }: { p: PersonaLite; focusable?: boolean; children: React.ReactNode }) => {
+    if (editMode) {
+      const linkedToCenter = persona && p.id !== persona.id && relacionesEntre(persona.id, p.id, rels as any).length > 0;
+      return (
+        <div
+          draggable
+          onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const src = e.dataTransfer.getData("text/persona");
+            if (!src || src === p.id) return;
+            setDropTarget({ source: src, target: p.id });
+          }}
+          className="relative ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
+        >
+          {children}
+          {linkedToCenter && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditRel({ a: persona!, b: p }); }}
+              className="absolute -top-2 -right-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition"
+              aria-label="Editar relación"
+              title="Editar / eliminar esta relación"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      );
+    }
+    if (focusable && p.id !== center) {
+      // override default navigation: single click focuses on this person in the tree
+      return (
+        <div className="relative group">
+          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCenter(p.id); toast.success(`Centro: ${p.nombres}`, { duration: 1200 }); }}>
+            <PersonCardClickIntercept>{children}</PersonCardClickIntercept>
+          </div>
+          <Link
+            to={`/personas/${p.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute -top-2 -right-2 z-10 hidden group-hover:grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md text-[10px]"
+            title="Abrir ficha completa"
+          >→</Link>
+        </div>
+      );
+    }
+    return <>{children}</>;
+  };
+
+  // Swallows the inner PersonCard's button click so our outer onClick wins
+  const PersonCardClickIntercept = ({ children }: { children: React.ReactNode }) => (
+    <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}>{children}</div>
+  );
+
+  const Draggable = TreeCard; // backwards-compat alias used by older sections below
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
   const Ascendants = ({ pid, gen }: { pid: string; gen: number }) => {
