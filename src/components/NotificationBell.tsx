@@ -71,7 +71,7 @@ export default function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[22rem] p-0" align="end">
+      <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" align="end">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-semibold">Centro de avisos</span>
           {noLeidas > 0 && (
@@ -87,15 +87,18 @@ export default function NotificationBell() {
           </div>
         )}
         <Tabs defaultValue="notif" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 rounded-none border-b bg-transparent">
-            <TabsTrigger value="notif" className="text-xs">
+          <TabsList className="grid w-full grid-cols-4 rounded-none border-b bg-transparent">
+            <TabsTrigger value="notif" className="text-[11px]">
               <FileText className="mr-1 h-3 w-3" /> Avisos {noLeidas > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{noLeidas}</span>}
             </TabsTrigger>
-            <TabsTrigger value="sug" className="text-xs">
-              <Sparkles className="mr-1 h-3 w-3" /> Sugerencias {sugs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{sugs.length}</span>}
+            <TabsTrigger value="sug" className="text-[11px]">
+              <Sparkles className="mr-1 h-3 w-3" /> Sug. {sugs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{sugs.length}</span>}
             </TabsTrigger>
-            <TabsTrigger value="pred" className="text-xs">
-              <Lightbulb className="mr-1 h-3 w-3" /> Predicciones {infs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{infs.length}</span>}
+            <TabsTrigger value="pred" className="text-[11px]">
+              <Lightbulb className="mr-1 h-3 w-3" /> Pred. {infs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{infs.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="task" className="text-[11px]">
+              <ListChecks className="mr-1 h-3 w-3" /> Tareas {tasks.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{tasks.length}</span>}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="notif" className="mt-0 max-h-80 overflow-y-auto">
@@ -133,6 +136,21 @@ export default function NotificationBell() {
                   <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{i.confidence_score}%</span>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{i.explanation}</p>
+              </Link>
+            ))}
+          </TabsContent>
+          </TabsContent>
+          <TabsContent value="task" className="mt-0 max-h-80 overflow-y-auto">
+            {tasks.length === 0 ? (
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground">No hay tareas pendientes.</p>
+            ) : tasks.map((t) => (
+              <Link key={t.id} to={t.person_id ? `/personas/${t.person_id}` : "/investigacion"} className="block border-b px-3 py-2 text-sm hover:bg-foreground/5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium capitalize">{t.tipo}</p>
+                  <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{t.estado}</span>
+                </div>
+                {t.descripcion && <p className="text-xs text-muted-foreground line-clamp-2">{t.descripcion}</p>}
+                <p className="mt-0.5 text-[10px] text-muted-foreground/70">{new Date(t.created_at).toLocaleString("es")}</p>
               </Link>
             ))}
           </TabsContent>
