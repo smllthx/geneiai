@@ -272,6 +272,7 @@ export default function PersonaDetail() {
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
             toast.success("Biografía generada y guardada en Notas");
+            notify("Biografía generada", { body: `${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `bio-${id}` });
             const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
             if (fresh) setP(fresh);
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
@@ -283,7 +284,9 @@ export default function PersonaDetail() {
             toast.dismiss(t);
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
-            toast.success(`${data.sugerencias_creadas ?? 0} sugerencias de ascendientes`);
+            const n = data.sugerencias_creadas ?? 0;
+            toast.success(`${n} sugerencias de ascendientes`);
+            if (n > 0) notify("Nuevas sugerencias de ascendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `asc-${id}` });
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Buscar ascendientes</Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
@@ -293,7 +296,9 @@ export default function PersonaDetail() {
             toast.dismiss(t);
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
-            toast.success(`${data.sugerencias_creadas ?? 0} sugerencias de descendientes`);
+            const n = data.sugerencias_creadas ?? 0;
+            toast.success(`${n} sugerencias de descendientes`);
+            if (n > 0) notify("Nuevas sugerencias de descendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `desc-${id}` });
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
         {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
