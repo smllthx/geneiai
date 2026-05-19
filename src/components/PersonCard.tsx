@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { User, UserPlus } from "lucide-react";
@@ -30,7 +31,7 @@ function completeness(p: PersonaLite): number {
   return filled / keys.length;
 }
 
-export function PersonCard({
+export const PersonCard = memo(function PersonCard({
   p, highlighted, directLine, compact, onClick,
 }: {
   p: PersonaLite;
@@ -93,7 +94,7 @@ export function PersonCard({
       </div>
     </button>
   );
-}
+});
 
 export function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
   return (

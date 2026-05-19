@@ -398,11 +398,42 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fotos">
-          {fotos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin fotos vinculadas. Sube y etiqueta esta persona en la sección Fotos.</p>
-          ) : (
-            <>
-              <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">Fotos en las que aparece esta persona.</p>
+            <div className="flex items-center gap-2">
+              <input
+                id="upload-foto-persona"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !id || isNew) return;
+                  const t = toast.loading("Subiendo foto…");
+                  try {
+                    const u = (await supabase.auth.getUser()).data.user!;
+                    const ext = file.name.split(".").pop();
+                    const path = `${u.id}/${crypto.randomUUID()}.${ext}`;
+                    const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
+                    if (upErr) throw upErr;
+                    const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
+                    const { error: insErr } = await supabase.from("fotos").insert({
+                      user_id: u.id, url: publicUrl, storage_path: path,
+                      titulo: `${p.nombres} ${p.apellidos}`,
+                      personas_ids: [id],
+                    });
+                    if (insErr) throw insErr;
+                    const { data: ft } = await supabase.from("fotos").select("*").contains("personas_ids", [id]).order("created_at", { ascending: false });
+                    setFotos(ft ?? []);
+                    toast.dismiss(t); toast.success("Foto agregada");
+                  } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error al subir"); }
+                  e.target.value = "";
+                }}
+              />
+              <Button asChild size="sm" variant="default" disabled={isNew}>
+                <label htmlFor="upload-foto-persona" className="cursor-pointer">+ Subir foto</label>
+              </Button>
+              {fotos.length > 0 && (
                 <Button size="sm" variant="outline" onClick={async () => {
                   toast.message(`Analizando ${fotos.length} foto(s)…`);
                   let ok = 0;
@@ -414,35 +445,66 @@ export default function PersonaDetail() {
                 }}>
                   <Sparkles className="mr-1 h-3.5 w-3.5" /> Analizar todas
                 </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {fotos.map((f: any) => (
-                  <div key={f.id} className="glass overflow-hidden rounded-2xl">
-                    <div className="aspect-square overflow-hidden">
-                      <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
-                    </div>
-                    <div className="space-y-1 p-2">
-                      {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
-                      {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
-                      <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
-                        const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
-                        if (error) toast.error(error.message); else toast.success("Rasgos extraídos");
-                      }}>
-                        <Sparkles className="mr-1 h-3 w-3" /> Analizar rasgos
-                      </Button>
-                    </div>
+              )}
+            </div>
+          </div>
+          {fotos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin fotos vinculadas todavía. Sube la primera con el botón de arriba.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {fotos.map((f: any) => (
+                <div key={f.id} className="glass overflow-hidden rounded-2xl">
+                  <div className="aspect-square overflow-hidden">
+                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                ))}
-              </div>
-            </>
+                  <div className="space-y-1 p-2">
+                    {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
+                    {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                    <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
+                      const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
+                      if (error) toast.error(error.message); else toast.success("Rasgos extraídos");
+                    }}>
+                      <Sparkles className="mr-1 h-3 w-3" /> Analizar rasgos
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </TabsContent>
 
+
         <TabsContent value="documentos">
-          <EventosPanel personaId={id!} eventos={eventos} reload={async () => {
-            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha");
-            setEventos(data ?? []);
-          }} disabled={isNew} />
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Documentos en los que aparece esta persona (actas, censos, padrones, fotos escaneadas).
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento y leerlo con IA</Link>
+            </Button>
+          </div>
+          {docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin documentos vinculados todavía.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {docs.map((d: any) => (
+                <li key={d.id} className="archivo-card px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link to={`/documentos`} className="font-medium hover:text-primary truncate block">{d.titulo}</Link>
+                      <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div>
+                      {d.resumen && <p className="mt-1 text-xs line-clamp-2">{d.resumen}</p>}
+                    </div>
+                    {d.url && (
+                      <Button asChild size="sm" variant="ghost">
+                        <a href={d.url} target="_blank" rel="noreferrer">Ver</a>
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </TabsContent>
 
         <TabsContent value="coincidencias">
@@ -513,11 +575,52 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fuentes">
-          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Sin documentos vinculados aún.</p> :
-            <ul className="grid gap-2">{docs.map((d) => (
-              <li key={d.id} className="archivo-card px-4 py-3"><div className="font-medium">{d.titulo}</div>
-                <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div></li>
-            ))}</ul>}
+          <p className="mb-3 text-sm text-muted-foreground">
+            Fuentes citadas para los datos vitales (eventos) de esta persona. Cada evento puede tener una fuente asociada.
+          </p>
+          {(() => {
+            const conFuente = eventos.filter((e: any) => e.fuente_id);
+            const sinFuente = eventos.filter((e: any) => !e.fuente_id);
+            return (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eventos con fuente ({conFuente.length})</h4>
+                  {conFuente.length === 0 ? <p className="text-sm text-muted-foreground">Aún no hay eventos con fuente documental.</p> :
+                    <ul className="grid gap-2">{conFuente.map((e: any) => {
+                      const d = docs.find((x: any) => x.id === e.fuente_id);
+                      return (
+                        <li key={e.id} className="archivo-card px-4 py-3">
+                          <div className="font-medium">{e.tipo} · {e.fecha ?? e.fecha_aprox ?? "s/f"}</div>
+                          <div className="text-xs text-muted-foreground">Fuente: {d?.titulo ?? "documento sin título"}</div>
+                        </li>
+                      );
+                    })}</ul>}
+                </div>
+                {sinFuente.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eventos sin fuente ({sinFuente.length})</h4>
+                    <ul className="grid gap-2">{sinFuente.map((e: any) => (
+                      <li key={e.id} className="archivo-card px-4 py-3 flex items-center justify-between">
+                        <span className="text-sm">{e.tipo} · {e.fecha ?? e.fecha_aprox ?? "s/f"}</span>
+                        <span className="archivo-chip">Sin fuente</span>
+                      </li>
+                    ))}</ul>
+                  </div>
+                )}
+                {docs.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Todos los documentos vinculados ({docs.length})</h4>
+                    <ul className="grid gap-2">{docs.map((d: any) => (
+                      <li key={d.id} className="archivo-card px-4 py-3">
+                        <div className="font-medium">{d.titulo}</div>
+                        <div className="text-xs text-muted-foreground">{d.cita ?? d.repositorio ?? d.tipo}</div>
+                      </li>
+                    ))}</ul>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="timeline">
