@@ -31,7 +31,7 @@ function completeness(p: PersonaLite): number {
   return filled / keys.length;
 }
 
-export function PersonCard({
+export const PersonCard = memo(function PersonCard({
   p, highlighted, directLine, compact, onClick,
 }: {
   p: PersonaLite;
