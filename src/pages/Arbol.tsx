@@ -314,6 +314,12 @@ export default function Arbol() {
           {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
         </Button>
         <Button variant="outline" size="sm" onClick={exportarGedcom}><FileDown className="h-4 w-4" /> Crear archivo del árbol</Button>
+        <Button variant="secondary" size="sm" onClick={verificarCoherencia}>
+          <ShieldCheck className="h-4 w-4" /> Verificar coherencia
+        </Button>
+        <Button variant="secondary" size="sm" onClick={agentesEnParalelo} disabled={!persona}>
+          <Rocket className="h-4 w-4" /> Agentes en paralelo
+        </Button>
         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={eliminarTodoElArbol}><Trash2 className="h-4 w-4" /> Eliminar todo el árbol</Button>
         {lastUndo && (
           <Button variant="ghost" size="sm" onClick={async () => {
