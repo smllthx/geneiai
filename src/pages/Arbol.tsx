@@ -77,28 +77,10 @@ export default function Arbol() {
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
 
-  const padresDe = (pid: string) => {
-    const padreIds = rels
-      .filter((r) => r.persona_id === pid && (r.tipo === "padre" || r.tipo === "madre"))
-      .map((r) => ({ id: r.pariente_id, tipo: r.tipo }));
-    const padre = padreIds.find((x) => x.tipo === "padre" || (byId.get(x.id)?.sexo === "masculino"));
-    const madre = padreIds.find((x) => x.tipo === "madre" || (byId.get(x.id)?.sexo === "femenino"));
-    return { padre: padre ? byId.get(padre.id) : undefined, madre: madre ? byId.get(madre.id) : undefined };
-  };
-
-  const conyugesDe = (pid: string) =>
-    rels.filter((r) => (r.persona_id === pid || r.pariente_id === pid) && r.tipo === "conyuge")
-      .map((r) => byId.get(r.persona_id === pid ? r.pariente_id : r.persona_id))
-      .filter(Boolean) as PersonaLite[];
-
-  const hijosDe = (pid: string) => {
-    const ids = new Set<string>();
-    for (const r of rels) {
-      if (r.pariente_id === pid && (r.tipo === "padre" || r.tipo === "madre")) ids.add(r.persona_id);
-      if (r.persona_id === pid && r.tipo === "hijo") ids.add(r.pariente_id);
-    }
-    return [...ids].map((i) => byId.get(i)).filter(Boolean) as PersonaLite[];
-  };
+  // Use unified kinship helpers — same logic everywhere in the app
+  const padresDe = (pid: string) => kPadresDe(pid, rels as any, byId);
+  const conyugesDe = (pid: string) => kConyugesDe(pid, rels as any, byId);
+  const hijosDe = (pid: string) => kHijosDe(pid, rels as any, byId);
 
   const reload = () => setReloadKey((k) => k + 1);
 
