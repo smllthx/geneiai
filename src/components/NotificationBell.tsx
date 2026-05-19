@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Check, Sparkles, FileText, Lightbulb } from "lucide-react";
+import { Bell, Check, Sparkles, FileText, Lightbulb, ListChecks } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,15 +12,17 @@ export default function NotificationBell() {
   const [items, setItems] = useState<any[]>([]);
   const [sugs, setSugs] = useState<any[]>([]);
   const [infs, setInfs] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
   const load = async () => {
-    const [{ data: n }, { data: s }, { data: i }] = await Promise.all([
+    const [{ data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
       supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
       supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30),
       supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
+      supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30),
     ]);
-    setItems(n ?? []); setSugs(s ?? []); setInfs(i ?? []);
+    setItems(n ?? []); setSugs(s ?? []); setInfs(i ?? []); setTasks(t ?? []);
   };
 
   useEffect(() => {
@@ -31,12 +33,13 @@ export default function NotificationBell() {
       .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "research_tasks" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
 
   const noLeidas = items.filter((i) => !i.leida).length;
-  const total = noLeidas + sugs.length + infs.length;
+  const total = noLeidas + sugs.length + infs.length + tasks.length;
   const marcarTodas = async () => {
     await supabase.from("notificaciones").update({ leida: true }).eq("leida", false);
     load();
