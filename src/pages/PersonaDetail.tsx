@@ -539,11 +539,52 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fuentes">
-          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Sin documentos vinculados aún.</p> :
-            <ul className="grid gap-2">{docs.map((d) => (
-              <li key={d.id} className="archivo-card px-4 py-3"><div className="font-medium">{d.titulo}</div>
-                <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div></li>
-            ))}</ul>}
+          <p className="mb-3 text-sm text-muted-foreground">
+            Fuentes citadas para los datos vitales (eventos) de esta persona. Cada evento puede tener una fuente asociada.
+          </p>
+          {(() => {
+            const conFuente = eventos.filter((e: any) => e.fuente_id);
+            const sinFuente = eventos.filter((e: any) => !e.fuente_id);
+            return (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eventos con fuente ({conFuente.length})</h4>
+                  {conFuente.length === 0 ? <p className="text-sm text-muted-foreground">Aún no hay eventos con fuente documental.</p> :
+                    <ul className="grid gap-2">{conFuente.map((e: any) => {
+                      const d = docs.find((x: any) => x.id === e.fuente_id);
+                      return (
+                        <li key={e.id} className="archivo-card px-4 py-3">
+                          <div className="font-medium">{e.tipo} · {e.fecha ?? e.fecha_aprox ?? "s/f"}</div>
+                          <div className="text-xs text-muted-foreground">Fuente: {d?.titulo ?? "documento sin título"}</div>
+                        </li>
+                      );
+                    })}</ul>}
+                </div>
+                {sinFuente.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eventos sin fuente ({sinFuente.length})</h4>
+                    <ul className="grid gap-2">{sinFuente.map((e: any) => (
+                      <li key={e.id} className="archivo-card px-4 py-3 flex items-center justify-between">
+                        <span className="text-sm">{e.tipo} · {e.fecha ?? e.fecha_aprox ?? "s/f"}</span>
+                        <span className="archivo-chip">Sin fuente</span>
+                      </li>
+                    ))}</ul>
+                  </div>
+                )}
+                {docs.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Todos los documentos vinculados ({docs.length})</h4>
+                    <ul className="grid gap-2">{docs.map((d: any) => (
+                      <li key={d.id} className="archivo-card px-4 py-3">
+                        <div className="font-medium">{d.titulo}</div>
+                        <div className="text-xs text-muted-foreground">{d.cita ?? d.repositorio ?? d.tipo}</div>
+                      </li>
+                    ))}</ul>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="timeline">
