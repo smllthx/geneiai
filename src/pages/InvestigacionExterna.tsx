@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { notify } from "@/lib/notifications";
 
 export default function InvestigacionExterna() {
   const [personas, setPersonas] = useState<any[]>([]);
