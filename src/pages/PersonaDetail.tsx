@@ -398,11 +398,42 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fotos">
-          {fotos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin fotos vinculadas. Sube y etiqueta esta persona en la sección Fotos.</p>
-          ) : (
-            <>
-              <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">Fotos en las que aparece esta persona.</p>
+            <div className="flex items-center gap-2">
+              <input
+                id="upload-foto-persona"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !id || isNew) return;
+                  const t = toast.loading("Subiendo foto…");
+                  try {
+                    const u = (await supabase.auth.getUser()).data.user!;
+                    const ext = file.name.split(".").pop();
+                    const path = `${u.id}/${crypto.randomUUID()}.${ext}`;
+                    const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
+                    if (upErr) throw upErr;
+                    const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
+                    const { error: insErr } = await supabase.from("fotos").insert({
+                      user_id: u.id, url: publicUrl, storage_path: path,
+                      titulo: `${p.nombres} ${p.apellidos}`,
+                      personas_ids: [id],
+                    });
+                    if (insErr) throw insErr;
+                    const { data: ft } = await supabase.from("fotos").select("*").contains("personas_ids", [id]).order("created_at", { ascending: false });
+                    setFotos(ft ?? []);
+                    toast.dismiss(t); toast.success("Foto agregada");
+                  } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error al subir"); }
+                  e.target.value = "";
+                }}
+              />
+              <Button asChild size="sm" variant="default" disabled={isNew}>
+                <label htmlFor="upload-foto-persona" className="cursor-pointer">+ Subir foto</label>
+              </Button>
+              {fotos.length > 0 && (
                 <Button size="sm" variant="outline" onClick={async () => {
                   toast.message(`Analizando ${fotos.length} foto(s)…`);
                   let ok = 0;
@@ -414,29 +445,34 @@ export default function PersonaDetail() {
                 }}>
                   <Sparkles className="mr-1 h-3.5 w-3.5" /> Analizar todas
                 </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {fotos.map((f: any) => (
-                  <div key={f.id} className="glass overflow-hidden rounded-2xl">
-                    <div className="aspect-square overflow-hidden">
-                      <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
-                    </div>
-                    <div className="space-y-1 p-2">
-                      {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
-                      {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
-                      <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
-                        const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
-                        if (error) toast.error(error.message); else toast.success("Rasgos extraídos");
-                      }}>
-                        <Sparkles className="mr-1 h-3 w-3" /> Analizar rasgos
-                      </Button>
-                    </div>
+              )}
+            </div>
+          </div>
+          {fotos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin fotos vinculadas todavía. Sube la primera con el botón de arriba.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {fotos.map((f: any) => (
+                <div key={f.id} className="glass overflow-hidden rounded-2xl">
+                  <div className="aspect-square overflow-hidden">
+                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                ))}
-              </div>
-            </>
+                  <div className="space-y-1 p-2">
+                    {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
+                    {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                    <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
+                      const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
+                      if (error) toast.error(error.message); else toast.success("Rasgos extraídos");
+                    }}>
+                      <Sparkles className="mr-1 h-3 w-3" /> Analizar rasgos
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </TabsContent>
+
 
         <TabsContent value="documentos">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
