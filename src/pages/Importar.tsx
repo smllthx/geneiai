@@ -64,6 +64,11 @@ export default function Importar() {
       if (data?.error) throw new Error(data.error);
       setIaResult(data);
       toast.success(`+${data.personasCreadas} personas · +${data.eventosCreados} eventos · +${data.relacionesCreadas} relaciones`);
+      notify("Documento procesado por IA", {
+        body: `+${data.personasCreadas ?? 0} personas · +${data.eventosCreados ?? 0} eventos · +${data.relacionesCreadas ?? 0} relaciones`,
+        url: "/personas",
+        tag: "leer-doc",
+      });
     } catch (e: any) {
       toast.dismiss(t);
       toast.error(e.message ?? "Error de IA");
