@@ -21,7 +21,6 @@ import QuickAddRelative from "@/components/QuickAddRelative";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
-import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe, sortByBirth } from "@/lib/kinship";
 import { notify } from "@/lib/notifications";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
