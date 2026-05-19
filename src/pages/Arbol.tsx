@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -39,6 +39,41 @@ export default function Arbol() {
       if (!center && p?.[0]) setCenter(p[0].id);
     })();
   }, [reloadKey]);
+
+  // Hide bottom nav / Siri / sidebar when tree is fullscreen
+  useEffect(() => {
+    if (fullscreen) {
+      document.body.classList.add("tree-fullscreen");
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("tree-fullscreen");
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("tree-fullscreen");
+      document.body.style.overflow = "";
+    };
+  }, [fullscreen]);
+
+  const eliminarTodoElArbol = async () => {
+    if (!confirm("⚠️ Esto eliminará TODAS las personas, relaciones y eventos de tu árbol. ¿Continuar?")) return;
+    if (!confirm("Confirma una vez más: se borrará TODO el árbol genealógico. Esta acción no se puede deshacer.")) return;
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión no encontrada");
+    const t = toast.loading("Eliminando árbol completo…");
+    try {
+      await supabase.from("relaciones").delete().eq("user_id", user.id);
+      await supabase.from("eventos").delete().eq("user_id", user.id);
+      await supabase.from("personas").delete().eq("user_id", user.id);
+      toast.dismiss(t);
+      toast.success("Árbol eliminado por completo");
+      setCenter("");
+      reload();
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error al eliminar");
+    }
+  };
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
 
@@ -138,13 +173,18 @@ export default function Arbol() {
     );
   };
 
-  // Recursive ascendants renderer
+  // Recursive ascendants renderer — FamilySearch-style with visible connector lines
   const Ascendants = ({ pid, gen }: { pid: string; gen: number }) => {
     if (gen <= 0) return null;
     const { padre, madre } = padresDe(pid);
+    const hasAny = !!(padre || madre);
     return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex flex-wrap items-end justify-center gap-3">
+      <div className="flex flex-col items-center">
+        <div className="relative flex flex-wrap items-end justify-center gap-4 px-3 pb-3">
+          {/* horizontal bar joining the two parents */}
+          {padre && madre && (
+            <div className="pointer-events-none absolute bottom-1 left-1/2 h-px w-[55%] -translate-x-1/2 bg-foreground/30" />
+          )}
           <div className="flex flex-col items-center gap-2">
             {padre ? <Ascendants pid={padre.id} gen={gen - 1} /> : null}
             {padre ? (
@@ -164,6 +204,8 @@ export default function Arbol() {
             )}
           </div>
         </div>
+        {/* vertical drop line to the child below */}
+        {hasAny && <div className="h-4 w-px bg-foreground/30" />}
       </div>
     );
   };
@@ -183,7 +225,7 @@ export default function Arbol() {
   };
 
   return (
-    <div className={fullscreen ? "fixed inset-0 z-[60] bg-background overflow-y-auto p-3 md:p-6" : ""}>
+    <div className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto p-3 md:p-6" : ""} style={fullscreen ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" } : undefined}>
       <SectionHeader
         eyebrow="Genealogía visual"
         title="Árbol familiar"
@@ -240,6 +282,7 @@ export default function Arbol() {
           {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
         </Button>
         <Button variant="outline" size="sm" onClick={exportarGedcom}><FileDown className="h-4 w-4" /> Crear archivo del árbol</Button>
+        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={eliminarTodoElArbol}><Trash2 className="h-4 w-4" /> Eliminar todo el árbol</Button>
         {lastUndo && (
           <Button variant="ghost" size="sm" onClick={async () => {
             await supabase.from("relaciones").delete().in("id", lastUndo.ids);

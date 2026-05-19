@@ -246,3 +246,25 @@ html[data-density="comfortable"] .glass-card { @apply p-6; }
   main { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem) !important; }
 }
 
+/* Fullscreen tree mode — hide every overlay (sidebar, mobile nav, Siri, notification overlays) */
+body.tree-fullscreen aside,
+body.tree-fullscreen nav.glass-strong.fixed,
+body.tree-fullscreen [aria-label="Asistente"],
+body.tree-fullscreen [data-genaia-panel] {
+  display: none !important;
+}
+body.tree-fullscreen main { padding: 0 !important; }
+
+/* Popper content must fit within the viewport on small screens */
+[data-radix-popper-content-wrapper] {
+  max-width: calc(100vw - 1rem) !important;
+}
+[data-radix-popper-content-wrapper] [role="menu"],
+[data-radix-popper-content-wrapper] [role="listbox"],
+[data-radix-popper-content-wrapper] [role="dialog"] {
+  max-width: calc(100vw - 1rem) !important;
+  max-height: calc(100vh - 6rem) !important;
+  overflow: auto;
+}
+
+
