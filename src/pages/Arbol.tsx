@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -39,6 +39,41 @@ export default function Arbol() {
       if (!center && p?.[0]) setCenter(p[0].id);
     })();
   }, [reloadKey]);
+
+  // Hide bottom nav / Siri / sidebar when tree is fullscreen
+  useEffect(() => {
+    if (fullscreen) {
+      document.body.classList.add("tree-fullscreen");
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.classList.remove("tree-fullscreen");
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.classList.remove("tree-fullscreen");
+      document.body.style.overflow = "";
+    };
+  }, [fullscreen]);
+
+  const eliminarTodoElArbol = async () => {
+    if (!confirm("⚠️ Esto eliminará TODAS las personas, relaciones y eventos de tu árbol. ¿Continuar?")) return;
+    if (!confirm("Confirma una vez más: se borrará TODO el árbol genealógico. Esta acción no se puede deshacer.")) return;
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión no encontrada");
+    const t = toast.loading("Eliminando árbol completo…");
+    try {
+      await supabase.from("relaciones").delete().eq("user_id", user.id);
+      await supabase.from("eventos").delete().eq("user_id", user.id);
+      await supabase.from("personas").delete().eq("user_id", user.id);
+      toast.dismiss(t);
+      toast.success("Árbol eliminado por completo");
+      setCenter("");
+      reload();
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error al eliminar");
+    }
+  };
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
 

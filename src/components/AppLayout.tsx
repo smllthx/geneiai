@@ -115,15 +115,19 @@ export default function AppLayout() {
           aria-hidden
           className="pointer-events-none fixed inset-x-0 top-0 z-30 md:hidden"
           style={{
-            height: "env(safe-area-inset-top, 0px)",
-            background: "hsl(var(--background) / 0.85)",
+            height: "calc(env(safe-area-inset-top, 0px) + 8px)",
+            background: "hsl(var(--background) / 0.92)",
             backdropFilter: "saturate(180%) blur(20px)",
             WebkitBackdropFilter: "saturate(180%) blur(20px)",
           }}
         />
         <main
-          className="min-w-0 flex-1 px-4 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
-          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1rem)" }}
+          className="min-w-0 flex-1 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
+          style={{
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+            paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
+            paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
+          }}
         >
           <Outlet />
         </main>
