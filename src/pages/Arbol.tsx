@@ -406,6 +406,39 @@ export default function Arbol() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Editar relación existente */}
+      <Dialog open={!!editRel} onOpenChange={(o) => !o && setEditRel(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar relación</DialogTitle></DialogHeader>
+          {editRel && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Entre <strong>{editRel.a.nombres} {editRel.a.apellidos}</strong> y{" "}
+                <strong>{editRel.b.nombres} {editRel.b.apellidos}</strong>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ["padre", "Cambiar a padre/madre"],
+                  ["hijo", "Cambiar a hijo/a"],
+                  ["conyuge", "Cambiar a cónyuge"],
+                  ["hermano", "Cambiar a hermano/a"],
+                ] as [RelTipo, string][]).map(([t, label]) => (
+                  <Button key={t} variant="outline" size="sm" onClick={async () => {
+                    await eliminarRelacionEntre(editRel.a.id, editRel.b.id);
+                    await crearRelacion(editRel.b.id, editRel.a.id, t);
+                  }}>{label}</Button>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button variant="destructive" size="sm" onClick={() => eliminarRelacionEntre(editRel.a.id, editRel.b.id)}>
+                  <Trash2 className="h-4 w-4" /> Eliminar relación
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
