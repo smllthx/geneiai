@@ -6,13 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, Focus } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
+import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 
-type RelTipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
 type Vista = "ascendientes" | "abanico" | "dinastica";
 
 export default function Arbol() {
