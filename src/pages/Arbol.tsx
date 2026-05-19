@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, Focus } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
+import { checkCoherence } from "@/lib/coherence";
+import { notify } from "@/lib/notifications";
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
 
