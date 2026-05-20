@@ -146,9 +146,8 @@ export default function AppLayout() {
           <NotificationBell />
         </div>
         <main
-          className="min-w-0 flex-1 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
+          className="min-w-0 flex-1 pb-28 pt-20 md:px-8 md:pt-6 md:pb-8"
           style={{
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.75rem)",
             paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
             paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
           }}
