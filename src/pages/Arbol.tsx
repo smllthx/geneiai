@@ -288,21 +288,40 @@ export default function Arbol() {
   const agentesEnParalelo = async () => {
     if (!persona) return;
     const pid = persona.id;
-    const t = toast.loading("Desplegando 4 agentes en paralelo…");
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión no encontrada");
+    const agentJobs = [
+      { titulo: "Biografía automática", body: { person_id: pid }, fn: "biografia-auto" },
+      { titulo: "Ascendientes posibles", body: { person_id: pid, foco: "ascendientes" }, fn: "investigar-auto" },
+      { titulo: "Descendientes posibles", body: { person_id: pid, foco: "descendientes" }, fn: "investigar-auto" },
+      { titulo: "Coherencia y fuentes faltantes", body: { person_id: pid }, fn: "investigar-auto" },
+    ];
+    setAgentProgress({ total: agentJobs.length, done: 0, ok: 0, running: true, errors: [] });
+    const t = toast.loading("Desplegando agentes en paralelo…");
     try {
-      const tasks = [
-        supabase.functions.invoke("biografia-auto", { body: { person_id: pid } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "ascendientes" } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "descendientes" } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid } }),
-      ];
-      const results = await Promise.allSettled(tasks);
+      await supabase.from("research_tasks").insert(agentJobs.map((job) => ({
+        user_id: user.id,
+        person_id: pid,
+        tipo: "otro" as const,
+        descripcion: `Agente en paralelo: ${job.titulo}`,
+      })));
+      const results = await Promise.allSettled(agentJobs.map(async (job) => {
+        const res = await supabase.functions.invoke(job.fn, { body: job.body });
+        if (res.error) throw res.error;
+        setAgentProgress((p) => ({ ...p, done: p.done + 1, ok: p.ok + 1 }));
+        return res;
+      }));
       toast.dismiss(t);
       const ok = results.filter((r) => r.status === "fulfilled").length;
+      const errors = results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => r.reason?.message ?? "Error desconocido");
+      setAgentProgress({ total: agentJobs.length, done: agentJobs.length, ok, running: false, errors });
       toast.success(`${ok}/4 agentes completados para ${persona.nombres}`);
       notify("Agentes en paralelo", { body: `${ok}/4 completados para ${persona.nombres} ${persona.apellidos}`, url: `/personas/${pid}` });
       reload();
-    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+    } catch (e: any) {
+      toast.dismiss(t); toast.error(e.message ?? "Error");
+      setAgentProgress((p) => ({ ...p, running: false, errors: [...p.errors, e.message ?? "Error"] }));
+    }
   };
 
 
