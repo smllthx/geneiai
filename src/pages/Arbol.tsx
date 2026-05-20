@@ -453,7 +453,7 @@ export default function Arbol() {
             <Ascendants pid={persona.id} gen={generaciones} />
 
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Draggable p={persona}><PersonCard p={persona} highlighted /></Draggable>
+              <Draggable p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Draggable>
               {conyugesDe(persona.id).map((c) => (
                 <Draggable key={c.id} p={c}><PersonCard p={c} /></Draggable>
               ))}
