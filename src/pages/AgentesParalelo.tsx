@@ -7,7 +7,7 @@ import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "
 import { toast } from "sonner";
 import { notify } from "@/lib/notifications";
 
-type Provider = "gemini" | "openai" | "anthropic";
+type Provider = "gemini";
 type Status = "queued" | "running" | "done" | "error" | "cancelled";
 
 interface Task {
@@ -32,8 +32,6 @@ interface Run {
 
 const MODELS: Record<Provider, string[]> = {
   gemini: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "google/gemini-2.5-pro"],
-  openai: ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-5-nano"],
-  anthropic: ["claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-4-5"],
 };
 
 const newTask = (): Task => ({
@@ -142,7 +140,7 @@ export default function AgentesParalelo() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Agentes en paralelo</h1>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Lanzá <span className="text-gradient font-semibold">Gemini</span>, <span className="text-gradient font-semibold">GPT-5</span> y <span className="text-gradient font-semibold">Claude</span> al mismo tiempo, cada uno en una tarea distinta. Los resultados aparecen acá en vivo.
+          Lanzá varios agentes de <span className="text-gradient font-semibold">Lovable AI</span> al mismo tiempo, cada uno con una tarea distinta. Los resultados, avisos y tareas enlazadas aparecen acá en vivo.
         </p>
       </div>
 
@@ -157,25 +155,13 @@ export default function AgentesParalelo() {
         <div className="space-y-3">
           {tasks.map((t, i) => (
             <div key={i} className="glass rounded-2xl p-3">
-              <div className="grid gap-2 md:grid-cols-[1fr_160px_220px_auto] md:items-center">
+              <div className="grid gap-2 md:grid-cols-[1fr_220px_auto] md:items-center">
                 <input
                   className="glass-input"
                   placeholder="Título de la tarea"
                   value={t.titulo}
                   onChange={(e) => updateTask(i, { titulo: e.target.value })}
                 />
-                <select
-                  className="glass-input"
-                  value={t.provider}
-                  onChange={(e) => {
-                    const p = e.target.value as Provider;
-                    updateTask(i, { provider: p, modelo: MODELS[p][0] });
-                  }}
-                >
-                  <option value="gemini">Gemini (Lovable AI)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
-                </select>
                 <select
                   className="glass-input"
                   value={t.modelo}
