@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader } from "@/components/glass";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -29,9 +30,12 @@ export default function Arbol() {
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [loadingTree, setLoadingTree] = useState(true);
+  const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
   useEffect(() => {
     (async () => {
+      setLoadingTree(true);
       const [{ data: p }, { data: r }] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva").order("apellidos"),
         supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
@@ -39,6 +43,7 @@ export default function Arbol() {
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
       if (!center && p?.[0]) setCenter(p[0].id);
+      setLoadingTree(false);
     })();
   }, [reloadKey]);
 
