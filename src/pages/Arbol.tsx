@@ -391,7 +391,7 @@ export default function Arbol() {
           <ShieldCheck className="h-4 w-4" /> Verificar coherencia
         </Button>
         <Button variant="secondary" size="sm" onClick={agentesEnParalelo} disabled={!persona}>
-          <Rocket className="h-4 w-4" /> Agentes en paralelo
+          {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} Agentes en paralelo
         </Button>
         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={eliminarTodoElArbol}><Trash2 className="h-4 w-4" /> Eliminar todo el árbol</Button>
         {lastUndo && (
@@ -402,13 +402,31 @@ export default function Arbol() {
         )}
       </div>
 
+      {agentProgress.total > 0 && (
+        <div className="mb-4 rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="inline-flex items-center gap-2 font-medium">
+              {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : agentProgress.errors.length ? <AlertCircle className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-primary" />}
+              Progreso de agentes
+            </span>
+            <span className="text-xs text-muted-foreground">{agentProgress.done}/{agentProgress.total} · {agentProgress.ok} correctos</span>
+          </div>
+          <Progress value={(agentProgress.done / agentProgress.total) * 100} className="h-2" />
+          {agentProgress.errors.length > 0 && <p className="mt-2 text-xs text-destructive">Algunos agentes fallaron; las tareas quedaron registradas para reintentar desde Investigación.</p>}
+        </div>
+      )}
+
       {editMode && (
         <p className="mb-3 rounded-xl bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-foreground">
           🖱️ Arrastra una persona <strong>sobre otra</strong> para crear una relación entre ambas.
         </p>
       )}
 
-      {!persona ? (
+      {loadingTree ? (
+        <div className="grid min-h-[45vh] place-items-center rounded-2xl border border-border bg-card/60">
+          <div className="text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />Cargando árbol…</div>
+        </div>
+      ) : !persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
