@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu,
@@ -126,6 +126,7 @@ export default function AppLayout() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[86vw] max-w-sm overflow-y-auto p-3">
+              <SheetTitle className="sr-only">Menú principal de GENAIA</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={44} />
                 <div className="min-w-0">
