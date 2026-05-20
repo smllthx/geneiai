@@ -306,10 +306,14 @@ export default function Arbol() {
         descripcion: `Agente en paralelo: ${job.titulo}`,
       })));
       const results = await Promise.allSettled(agentJobs.map(async (job) => {
-        const res = await supabase.functions.invoke(job.fn, { body: job.body });
-        if (res.error) throw res.error;
-        setAgentProgress((p) => ({ ...p, done: p.done + 1, ok: p.ok + 1 }));
-        return res;
+        try {
+          const res = await supabase.functions.invoke(job.fn, { body: job.body });
+          if (res.error) throw res.error;
+          setAgentProgress((p) => ({ ...p, ok: p.ok + 1 }));
+          return res;
+        } finally {
+          setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
+        }
       }));
       toast.dismiss(t);
       const ok = results.filter((r) => r.status === "fulfilled").length;
