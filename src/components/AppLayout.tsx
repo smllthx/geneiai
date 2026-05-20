@@ -2,9 +2,10 @@ import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -31,7 +32,7 @@ const investigationNav = [
 ];
 const utilityNav = [
   { to: "/importar", label: "Importar / Exportar", icon: Upload },
-  { to: "/agente", label: "Agente IA", icon: Bot },
+  { to: "/investigacion?tab=paralelo", label: "Agentes en paralelo", icon: Bot },
   { to: "/credenciales", label: "Credenciales", icon: KeyRound },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
@@ -81,6 +82,7 @@ export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate("/login"); };
+  const allMobileNav = [...primaryNav, ...investigationNav, ...utilityNav];
 
   return (
     <div className="relative flex min-h-screen">
@@ -112,19 +114,41 @@ export default function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div
-          aria-hidden
-          className="pointer-events-none fixed inset-x-0 top-0 z-30 md:hidden"
+          className="glass-strong fixed inset-x-2 top-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
           style={{
-            height: "calc(env(safe-area-inset-top, 0px) + 8px)",
-            background: "hsl(var(--background) / 0.92)",
-            backdropFilter: "saturate(180%) blur(20px)",
-            WebkitBackdropFilter: "saturate(180%) blur(20px)",
+            marginTop: "env(safe-area-inset-top, 0px)",
           }}
-        />
+        >
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-xl" aria-label="Abrir menú">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[86vw] max-w-sm overflow-y-auto p-3">
+              <SheetTitle className="sr-only">Menú principal de GENAIA</SheetTitle>
+              <div className="mb-4 flex items-center gap-3 pr-8">
+                <BrandLogo size={44} />
+                <div className="min-w-0">
+                  <p className="font-display text-lg font-semibold leading-none">GENAIA</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
+                </div>
+              </div>
+              <NavItems items={allMobileNav} />
+              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" /> Cerrar sesión
+              </Button>
+            </SheetContent>
+          </Sheet>
+          <NavLink to="/inicio" className="flex items-center gap-2">
+            <BrandLogo size={34} />
+            <span className="font-display text-lg font-semibold">GENAIA</span>
+          </NavLink>
+          <NotificationBell />
+        </div>
         <main
-          className="min-w-0 flex-1 py-6 pb-28 md:px-8 md:pt-6 md:pb-8"
+          className="min-w-0 flex-1 pb-28 pt-20 md:px-8 md:pt-6 md:pb-8"
           style={{
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
             paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
             paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
           }}

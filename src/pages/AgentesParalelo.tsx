@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "lucide-react";
 import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
 
-type Provider = "gemini" | "openai" | "anthropic";
+type Provider = "gemini";
 type Status = "queued" | "running" | "done" | "error" | "cancelled";
 
 interface Task {
@@ -29,8 +32,6 @@ interface Run {
 
 const MODELS: Record<Provider, string[]> = {
   gemini: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "google/gemini-2.5-pro"],
-  openai: ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-5-nano"],
-  anthropic: ["claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-4-5"],
 };
 
 const newTask = (): Task => ({
@@ -44,6 +45,7 @@ export default function AgentesParalelo() {
   const [tasks, setTasks] = useState<Task[]>([newTask()]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [launching, setLaunching] = useState(false);
+  const [progress, setProgress] = useState({ total: 0, done: 0, ok: 0 });
 
   const loadRuns = async () => {
     const { data } = await supabase
@@ -86,12 +88,26 @@ export default function AgentesParalelo() {
       }));
       const { data: created, error } = await supabase.from("agent_runs").insert(inserts).select("id");
       if (error) throw error;
+      await supabase.from("research_tasks").insert(valid.map((t) => ({
+        user_id,
+        tipo: "otro" as const,
+        descripcion: `Agente paralelo: ${t.titulo || "Tarea"} — ${t.prompt.slice(0, 180)}`,
+      })));
 
-      // Lanzar todas en paralelo
-      await Promise.all((created ?? []).map((r) =>
-        supabase.functions.invoke("run-agent", { body: { runId: r.id } })
-      ));
-      toast.success(`${valid.length} agentes lanzados en paralelo`);
+      setProgress({ total: created?.length ?? valid.length, done: 0, ok: 0 });
+      const results = await Promise.allSettled((created ?? []).map(async (r) => {
+        try {
+          const res = await supabase.functions.invoke("run-agent", { body: { runId: r.id } });
+          if (res.error) throw res.error;
+          setProgress((p) => ({ ...p, ok: p.ok + 1 }));
+          return res;
+        } finally {
+          setProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
+        }
+      }));
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      toast.success(`${ok}/${valid.length} agentes completados en paralelo`);
+      notify("Agentes en paralelo", { body: `${ok}/${valid.length} tareas completadas; revisa resultados y tareas enlazadas.`, url: "/investigacion?tab=paralelo" });
       setTasks([newTask()]);
     } catch (e: any) {
       toast.error(e.message ?? "Error al lanzar agentes");
@@ -124,7 +140,7 @@ export default function AgentesParalelo() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Agentes en paralelo</h1>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Lanzá <span className="text-gradient font-semibold">Gemini</span>, <span className="text-gradient font-semibold">GPT-5</span> y <span className="text-gradient font-semibold">Claude</span> al mismo tiempo, cada uno en una tarea distinta. Los resultados aparecen acá en vivo.
+          Lanzá varios agentes de <span className="text-gradient font-semibold">Lovable AI</span> al mismo tiempo, cada uno con una tarea distinta. Los resultados, avisos y tareas enlazadas aparecen acá en vivo.
         </p>
       </div>
 
@@ -139,25 +155,13 @@ export default function AgentesParalelo() {
         <div className="space-y-3">
           {tasks.map((t, i) => (
             <div key={i} className="glass rounded-2xl p-3">
-              <div className="grid gap-2 md:grid-cols-[1fr_160px_220px_auto] md:items-center">
+              <div className="grid gap-2 md:grid-cols-[1fr_220px_auto] md:items-center">
                 <input
                   className="glass-input"
                   placeholder="Título de la tarea"
                   value={t.titulo}
                   onChange={(e) => updateTask(i, { titulo: e.target.value })}
                 />
-                <select
-                  className="glass-input"
-                  value={t.provider}
-                  onChange={(e) => {
-                    const p = e.target.value as Provider;
-                    updateTask(i, { provider: p, modelo: MODELS[p][0] });
-                  }}
-                >
-                  <option value="gemini">Gemini (Lovable AI)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
-                </select>
                 <select
                   className="glass-input"
                   value={t.modelo}
@@ -190,6 +194,16 @@ export default function AgentesParalelo() {
             Lanzar {tasks.length} {tasks.length === 1 ? "agente" : "agentes"} en paralelo
           </Button>
         </div>
+        {progress.total > 0 && (
+          <div className="mt-4 rounded-2xl border border-border bg-card/60 p-3">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium">Progreso</span>
+              <span className="text-xs text-muted-foreground">{progress.done}/{progress.total} · {progress.ok} correctos</span>
+            </div>
+            <Progress value={(progress.done / progress.total) * 100} className="h-2" />
+            <Link to="/investigacion?tab=pistas" className="mt-2 inline-block text-xs text-link underline">Ver tareas y pistas enlazadas</Link>
+          </div>
+        )}
       </div>
 
       <div>

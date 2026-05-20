@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader } from "@/components/glass";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -29,9 +30,12 @@ export default function Arbol() {
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [loadingTree, setLoadingTree] = useState(true);
+  const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
   useEffect(() => {
     (async () => {
+      setLoadingTree(true);
       const [{ data: p }, { data: r }] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva").order("apellidos"),
         supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
@@ -39,6 +43,7 @@ export default function Arbol() {
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
       if (!center && p?.[0]) setCenter(p[0].id);
+      setLoadingTree(false);
     })();
   }, [reloadKey]);
 
@@ -283,21 +288,44 @@ export default function Arbol() {
   const agentesEnParalelo = async () => {
     if (!persona) return;
     const pid = persona.id;
-    const t = toast.loading("Desplegando 4 agentes en paralelo…");
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión no encontrada");
+    const agentJobs = [
+      { titulo: "Biografía automática", body: { person_id: pid }, fn: "biografia-auto" },
+      { titulo: "Ascendientes posibles", body: { person_id: pid, foco: "ascendientes" }, fn: "investigar-auto" },
+      { titulo: "Descendientes posibles", body: { person_id: pid, foco: "descendientes" }, fn: "investigar-auto" },
+      { titulo: "Coherencia y fuentes faltantes", body: { person_id: pid }, fn: "investigar-auto" },
+    ];
+    setAgentProgress({ total: agentJobs.length, done: 0, ok: 0, running: true, errors: [] });
+    const t = toast.loading("Desplegando agentes en paralelo…");
     try {
-      const tasks = [
-        supabase.functions.invoke("biografia-auto", { body: { person_id: pid } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "ascendientes" } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid, foco: "descendientes" } }),
-        supabase.functions.invoke("investigar-auto", { body: { person_id: pid } }),
-      ];
-      const results = await Promise.allSettled(tasks);
+      await supabase.from("research_tasks").insert(agentJobs.map((job) => ({
+        user_id: user.id,
+        person_id: pid,
+        tipo: "otro" as const,
+        descripcion: `Agente en paralelo: ${job.titulo}`,
+      })));
+      const results = await Promise.allSettled(agentJobs.map(async (job) => {
+        try {
+          const res = await supabase.functions.invoke(job.fn, { body: job.body });
+          if (res.error) throw res.error;
+          setAgentProgress((p) => ({ ...p, ok: p.ok + 1 }));
+          return res;
+        } finally {
+          setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
+        }
+      }));
       toast.dismiss(t);
       const ok = results.filter((r) => r.status === "fulfilled").length;
+      const errors = results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => r.reason?.message ?? "Error desconocido");
+      setAgentProgress({ total: agentJobs.length, done: agentJobs.length, ok, running: false, errors });
       toast.success(`${ok}/4 agentes completados para ${persona.nombres}`);
       notify("Agentes en paralelo", { body: `${ok}/4 completados para ${persona.nombres} ${persona.apellidos}`, url: `/personas/${pid}` });
       reload();
-    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+    } catch (e: any) {
+      toast.dismiss(t); toast.error(e.message ?? "Error");
+      setAgentProgress((p) => ({ ...p, running: false, errors: [...p.errors, e.message ?? "Error"] }));
+    }
   };
 
 
@@ -363,7 +391,7 @@ export default function Arbol() {
           <ShieldCheck className="h-4 w-4" /> Verificar coherencia
         </Button>
         <Button variant="secondary" size="sm" onClick={agentesEnParalelo} disabled={!persona}>
-          <Rocket className="h-4 w-4" /> Agentes en paralelo
+          {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} Agentes en paralelo
         </Button>
         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={eliminarTodoElArbol}><Trash2 className="h-4 w-4" /> Eliminar todo el árbol</Button>
         {lastUndo && (
@@ -374,13 +402,31 @@ export default function Arbol() {
         )}
       </div>
 
+      {agentProgress.total > 0 && (
+        <div className="mb-4 rounded-2xl border border-border bg-card/70 p-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <span className="inline-flex items-center gap-2 font-medium">
+              {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : agentProgress.errors.length ? <AlertCircle className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-primary" />}
+              Progreso de agentes
+            </span>
+            <span className="text-xs text-muted-foreground">{agentProgress.done}/{agentProgress.total} · {agentProgress.ok} correctos</span>
+          </div>
+          <Progress value={(agentProgress.done / agentProgress.total) * 100} className="h-2" />
+          {agentProgress.errors.length > 0 && <p className="mt-2 text-xs text-destructive">Algunos agentes fallaron; las tareas quedaron registradas para reintentar desde Investigación.</p>}
+        </div>
+      )}
+
       {editMode && (
         <p className="mb-3 rounded-xl bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-foreground">
           🖱️ Arrastra una persona <strong>sobre otra</strong> para crear una relación entre ambas.
         </p>
       )}
 
-      {!persona ? (
+      {loadingTree ? (
+        <div className="grid min-h-[45vh] place-items-center rounded-2xl border border-border bg-card/60">
+          <div className="text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />Cargando árbol…</div>
+        </div>
+      ) : !persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
@@ -407,7 +453,7 @@ export default function Arbol() {
             <Ascendants pid={persona.id} gen={generaciones} />
 
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Draggable p={persona}><PersonCard p={persona} highlighted /></Draggable>
+              <Draggable p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Draggable>
               {conyugesDe(persona.id).map((c) => (
                 <Draggable key={c.id} p={c}><PersonCard p={c} /></Draggable>
               ))}

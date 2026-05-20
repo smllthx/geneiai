@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
+import { Chrome, Loader2 } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,13 +18,19 @@ export default function Login() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate("/inicio", { replace: true });
+    });
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast.error(error.message);
-    navigate("/dashboard");
+    navigate("/inicio", { replace: true });
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -30,12 +38,19 @@ export default function Login() {
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email, password,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard`, data: { display_name: name } },
+        options: { emailRedirectTo: `${window.location.origin}/inicio`, data: { display_name: name } },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Cuenta creada. Iniciando sesión…");
-    navigate("/dashboard");
+    toast.success("Cuenta creada. Revisa tu correo si se solicita confirmación.");
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    setLoading(false);
+    if (result.error) return toast.error(result.error.message);
+    if (!result.redirected) navigate("/inicio", { replace: true });
   };
 
   return (
@@ -52,7 +67,11 @@ export default function Login() {
             <CardDescription>Tus datos genealógicos son privados.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
+              <Button type="button" variant="outline" className="mb-4 w-full" disabled={loading} onClick={handleGoogle}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
+                Entrar con Google
+              </Button>
+              <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Ingresar</TabsTrigger>
                 <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
