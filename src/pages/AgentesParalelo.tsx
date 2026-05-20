@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "lucide-react";
 import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
 
 type Provider = "gemini" | "openai" | "anthropic";
 type Status = "queued" | "running" | "done" | "error" | "cancelled";
@@ -44,6 +47,7 @@ export default function AgentesParalelo() {
   const [tasks, setTasks] = useState<Task[]>([newTask()]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [launching, setLaunching] = useState(false);
+  const [progress, setProgress] = useState({ total: 0, done: 0, ok: 0 });
 
   const loadRuns = async () => {
     const { data } = await supabase
@@ -86,12 +90,26 @@ export default function AgentesParalelo() {
       }));
       const { data: created, error } = await supabase.from("agent_runs").insert(inserts).select("id");
       if (error) throw error;
+      await supabase.from("research_tasks").insert(valid.map((t) => ({
+        user_id,
+        tipo: "otro" as const,
+        descripcion: `Agente paralelo: ${t.titulo || "Tarea"} — ${t.prompt.slice(0, 180)}`,
+      })));
 
-      // Lanzar todas en paralelo
-      await Promise.all((created ?? []).map((r) =>
-        supabase.functions.invoke("run-agent", { body: { runId: r.id } })
-      ));
-      toast.success(`${valid.length} agentes lanzados en paralelo`);
+      setProgress({ total: created?.length ?? valid.length, done: 0, ok: 0 });
+      const results = await Promise.allSettled((created ?? []).map(async (r) => {
+        try {
+          const res = await supabase.functions.invoke("run-agent", { body: { runId: r.id } });
+          if (res.error) throw res.error;
+          setProgress((p) => ({ ...p, ok: p.ok + 1 }));
+          return res;
+        } finally {
+          setProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
+        }
+      }));
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      toast.success(`${ok}/${valid.length} agentes completados en paralelo`);
+      notify("Agentes en paralelo", { body: `${ok}/${valid.length} tareas completadas; revisa resultados y tareas enlazadas.`, url: "/investigacion?tab=paralelo" });
       setTasks([newTask()]);
     } catch (e: any) {
       toast.error(e.message ?? "Error al lanzar agentes");
@@ -190,6 +208,16 @@ export default function AgentesParalelo() {
             Lanzar {tasks.length} {tasks.length === 1 ? "agente" : "agentes"} en paralelo
           </Button>
         </div>
+        {progress.total > 0 && (
+          <div className="mt-4 rounded-2xl border border-border bg-card/60 p-3">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium">Progreso</span>
+              <span className="text-xs text-muted-foreground">{progress.done}/{progress.total} · {progress.ok} correctos</span>
+            </div>
+            <Progress value={(progress.done / progress.total) * 100} className="h-2" />
+            <Link to="/investigacion?tab=pistas" className="mt-2 inline-block text-xs text-link underline">Ver tareas y pistas enlazadas</Link>
+          </div>
+        )}
       </div>
 
       <div>
