@@ -26,6 +26,8 @@ import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
 import { personaCode, matchesCode } from "@/lib/personaCode";
 import { pushRecent } from "@/lib/recent";
+import TimelineVisual from "@/components/TimelineVisual";
+import ContextoHistorico from "@/components/ContextoHistorico";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -701,7 +703,8 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <TimelinePanel eventos={eventos} persona={p} />
+          <TimelineVisual eventos={eventos} persona={p} />
+          {!isNew && <ContextoHistorico personaId={id!} />}
         </TabsContent>
 
         <TabsContent value="notas">
