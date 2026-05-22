@@ -726,16 +726,18 @@ function BusquedasSugeridas({ persona, disabled }: any) {
   const [running, setRunning] = useState(false);
   const auto = async () => {
     setRunning(true);
-    const { data, error } = await supabase.functions.invoke("buscar-externo-auto", { body: { persona_id: persona.id } });
+    toast.info("Lanzando 5 agentes en paralelo…");
+    const { data, error } = await supabase.functions.invoke("mega-buscador", { body: { persona_id: persona.id } });
     setRunning(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`${data?.sugerencias ?? 0} sugerencias creadas. Revísalas en el Asistente IA.`);
+    const ok = (data?.agents ?? []).filter((a: any) => a.ok).length;
+    toast.success(`${ok}/5 agentes · ${data?.sugerencias ?? 0} sugerencias · ${data?.hipotesis ?? 0} hipótesis.`);
   };
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button size="sm" onClick={auto} disabled={running}>
-          <Sparkles className="h-4 w-4" /> {running ? "Buscando…" : "Buscar en sitios externos"}
+          <Sparkles className="h-4 w-4" /> {running ? "5 agentes buscando…" : "Mega-buscador (5 agentes)"}
         </Button>
       </div>
       <div className="grid gap-2 md:grid-cols-2">{sugs.map((s, i) => (
