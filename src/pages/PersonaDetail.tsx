@@ -677,10 +677,78 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="notas">
-          <Textarea rows={12} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)} placeholder="Notas extensas, hipótesis, ideas…" />
+          <Card className="archivo-card">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="font-serif text-lg">Biografía y notas</CardTitle>
+              {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+                const t = toast.loading("Escribiendo biografía con IA…");
+                try {
+                  const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
+                  toast.dismiss(t);
+                  if (error) throw error;
+                  if (data?.error) throw new Error(data.error);
+                  toast.success("Biografía generada");
+                  const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+                  if (fresh) setP(fresh);
+                } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+              }}><Sparkles className="h-3.5 w-3.5" /> Generar con IA</Button>}
+            </CardHeader>
+            <CardContent>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Escribe la historia de vida: contexto, momentos importantes, relatos familiares, anécdotas, viajes, hipótesis. Puedes generar un borrador con IA y luego ajustarlo.
+              </p>
+              <Textarea rows={14} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)}
+                placeholder="Nació en… Vivió en… Trabajó como… Se casó con… Se distinguió por…" />
+              <div className="mt-3 flex justify-end">
+                <Button size="sm" onClick={save} disabled={loading}><Save className="h-3.5 w-3.5" /> Guardar biografía</Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode }) {
+  return (
+    <Card className="archivo-card">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="font-serif text-lg">{titulo} <span className="ml-1 text-xs text-muted-foreground">({personas.length})</span></CardTitle>
+        {quickAdd}
+      </CardHeader>
+      <CardContent>
+        {personas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {personas.map((x: any) => {
+              const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
+              const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
+              const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
+              return (
+                <li key={x.id}>
+                  <Link to={`/personas/${x.id}`} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3 hover:border-primary hover:bg-accent/30 transition">
+                    {x.foto_url ? (
+                      <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
+                        {(x.nombres?.[0] ?? "?").toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{x.nombres} {x.apellidos}</div>
+                      <div className="truncate text-xs text-muted-foreground">{sub}</div>
+                    </div>
+                    <span className="font-mono text-[10px] text-muted-foreground">{personaCode(x.id)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
