@@ -116,9 +116,9 @@ export default function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div
-          className="glass-strong fixed inset-x-2 top-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
+          className="glass-strong fixed inset-x-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
           style={{
-            marginTop: "env(safe-area-inset-top, 0px)",
+            top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)",
           }}
         >
           <Sheet>
@@ -127,7 +127,11 @@ export default function AppLayout() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[86vw] max-w-sm overflow-y-auto p-3">
+            <SheetContent
+              side="left"
+              className="w-[86vw] max-w-sm overflow-y-auto p-3"
+              style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+            >
               <SheetTitle className="sr-only">Menú principal de GENAIA</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={44} />
@@ -149,10 +153,11 @@ export default function AppLayout() {
           <NotificationBell />
         </div>
         <main
-          className="min-w-0 flex-1 pb-28 pt-20 md:px-8 md:pt-6 md:pb-8"
+          className="min-w-0 flex-1 pb-28 md:px-8 md:pt-6 md:pb-8"
           style={{
             paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
             paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.5rem)",
           }}
         >
           <Outlet />
