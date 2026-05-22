@@ -53,10 +53,10 @@ function buildLinks(p: any) {
 
   // Cementerio General de Santiago (CL)
   links.push({
-    platausforma: "cementerio_cl",
-    titulo: `Cementerio General · Búsqueda ${q}`,
+    plataforma: "cementerio_cl",
+    titulo: `Cementerio General de Santiago · ${q}`,
     url: `https://www.cementeriogeneral.cl/sepulcros/?nombre=${enc(q)}`,
-  } as any);
+  });
 
   // Periódicos digitales (Memoria Chilena / BNE Hemeroteca)
   links.push({
