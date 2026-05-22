@@ -24,6 +24,7 @@ export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
+  const [probandLocked, setProbandLocked] = useState(false);
   const [generaciones, setGeneraciones] = useState(4);
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
@@ -46,10 +47,13 @@ export default function Arbol() {
       ]);
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
-      if (!center && p?.length) {
-        const probandId = (profRes as any)?.data?.proband_id;
-        const valid = probandId && p.some((x: any) => x.id === probandId);
-        setCenter(valid ? probandId : p[0].id);
+      const probandId = (profRes as any)?.data?.proband_id;
+      const valid = probandId && p?.some((x: any) => x.id === probandId);
+      if (valid) {
+        setCenter(probandId);
+        setProbandLocked(true);
+      } else if (!center && p?.length) {
+        setCenter(p[0].id);
       }
       setLoadingTree(false);
     })();
