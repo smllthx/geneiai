@@ -462,7 +462,7 @@ export default function Arbol() {
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
           <SelectTrigger className="h-9 w-[92px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {[2, 3, 4, 5, 6, 8, 10].map((n) => (
+            {[2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50].map((n) => (
               <SelectItem key={n} value={String(n)}>{n} gen</SelectItem>
             ))}
           </SelectContent>
