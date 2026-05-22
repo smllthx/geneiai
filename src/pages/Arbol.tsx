@@ -22,6 +22,8 @@ type Vista = "ascendientes" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 
 export default function Arbol() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const centroParam = searchParams.get("centro");
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
