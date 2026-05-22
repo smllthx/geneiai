@@ -76,6 +76,32 @@ function buildSearches(p: any) {
   return out;
 }
 
+function buildBroad(p: any) {
+  const out: { plataforma: string; url: string; query: string }[] = [];
+  const nombres = (p.nombres ?? "").trim();
+  const apellidos = (p.apellidos ?? "").trim();
+  const apellido1 = apellidos.split(/\s+/)[0] ?? "";
+  const nombre1 = nombres.split(/\s+/)[0] ?? "";
+  if (!nombre1 && !apellido1) return out;
+
+  // Búsquedas SIN filtros — solo el nombre tal cual
+  out.push({ plataforma: "Google (libre)", query: `${nombres} ${apellidos}`,
+    url: `https://www.google.com/search?q=${enc(`${nombres} ${apellidos}`)}` });
+  out.push({ plataforma: "Google (apellido)", query: apellido1,
+    url: `https://www.google.com/search?q=${enc(`apellido ${apellido1} familia historia`)}` });
+  out.push({ plataforma: "Google Images", query: `${nombres} ${apellidos}`,
+    url: `https://www.google.com/search?tbm=isch&q=${enc(`${nombres} ${apellido1}`)}` });
+  out.push({ plataforma: "Google Books", query: `${apellido1}`,
+    url: `https://www.google.com/search?tbm=bks&q=${enc(`"${nombre1} ${apellido1}"`)}` });
+  out.push({ plataforma: "Google Scholar", query: `${apellido1}`,
+    url: `https://scholar.google.com/scholar?q=${enc(`"${nombre1} ${apellido1}" genealogía OR ancestry`)}` });
+  out.push({ plataforma: "Wikipedia", query: `${nombres} ${apellidos}`,
+    url: `https://es.wikipedia.org/w/index.php?search=${enc(`${nombres} ${apellido1}`)}` });
+  out.push({ plataforma: "Internet Archive", query: `${apellido1}`,
+    url: `https://archive.org/search.php?query=${enc(apellido1)}` });
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
