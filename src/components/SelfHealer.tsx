@@ -42,7 +42,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { err: 
             <h2 className="mb-1 font-display text-lg font-semibold">Algo se rompió</h2>
             <p className="mb-4 text-sm text-muted-foreground">{this.state.err.message}</p>
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => applyHeal("clear-cache")}>
+              <Button className="flex-1" onClick={() => applyHeal("deep-repair")}>
                 <RefreshCw className="mr-1 h-4 w-4" /> Auto-reparar y reiniciar
               </Button>
             </div>
