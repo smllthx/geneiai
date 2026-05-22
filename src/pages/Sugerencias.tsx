@@ -35,7 +35,7 @@ export default function Sugerencias() {
     const { data } = await supabase
       .from("sugerencias")
       .select("*")
-      .eq("tipo", "persona")
+      .in("tipo", ["persona", "actualizacion_persona", "fuente"])
       .eq("estado", "pendiente")
       .order("created_at", { ascending: false })
       .limit(2000);
