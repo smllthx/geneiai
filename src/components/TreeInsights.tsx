@@ -20,8 +20,8 @@ export default function TreeInsights({ personaId, personaNombre }: { personaId: 
       const [sugs, hips, coins] = await Promise.all([
         supabase.from("sugerencias").select("id,titulo,url_externa,tipo_externo,origen", { count: "exact" })
           .eq("persona_id", personaId).eq("estado", "pendiente").order("created_at", { ascending: false }).limit(5),
-        supabase.from("hipotesis").select("id", { count: "exact", head: true }).eq("persona_id", personaId),
-        supabase.from("coincidencias").select("id", { count: "exact", head: true }).or(`persona_a.eq.${personaId},persona_b.eq.${personaId}`),
+        supabase.from("hipotesis").select("id", { count: "exact", head: true }).contains("personas", [personaId]).eq("estado", "abierta"),
+        supabase.from("coincidencias").select("id", { count: "exact", head: true }).or(`ref_a.eq.${personaId},ref_b.eq.${personaId}`),
       ]);
       const ultimaWeb = (sugs.data ?? []).find((s: any) => s.origen === "web-search-libre");
       setStats({
