@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Sesión inválida");
 
-    const { persona_id, scope } = await req.json().catch(() => ({}));
+    const { persona_id, scope, modo = "both" } = await req.json().catch(() => ({}));
 
     let personas: any[] = [];
     if (persona_id) {
@@ -130,7 +130,10 @@ Deno.serve(async (req) => {
 
     let creadas = 0;
     for (const p of personas) {
-      const items = buildSearches(p);
+      const items = [
+        ...(modo === "broad" ? [] : buildSearches(p)),
+        ...(modo === "advanced" ? [] : buildBroad(p)),
+      ];
       for (const it of items) {
         const { error } = await supabase.from("sugerencias").insert({
           user_id: user.id,
