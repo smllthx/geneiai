@@ -181,12 +181,15 @@ Deno.serve(async (req) => {
     const { data: docs } = documentoIds?.length ? await docQuery.in('id', documentoIds) : await docQuery.order('created_at', { ascending: false }).limit(max)
     if (!docs?.length) return new Response(JSON.stringify({ procesados: 0, creadas: 0, duplicadas: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    // Personas existentes para deduplicar
-    const { data: existentes } = await supa.from('personas').select('nombres,apellidos,nac_fecha,nac_rango_ini').eq('user_id', user.id)
+    // Personas existentes para deduplicar y comparar calidad
+    const { data: existentes } = await supa.from('personas').select('id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,ocupacion,notas,nacionalidad').eq('user_id', user.id)
+    const byKey = new Map<string, any>()
     const dedupe = new Set<string>()
     for (const p of existentes ?? []) {
-      dedupe.add(dedupeKey(p.nombres, p.apellidos, yearFrom(p.nac_fecha) ?? p.nac_rango_ini ?? null))
-      dedupe.add(dedupeKey(p.nombres, p.apellidos, null))
+      const k1 = dedupeKey(p.nombres, p.apellidos, yearFrom(p.nac_fecha) ?? p.nac_rango_ini ?? null)
+      const k2 = dedupeKey(p.nombres, p.apellidos, null)
+      dedupe.add(k1); dedupe.add(k2)
+      byKey.set(k1, p); if (!byKey.has(k2)) byKey.set(k2, p)
     }
 
     // Sugerencias persona ya pendientes (evitar duplicar inserciones)
@@ -196,7 +199,10 @@ Deno.serve(async (req) => {
       dedupe.add(dedupeKey(pp.nombres ?? '', pp.apellidos ?? '', yearFrom(pp.nac_fecha)))
     }
 
-    let creadas = 0, duplicadas = 0, procesados = 0
+    // Cuenta campos no vacíos para evaluar si el dato nuevo "mejora" al existente
+    const score = (o: any) => ['sexo','nac_fecha','nac_lugar','defuncion_fecha','defuncion_lugar','ocupacion','notas'].reduce((n, f) => n + (o?.[f] ? 1 : 0), 0)
+
+    let creadas = 0, duplicadas = 0, mejoras = 0, procesados = 0
     const filas: any[] = []
 
     for (const d of docs) {
@@ -216,7 +222,6 @@ Deno.serve(async (req) => {
             if (looksText) {
               const t = await file.text()
               if (name.endsWith('.ged') || /^\s*0\s+head/i.test(t.slice(0, 200))) {
-                // GEDCOM
                 detalle.push(...parseGedcom(t))
               } else {
                 texto += '\n' + t
@@ -232,11 +237,32 @@ Deno.serve(async (req) => {
         detalle.push(...ai)
       }
 
-      // 3) Crear sugerencias deduplicando
+      // 3) Crear sugerencias deduplicando o proponiendo mejoras
       for (const p of detalle) {
         const y = yearFrom(p.nac_fecha)
         const k1 = dedupeKey(p.nombres, p.apellidos, y)
         const k2 = dedupeKey(p.nombres, p.apellidos, null)
+        const existente = byKey.get(k1) ?? byKey.get(k2)
+        if (existente) {
+          // ¿el nuevo aporta MÁS campos completos? → sugerencia de actualización
+          const sNew = score(p), sOld = score(existente)
+          if (sNew > sOld) {
+            filas.push({
+              user_id: user.id,
+              tipo: 'actualizacion_persona',
+              persona_id: existente.id,
+              titulo: `Mejora para ${existente.nombres} ${existente.apellidos}`,
+              descripcion: `El documento aporta ${sNew - sOld} campo(s) adicional(es) respecto a la ficha actual.`,
+              confianza: isGedcom ? 85 : 60,
+              origen: `documento:${d.id}`,
+              payload: { campos_nuevos: p, persona_actual: existente, documento_id: d.id, documento_titulo: d.titulo },
+            })
+            mejoras++
+          } else {
+            duplicadas++
+          }
+          continue
+        }
         if (dedupe.has(k1) || (y === null && dedupe.has(k2))) { duplicadas++; continue }
         dedupe.add(k1)
         filas.push({
