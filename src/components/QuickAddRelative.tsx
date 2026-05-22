@@ -130,6 +130,35 @@ export default function QuickAddRelative({
         });
       }
 
+      // === Propagación automática de padres al agregar hermano/a ===
+      if (tipo === "hermano") {
+        const [{ data: padresA }, { data: padresB }] = await Promise.all([
+          supabase.from("relaciones").select("pariente_id, tipo")
+            .eq("user_id", user.id).eq("persona_id", personaId).in("tipo", ["padre", "madre"] as any),
+          supabase.from("relaciones").select("pariente_id, tipo")
+            .eq("user_id", user.id).eq("persona_id", parienteId).in("tipo", ["padre", "madre"] as any),
+        ]);
+        const mapA = new Map((padresA ?? []).map((r: any) => [r.tipo, r.pariente_id as string]));
+        const mapB = new Map((padresB ?? []).map((r: any) => [r.tipo, r.pariente_id as string]));
+        const upsert = async (hijoId: string, padreId: string, tipoPadre: "padre" | "madre") => {
+          const { data: ya } = await supabase.from("relaciones").select("id")
+            .eq("persona_id", hijoId).eq("pariente_id", padreId).eq("tipo", tipoPadre as any).maybeSingle();
+          if (!ya) await supabase.from("relaciones").insert({
+            user_id: user.id, persona_id: hijoId, pariente_id: padreId, tipo: tipoPadre as any,
+          });
+          const { data: ya2 } = await supabase.from("relaciones").select("id")
+            .eq("persona_id", padreId).eq("pariente_id", hijoId).eq("tipo", "hijo" as any).maybeSingle();
+          if (!ya2) await supabase.from("relaciones").insert({
+            user_id: user.id, persona_id: padreId, pariente_id: hijoId, tipo: "hijo" as any,
+          });
+        };
+        for (const t of ["padre", "madre"] as const) {
+          const a = mapA.get(t), b = mapB.get(t);
+          if (a && !b) await upsert(parienteId, a, t);
+          if (b && !a) await upsert(personaId, b, t);
+        }
+      }
+
       toast.success(`${labels[tipo]} ${mode === "buscar" ? "vinculado/a" : "agregado/a"}`);
       setOpen(false);
       setNombres(""); setApellidos(""); setNacAprox(""); setQuery(""); setPicked(null);
