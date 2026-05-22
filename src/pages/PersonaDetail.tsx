@@ -666,6 +666,7 @@ export default function PersonaDetail() {
                 <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento</Link>
               </Button>
             </div>
+          </div>
           {(() => {
             const conFuente = eventos.filter((e: any) => e.fuente_id);
             const sinFuente = eventos.filter((e: any) => !e.fuente_id);
