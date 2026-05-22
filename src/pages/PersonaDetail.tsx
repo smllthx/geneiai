@@ -240,17 +240,51 @@ export default function PersonaDetail() {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
         <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
+        {/* Compartir — anclado arriba a la derecha, estilo FamilySearch */}
+        {!isNew && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto rounded-full"
+            onClick={async () => {
+              const url = `${window.location.origin}/p/${id}`;
+              try {
+                if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
+                else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
+              } catch {}
+            }}
+            title="Compartir ficha pública"
+          >
+            <Globe className="h-4 w-4" /> Compartir
+          </Button>
+        )}
       </div>
 
-      {!isNew && <PersonaHero p={p} />}
+      {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
 
+      {/* Acción horizontal destacada — Ver en árbol, justo bajo el badge "Probable" */}
+      {!isNew && (
+        <button
+          type="button"
+          onClick={() => navigate("/arbol")}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-[15px] font-semibold text-primary transition-colors hover:bg-primary/10"
+        >
+          <GitBranch className="h-5 w-5" /> Ver en árbol familiar
+        </button>
+      )}
+
+      {/* Acciones agrupadas: edición → IA → exportación/fuentes */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* Edición */}
         {user && !editMode && !isNew && (
           <Button variant="outline" size="sm" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
         )}
         {user && (editMode || isNew) && (
           <Button size="sm" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
         )}
+        {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+
+        {/* IA — búsqueda e investigación */}
         {!isNew && <Button size="sm" onClick={async () => {
           const t = toast.loading("Agente IA buscando más sobre esta persona…");
           try {
@@ -261,7 +295,7 @@ export default function PersonaDetail() {
             toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revisa en Búsqueda IA`);
             notify("Búsqueda IA finalizada", { body: `${data.hallazgos?.length ?? 0} hallazgos para ${p.nombres} ${p.apellidos}`, url: "/busqueda-ia", tag: `bia-${id}` });
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Buscar más sobre esta persona con IA</Button>}
+        }}><Sparkles className="h-4 w-4" /> Buscar más con IA</Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
           const t = toast.loading("Investigando con IA…");
           try {
@@ -271,17 +305,33 @@ export default function PersonaDetail() {
             if (data?.error) throw new Error(data.error);
             toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Investigar con IA</Button>}
+        }}><Sparkles className="h-4 w-4" /> Investigar</Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Generando hipótesis de contexto histórico…");
+          const t = toast.loading("Buscando ascendientes con IA…");
           try {
-            const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
+            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "ascendientes" } });
             toast.dismiss(t);
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
-            toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
+            const n = data.sugerencias_creadas ?? 0;
+            toast.success(`${n} sugerencias de ascendientes`);
+            if (n > 0) notify("Nuevas sugerencias de ascendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `asc-${id}` });
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
+        }}><Sparkles className="h-4 w-4" /> Ascendientes</Button>}
+        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+          const t = toast.loading("Buscando descendientes con IA…");
+          try {
+            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "descendientes" } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            const n = data.sugerencias_creadas ?? 0;
+            toast.success(`${n} sugerencias de descendientes`);
+            if (n > 0) notify("Nuevas sugerencias de descendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `desc-${id}` });
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Descendientes</Button>}
+
+        {/* IA — contenido narrativo */}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
           const t = toast.loading("Escribiendo biografía con IA…");
           try {
@@ -296,44 +346,19 @@ export default function PersonaDetail() {
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Biografía automática</Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Buscando ascendientes con IA…");
+          const t = toast.loading("Generando hipótesis de contexto histórico…");
           try {
-            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "ascendientes" } });
+            const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
             toast.dismiss(t);
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
-            const n = data.sugerencias_creadas ?? 0;
-            toast.success(`${n} sugerencias de ascendientes`);
-            if (n > 0) notify("Nuevas sugerencias de ascendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `asc-${id}` });
+            toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Buscar ascendientes</Button>}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Buscando descendientes con IA…");
-          try {
-            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "descendientes" } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            const n = data.sugerencias_creadas ?? 0;
-            toast.success(`${n} sugerencias de descendientes`);
-            if (n > 0) notify("Nuevas sugerencias de descendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `desc-${id}` });
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
-        {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
-        {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
+        }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
+
+        {/* Fuentes y exportación */}
         {!isNew && <CoincidenciasWebButton personaId={id!} />}
-        {!isNew && (
-          <Button size="sm" variant="outline" onClick={async () => {
-            const url = `${window.location.origin}/p/${id}`;
-            try {
-              if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
-              else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
-            } catch {}
-          }} title="Compartir ficha pública">
-            🔗 Compartir
-          </Button>
-        )}
-        <Button size="sm" variant="ghost" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Ver en árbol</Button>
+        {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
       </div>
 
       {isNew && (
