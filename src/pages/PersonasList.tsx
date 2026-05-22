@@ -53,9 +53,9 @@ export default function PersonasList() {
       ) : (
         <div className="grid gap-2">
           {filtered.map((p) => (
-            <button key={p.id} onClick={() => navigate(`/personas/${p.id}`)}
-              className="archivo-card flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:border-primary/40">
-              <div className="min-w-0 flex-1">
+            <div key={p.id}
+              className="archivo-card flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:border-primary/40">
+              <button onClick={() => navigate(`/personas/${p.id}`)} className="min-w-0 flex-1 text-left">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className="font-bold text-foreground">{p.nombres}</span>
                   <span className="font-bold text-foreground">{p.apellidos}</span>
@@ -68,9 +68,31 @@ export default function PersonasList() {
                   {p.nac_fecha ? `n. ${new Date(p.nac_fecha).getUTCFullYear()}` : p.nac_rango_ini ? `n. ${p.nac_rango_ini}–${p.nac_rango_fin}` : "nacimiento s/d"}
                   {p.defuncion_fecha && ` — †${new Date(p.defuncion_fecha).getUTCFullYear()}`}
                 </div>
+              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  title={`Investigar a ${p.nombres} ${p.apellidos} con IA usando toda su información`}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const t = toast.loading(`IA investigando a ${p.nombres} ${p.apellidos}…`);
+                    try {
+                      const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: p.id } });
+                      toast.dismiss(t);
+                      if (error) throw error;
+                      if (data?.error) throw new Error(data.error);
+                      toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revísalos en Búsqueda IA`, {
+                        action: { label: "Ver", onClick: () => navigate("/busqueda-ia") },
+                      });
+                    } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error"); }
+                  }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> IA
+                </Button>
+                <CertezaBadge value={p.certeza} />
               </div>
-              <CertezaBadge value={p.certeza} />
-            </button>
+            </div>
           ))}
         </div>
       )}
