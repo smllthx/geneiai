@@ -318,16 +318,26 @@ export default function PersonaDetail() {
       )}
 
       <Tabs defaultValue="detalles">
-        <TabsList className="flex flex-wrap h-auto glass-strong rounded-2xl p-1">
-          <TabsTrigger value="detalles">Detalles</TabsTrigger>
-          <TabsTrigger value="conyuges">Cónyuges e hijos{fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}</TabsTrigger>
-          <TabsTrigger value="padres">Padres y hermanos{fam.padres.length + fam.hermanos.length > 0 ? ` (${fam.padres.length + fam.hermanos.length})` : ""}</TabsTrigger>
-          <TabsTrigger value="fuentes">Fuentes{docs.length > 0 ? ` (${docs.length})` : ""}</TabsTrigger>
-          <TabsTrigger value="recuerdos">Recuerdos{fotos.length > 0 ? ` (${fotos.length})` : ""}</TabsTrigger>
-          <TabsTrigger value="notas">Biografía</TabsTrigger>
-          <TabsTrigger value="timeline">Línea de tiempo</TabsTrigger>
-          <TabsTrigger value="investigacion">Investigación</TabsTrigger>
-          <TabsTrigger value="coincidencias">Coincidencias{coincidencias.length > 0 ? ` (${coincidencias.length})` : ""}</TabsTrigger>
+        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0 [&::-webkit-scrollbar]:hidden">
+          {[
+            ["detalles", "Detalles"],
+            ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
+            ["padres", `Padres${fam.padres.length + fam.hermanos.length > 0 ? ` (${fam.padres.length + fam.hermanos.length})` : ""}`],
+            ["fuentes", `Fuentes${docs.length > 0 ? ` (${docs.length})` : ""}`],
+            ["recuerdos", `Recuerdos${fotos.length > 0 ? ` (${fotos.length})` : ""}`],
+            ["notas", "Biografía"],
+            ["timeline", "Línea de tiempo"],
+            ["investigacion", "Investigación"],
+            ["coincidencias", `Coincidencias${coincidencias.length > 0 ? ` (${coincidencias.length})` : ""}`],
+          ].map(([v, l]) => (
+            <TabsTrigger
+              key={v}
+              value={v}
+              className="relative shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground shadow-none transition data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            >
+              {l}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="detalles">
