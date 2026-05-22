@@ -5,8 +5,10 @@ import { SectionHeader, StatPill, GlassCard, EmptyState } from "@/components/gla
 import { Button } from "@/components/ui/button";
 import MigrationMap from "@/components/MigrationMap";
 import FamilyTimeline from "@/components/FamilyTimeline";
+import PersonaName from "@/components/PersonaName";
+import { getRecent } from "@/lib/recent";
 import {
-  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff,
+  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight,
 } from "lucide-react";
 
 export default function Inicio() {
@@ -17,6 +19,7 @@ export default function Inicio() {
   });
   const [actividad, setActividad] = useState<any[]>([]);
   const [recientes, setRecientes] = useState<any[]>([]);
+  const [vistasRecientes, setVistasRecientes] = useState<any[]>([]);
   const [sinPadres, setSinPadres] = useState<any[]>([]);
   const [sinFotos, setSinFotos] = useState<any[]>([]);
 
@@ -61,7 +64,24 @@ export default function Inicio() {
       const conFotos = new Set<string>();
       (fotos.data ?? []).forEach((fr: any) => (fr.personas_ids ?? []).forEach((id: string) => conFotos.add(id)));
       setSinFotos((allPersonas.data ?? []).filter((per: any) => !per.foto_url && !conFotos.has(per.id)).slice(0, 6));
+
+      // Vistas recientes (localStorage)
+      const recentIds = getRecent().map((r) => r.id);
+      if (recentIds.length) {
+        const map = new Map((allPersonas.data ?? []).map((x: any) => [x.id, x]));
+        setVistasRecientes(recentIds.map((rid) => map.get(rid)).filter(Boolean).slice(0, 8));
+      }
     })();
+
+    const onChange = () => {
+      const recentIds = getRecent().map((r) => r.id);
+      setVistasRecientes((prev) => {
+        const byId = new Map(prev.map((x: any) => [x.id, x]));
+        return recentIds.map((rid) => byId.get(rid)).filter(Boolean);
+      });
+    };
+    window.addEventListener("genaia:recent-changed", onChange);
+    return () => window.removeEventListener("genaia:recent-changed", onChange);
   }, []);
 
   const QuickAction = ({ icon: Icon, label, to }: any) => (
