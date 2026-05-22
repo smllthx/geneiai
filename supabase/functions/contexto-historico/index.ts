@@ -1,113 +1,60 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
-    const auth = req.headers.get("Authorization") ?? "";
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: auth } } },
-    );
-    const { data: ures } = await supabase.auth.getUser();
-    const user = ures?.user;
-    if (!user) return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const auth = req.headers.get('Authorization') ?? ''
+    const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: auth } },
+    })
+    const { data: { user } } = await supa.auth.getUser()
+    if (!user) return new Response(JSON.stringify({ error: 'no auth' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    const { person_id } = await req.json();
-    if (!person_id) throw new Error("Falta person_id");
+    const { persona_id } = await req.json()
+    const { data: p } = await supa.from('personas').select('*').eq('id', persona_id).maybeSingle()
+    if (!p) return new Response(JSON.stringify({ error: 'persona no encontrada' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    const { data: persona } = await supabase.from("personas").select("*").eq("id", person_id).maybeSingle();
-    if (!persona) throw new Error("Persona no encontrada");
+    const lugaresIds = [p.nac_lugar_id, p.defuncion_lugar_id, p.matrimonio_lugar_id, p.bautismo_lugar_id, p.entierro_lugar_id].filter(Boolean)
+    const { data: lugares } = await supa.from('lugares').select('id,ciudad,provincia,region,pais').in('id', lugaresIds.length ? lugaresIds : ['00000000-0000-0000-0000-000000000000'])
+    const lugaresTxt = (lugares ?? []).map((l: any) => [l.ciudad, l.provincia, l.region, l.pais].filter(Boolean).join(', ')).join(' · ') || 'lugares desconocidos'
 
-    // Lugares conocidos
-    const lugarIds = [persona.nac_lugar_id, persona.bautismo_lugar_id, persona.matrimonio_lugar_id, persona.defuncion_lugar_id].filter(Boolean);
-    const { data: lugares } = lugarIds.length
-      ? await supabase.from("lugares").select("*").in("id", lugarIds as string[])
-      : { data: [] as any[] };
+    const nac = p.nac_fecha ? new Date(p.nac_fecha).getUTCFullYear() : (p.nac_rango_ini ?? null)
+    const fin = p.defuncion_fecha ? new Date(p.defuncion_fecha).getUTCFullYear() : null
+    const periodo = nac && fin ? `${nac}–${fin}` : nac ? `desde ${nac}` : 'periodo desconocido'
 
-    const ctx = {
-      nombre: `${persona.nombres} ${persona.apellidos}`.trim(),
-      sexo: persona.sexo,
-      nacionalidad: persona.nacionalidad,
-      religion: persona.religion,
-      ocupacion: persona.ocupacion,
-      nacimiento: persona.nac_fecha ?? persona.nac_fecha_aprox ?? (persona.nac_rango_ini ? `c.${persona.nac_rango_ini}-${persona.nac_rango_fin ?? ""}` : null),
-      defuncion: persona.defuncion_fecha,
-      lugares: (lugares ?? []).map((l: any) => [l.parroquia, l.ciudad, l.provincia, l.region, l.pais].filter(Boolean).join(", ")),
-      notas: persona.notas,
-    };
+    const prompt = `Resume el contexto histórico, social, económico, político y cultural relevante durante la vida de ${p.nombres} ${p.apellidos} (${periodo}) en ${lugaresTxt}.
+${p.ocupacion ? `Ocupación: ${p.ocupacion}.` : ''}
+${p.nacionalidad ? `Nacionalidad: ${p.nacionalidad}.` : ''}
 
-    const prompt = `Sos un historiador genealogista. A partir de los datos siguientes, generá entre 3 y 6 HIPÓTESIS contextuales sobre hechos, situaciones y contextos históricos que probablemente hayan afectado la vida de esta persona (guerras, migraciones masivas, epidemias, hambrunas, contexto económico/político/religioso del lugar y la época, leyes que la pudieron afectar, rutas migratorias típicas, oficios comunes en la región).
+Entrega 6 a 10 puntos cortos en formato JSON: { "puntos": [{ "anio": número o rango, "titulo": string, "detalle": string, "categoria": "politica"|"economia"|"guerra"|"migracion"|"cultura"|"tecnologia"|"epidemia"|"local" }] }.
+Prioriza hechos locales/regionales por sobre globales. En español. Sin emojis.`
 
-Cada hipótesis debe ser razonable, específica al lugar y a la época, y JAMÁS presentarse como hecho comprobado.
-
-DATOS:
-${JSON.stringify(ctx, null, 2)}
-
-Devolvé estrictamente JSON válido con esta forma:
-{
-  "hipotesis": [
-    {
-      "titulo": "string corto",
-      "descripcion": "2-4 oraciones explicando el contexto y por qué es relevante para esta persona",
-      "argumentos_favor": "qué evidencia indirecta apoya esta hipótesis",
-      "argumentos_contra": "qué la haría improbable",
-      "probabilidad": 1-100,
-      "proxima_accion": "qué fuente buscar para confirmarla o descartarla"
-    }
-  ]
-}`;
-
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) throw new Error("LOVABLE_API_KEY no configurada");
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    const aiKey = Deno.env.get('LOVABLE_API_KEY')!
+    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: 'google/gemini-2.5-flash',
         messages: [
-          { role: "system", content: "Devolvés solo JSON válido. Nada de texto antes o después." },
-          { role: "user", content: prompt },
+          { role: 'system', content: 'Eres historiador genealogista. Responde SOLO con JSON válido.' },
+          { role: 'user', content: prompt },
         ],
+        response_format: { type: 'json_object' },
       }),
-    });
-    if (!r.ok) {
-      if (r.status === 429) throw new Error("Límite de uso alcanzado en Lovable AI. Esperá un minuto.");
-      if (r.status === 402) throw new Error("Sin créditos en Lovable AI. Agregá créditos en Workspace → Usage.");
-      throw new Error(`AI error ${r.status}: ${await r.text()}`);
+    })
+    if (!aiRes.ok) {
+      const t = await aiRes.text()
+      return new Response(JSON.stringify({ error: `AI ${aiRes.status}: ${t}` }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
-    const data = await r.json();
-    let content: string = data.choices?.[0]?.message?.content ?? "{}";
-    content = content.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    let parsed: any = {};
-    try { parsed = JSON.parse(content); } catch { parsed = { hipotesis: [] }; }
+    const ai = await aiRes.json()
+    let parsed: any = {}
+    try { parsed = JSON.parse(ai.choices[0].message.content) } catch { parsed = { puntos: [] } }
 
-    const items = Array.isArray(parsed.hipotesis) ? parsed.hipotesis : [];
-    const inserts = items.map((h: any) => ({
-      user_id: user.id,
-      titulo: `[Contexto] ${String(h.titulo ?? "Hipótesis contextual").slice(0, 200)}`,
-      descripcion: String(h.descripcion ?? ""),
-      argumentos_favor: String(h.argumentos_favor ?? ""),
-      argumentos_contra: String(h.argumentos_contra ?? ""),
-      probabilidad: Math.max(1, Math.min(100, Number(h.probabilidad ?? 50))),
-      proxima_accion: String(h.proxima_accion ?? ""),
-      personas: [person_id],
-      estado: "abierta" as const,
-    }));
-
-    if (inserts.length > 0) {
-      await supabase.from("hipotesis").insert(inserts);
-    }
-
-    return new Response(JSON.stringify({ ok: true, creadas: inserts.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message ?? String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ puntos: parsed.puntos ?? [], periodo, lugares: lugaresTxt }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
-});
+})
