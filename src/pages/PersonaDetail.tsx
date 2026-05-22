@@ -31,6 +31,8 @@ import ContextoHistorico from "@/components/ContextoHistorico";
 import PersonaExports from "@/components/PersonaExports";
 import VincularFuente from "@/components/VincularFuente";
 import RecentChanges from "@/components/RecentChanges";
+import NombresMultilingues from "@/components/NombresMultilingues";
+import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -319,6 +321,7 @@ export default function PersonaDetail() {
         }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
         {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
+        {!isNew && <CoincidenciasWebButton personaId={id!} />}
         {!isNew && (
           <Button size="sm" variant="outline" onClick={async () => {
             const url = `${window.location.origin}/p/${id}`;
@@ -388,6 +391,11 @@ export default function PersonaDetail() {
               </CardContent>
             </Card>
           )}
+          {!isNew && (
+            <div className="mb-3">
+              <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
+            </div>
+          )}
           {!isNew && eventos.length > 0 && (
             <Card className="archivo-card mb-3">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -445,6 +453,15 @@ export default function PersonaDetail() {
               <LugarSelect value={p.entierro_lugar_id} onChange={(v) => set("entierro_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
             <div><Label>Ocupación</Label><Input value={p.ocupacion ?? ""} onChange={(e) => set("ocupacion", e.target.value)} /></div>
             <div><Label>Nacionalidad / origen</Label><Input value={p.nacionalidad ?? ""} onChange={(e) => set("nacionalidad", e.target.value)} /></div>
+            <div className="sm:col-span-2">
+              <NombresMultilingues
+                nombres={p.nombres}
+                apellidos={p.apellidos}
+                origen={p.nacionalidad}
+                nacionalidad={p.nacionalidad}
+                onApply={(v) => { set("nombres", v.nombres); set("apellidos", v.apellidos); }}
+              />
+            </div>
             <div><Label>Religión / rito</Label><Input value={p.religion ?? ""} onChange={(e) => set("religion", e.target.value)} /></div>
             <div><Label>Certeza</Label>
               <Select value={p.certeza} onValueChange={(v) => set("certeza", v)}>

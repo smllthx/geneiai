@@ -20,6 +20,9 @@ type Sugerencia = {
   estado: string;
   payload: any;
   created_at: string;
+  persona_id?: string | null;
+  url_externa?: string | null;
+  tipo_externo?: string | null;
 };
 
 export default function Sugerencias() {
@@ -35,7 +38,7 @@ export default function Sugerencias() {
     const { data } = await supabase
       .from("sugerencias")
       .select("*")
-      .eq("tipo", "persona")
+      .in("tipo", ["persona", "actualizacion_persona", "fuente"])
       .eq("estado", "pendiente")
       .order("created_at", { ascending: false })
       .limit(2000);
@@ -65,6 +68,33 @@ export default function Sugerencias() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
     const p = s.payload ?? {};
+
+    // Sugerencia de actualización: aplica campos nuevos sobre la persona existente
+    if (s.tipo === "actualizacion_persona" && (s as any).persona_id) {
+      const nuevos = p.campos_nuevos ?? {};
+      const actual = p.persona_actual ?? {};
+      const patch: any = {};
+      for (const k of ["sexo","nac_fecha","defuncion_fecha","ocupacion","notas"]) {
+        if (nuevos[k] && !actual[k]) patch[k] = nuevos[k];
+      }
+      const { error } = await supabase.from("personas").update(patch).eq("id", (s as any).persona_id);
+      if (error) return toast.error(error.message);
+      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
+      setItems((xs) => xs.filter((x) => x.id !== s.id));
+      return toast.success("Persona actualizada");
+    }
+
+    // Sugerencia de fuente: enlaza al campo enlaces[] de la persona
+    if (s.tipo === "fuente" && (s as any).persona_id) {
+      const { data: per } = await supabase.from("personas").select("enlaces").eq("id", (s as any).persona_id).maybeSingle();
+      const enlaces = Array.isArray(per?.enlaces) ? per!.enlaces as any[] : [];
+      enlaces.push({ url: (s as any).url_externa, titulo: s.titulo, plataforma: (s as any).tipo_externo, agregado: new Date().toISOString() });
+      await supabase.from("personas").update({ enlaces }).eq("id", (s as any).persona_id);
+      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
+      setItems((xs) => xs.filter((x) => x.id !== s.id));
+      return toast.success("Fuente enlazada");
+    }
+
     const insert: any = {
       user_id: user.id,
       nombres: p.nombres ?? s.titulo.split(" ")[0] ?? "Sin nombre",
@@ -226,9 +256,14 @@ export default function Sugerencias() {
                             <div className="flex flex-wrap items-baseline gap-x-2">
                               <span className="font-medium">{s.titulo}</span>
                               <Badge variant="outline" className="text-[10px]">{s.confianza}%</Badge>
+                              {s.tipo === "actualizacion_persona" && <Badge variant="secondary" className="text-[10px]">Mejora</Badge>}
+                              {s.tipo === "fuente" && <Badge variant="secondary" className="text-[10px]">Fuente web</Badge>}
                             </div>
                             {s.descripcion && (
                               <div className="text-xs text-muted-foreground">{s.descripcion}</div>
+                            )}
+                            {s.url_externa && (
+                              <a href={s.url_externa} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline truncate block">{s.url_externa}</a>
                             )}
                           </div>
                           <Button size="sm" variant="outline" onClick={() => aceptar(s)} title="Añadir al árbol">
