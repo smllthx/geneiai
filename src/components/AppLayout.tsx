@@ -41,21 +41,21 @@ const utilityNav = [
 
 function NavItems({ items }: { items: typeof primaryNav }) {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             cn(
-              "group flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all",
+              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
               isActive
-                ? "bg-primary/12 font-medium text-foreground"
-                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground",
+                ? "bg-primary/12 font-semibold text-foreground"
+                : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
             )
           }
         >
-          <Icon className="h-4 w-4 shrink-0" /> <span className="truncate">{label}</span>
+          <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
         </NavLink>
       ))}
     </div>
