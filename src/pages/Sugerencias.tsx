@@ -65,6 +65,33 @@ export default function Sugerencias() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
     const p = s.payload ?? {};
+
+    // Sugerencia de actualización: aplica campos nuevos sobre la persona existente
+    if (s.tipo === "actualizacion_persona" && (s as any).persona_id) {
+      const nuevos = p.campos_nuevos ?? {};
+      const actual = p.persona_actual ?? {};
+      const patch: any = {};
+      for (const k of ["sexo","nac_fecha","defuncion_fecha","ocupacion","notas"]) {
+        if (nuevos[k] && !actual[k]) patch[k] = nuevos[k];
+      }
+      const { error } = await supabase.from("personas").update(patch).eq("id", (s as any).persona_id);
+      if (error) return toast.error(error.message);
+      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
+      setItems((xs) => xs.filter((x) => x.id !== s.id));
+      return toast.success("Persona actualizada");
+    }
+
+    // Sugerencia de fuente: enlaza al campo enlaces[] de la persona
+    if (s.tipo === "fuente" && (s as any).persona_id) {
+      const { data: per } = await supabase.from("personas").select("enlaces").eq("id", (s as any).persona_id).maybeSingle();
+      const enlaces = Array.isArray(per?.enlaces) ? per!.enlaces as any[] : [];
+      enlaces.push({ url: (s as any).url_externa, titulo: s.titulo, plataforma: (s as any).tipo_externo, agregado: new Date().toISOString() });
+      await supabase.from("personas").update({ enlaces }).eq("id", (s as any).persona_id);
+      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
+      setItems((xs) => xs.filter((x) => x.id !== s.id));
+      return toast.success("Fuente enlazada");
+    }
+
     const insert: any = {
       user_id: user.id,
       nombres: p.nombres ?? s.titulo.split(" ")[0] ?? "Sin nombre",
