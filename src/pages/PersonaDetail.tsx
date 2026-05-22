@@ -624,9 +624,14 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fuentes">
-          <p className="mb-3 text-sm text-muted-foreground">
-            Fuentes citadas para los datos vitales (eventos) de esta persona. Cada evento puede tener una fuente asociada.
-          </p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Fuentes y documentos vinculados (actas, censos, padrones, fotografías escaneadas).
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento</Link>
+            </Button>
+          </div>
           {(() => {
             const conFuente = eventos.filter((e: any) => e.fuente_id);
             const sinFuente = eventos.filter((e: any) => !e.fuente_id);
