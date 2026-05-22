@@ -152,11 +152,19 @@ async function splitPdfBase64(b64: string, chunkPages = CHUNK_PAGES): Promise<st
 }
 
 async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any | null> {
-  const aiRes = await fetch(GATEWAY, {
+  // Si el usuario configuró OPENAI_API_KEY, usamos su cuenta de OpenAI.
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const useOpenAI = !!openaiKey;
+  const url = useOpenAI ? "https://api.openai.com/v1/chat/completions" : GATEWAY_URL;
+  const apiKey = useOpenAI ? openaiKey! : LOVABLE_API_KEY;
+  // gpt-4o soporta visión + tool calling; gemini-2.5-pro vía gateway.
+  const model = useOpenAI ? "gpt-4o" : "google/gemini-2.5-pro";
+
+  const aiRes = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: userContent },
@@ -177,6 +185,7 @@ async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any 
   if (!tc) return null;
   try { return JSON.parse(tc.function.arguments); } catch { return null; }
 }
+
 
 async function pMap<T, R>(items: T[], fn: (x: T, i: number) => Promise<R>, concurrency = MAX_CONCURRENT): Promise<R[]> {
   const results: R[] = new Array(items.length);
