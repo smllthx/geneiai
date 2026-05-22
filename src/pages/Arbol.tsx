@@ -462,7 +462,7 @@ export default function Arbol() {
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
           <SelectTrigger className="h-9 w-[92px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {[2, 3, 4, 5, 6, 8, 10].map((n) => (
+            {[2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50].map((n) => (
               <SelectItem key={n} value={String(n)}>{n} gen</SelectItem>
             ))}
           </SelectContent>
@@ -598,7 +598,7 @@ export default function Arbol() {
       ) : vista === "abanico" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
-            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 6)} size={760} />
+            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={generaciones} size={760} />
           </div>
           <p className="mt-2 text-center text-xs text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> línea paterna ·{" "}
@@ -608,7 +608,7 @@ export default function Arbol() {
       ) : vista === "dinastica" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
-            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 5)} />
+            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
           </div>
         </div>
       ) : (
