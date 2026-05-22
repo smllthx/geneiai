@@ -250,6 +250,7 @@ html[data-density="comfortable"] .glass-card { @apply p-6; }
 body.tree-fullscreen aside,
 body.tree-fullscreen nav.glass-strong.fixed,
 body.tree-fullscreen [aria-label="Asistente"],
+body.tree-fullscreen [aria-label="Mostrar menú"],
 body.tree-fullscreen [data-genaia-panel] {
   display: none !important;
 }
