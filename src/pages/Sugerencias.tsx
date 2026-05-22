@@ -256,9 +256,14 @@ export default function Sugerencias() {
                             <div className="flex flex-wrap items-baseline gap-x-2">
                               <span className="font-medium">{s.titulo}</span>
                               <Badge variant="outline" className="text-[10px]">{s.confianza}%</Badge>
+                              {s.tipo === "actualizacion_persona" && <Badge variant="secondary" className="text-[10px]">Mejora</Badge>}
+                              {s.tipo === "fuente" && <Badge variant="secondary" className="text-[10px]">Fuente web</Badge>}
                             </div>
                             {s.descripcion && (
                               <div className="text-xs text-muted-foreground">{s.descripcion}</div>
+                            )}
+                            {s.url_externa && (
+                              <a href={s.url_externa} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline truncate block">{s.url_externa}</a>
                             )}
                           </div>
                           <Button size="sm" variant="outline" onClick={() => aceptar(s)} title="Añadir al árbol">
