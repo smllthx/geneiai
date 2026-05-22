@@ -458,6 +458,32 @@ export default function Arbol() {
         </Select>
       </div>
 
+      {/* Configuración del árbol: resaltado por categoría */}
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
+        {([
+          ["predeterminada", "Predeterminada"],
+          ["pais", "País"],
+          ["fuentes", "Fuentes"],
+          ["historia", "Historia"],
+        ] as [Categoria, string][]).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setCategoria(k)}
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+              categoria === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-foreground/5"
+            }`}
+          >{label}</button>
+        ))}
+        {categoria !== "predeterminada" && (
+          <span className="ml-1 text-[10px] text-muted-foreground">
+            {categoria === "fuentes" && "Resalta personas con documentos vinculados."}
+            {categoria === "pais" && "Color por nacionalidad."}
+            {categoria === "historia" && "Color por época de nacimiento."}
+          </span>
+        )}
+      </div>
+
+
       {agentProgress.total > 0 && (
         <div className="mx-3 mb-3 rounded-2xl border border-border bg-card/70 p-3 shadow-sm md:mx-6">
           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
