@@ -71,13 +71,20 @@ export default function SelfHealer() {
       setOpen(true);
     };
 
+    const isNoiseMessage = (m: string) =>
+      !m ||
+      m === "Script error." ||
+      m === "ResizeObserver loop limit exceeded" ||
+      m.startsWith("ResizeObserver loop completed");
+
     const onErr = (ev: ErrorEvent) => {
-      if (!ev?.message) return;
+      if (!ev?.message || isNoiseMessage(ev.message)) return;
       pushError?.({ message: ev.message, stack: ev.error?.stack, url: window.location.href, source: "auto" });
     };
     const onRej = (ev: PromiseRejectionEvent) => {
       const r = ev.reason;
       const msg = typeof r === "string" ? r : r?.message ?? "Promesa rechazada";
+      if (isNoiseMessage(msg)) return;
       pushError?.({ message: msg, stack: r?.stack, url: window.location.href, source: "auto" });
     };
     window.addEventListener("error", onErr);
