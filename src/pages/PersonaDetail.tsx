@@ -18,6 +18,7 @@ import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pen
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
+import AgregarInfoSheet from "@/components/AgregarInfoSheet";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
@@ -306,24 +307,34 @@ export default function PersonaDetail() {
         <h1 className="mb-4 font-display text-3xl font-bold tracking-tight">Nueva persona</h1>
       )}
 
-      <Tabs defaultValue="resumen">
+      {!isNew && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <AgregarInfoSheet personaId={id!} onAdded={async () => {
+            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
+            setEventos(data ?? []);
+          }} />
+          <span className="text-xs text-muted-foreground">Bautismo · Residencia · Ocupación · Censo · Inmigración · etc.</span>
+        </div>
+      )}
+
+      <Tabs defaultValue="detalles">
         <TabsList className="flex flex-wrap h-auto glass-strong rounded-2xl p-1">
-          <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          <TabsTrigger value="familia">Familia</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="fotos">Fotos {fotos.length > 0 && <span className="ml-1 text-xs opacity-70">{fotos.length}</span>}</TabsTrigger>
-          <TabsTrigger value="documentos">Documentos {docs.length > 0 && <span className="ml-1 text-xs opacity-70">{docs.length}</span>}</TabsTrigger>
-          <TabsTrigger value="fuentes">Fuentes</TabsTrigger>
+          <TabsTrigger value="detalles">Detalles</TabsTrigger>
+          <TabsTrigger value="conyuges">Cónyuges e hijos{fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="padres">Padres y hermanos{fam.padres.length + fam.hermanos.length > 0 ? ` (${fam.padres.length + fam.hermanos.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="fuentes">Fuentes{docs.length > 0 ? ` (${docs.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="recuerdos">Recuerdos{fotos.length > 0 ? ` (${fotos.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="notas">Biografía</TabsTrigger>
+          <TabsTrigger value="timeline">Línea de tiempo</TabsTrigger>
           <TabsTrigger value="investigacion">Investigación</TabsTrigger>
-          <TabsTrigger value="coincidencias">Coincidencias {coincidencias.length > 0 && <span className="ml-1 text-xs opacity-70">{coincidencias.length}</span>}</TabsTrigger>
-          <TabsTrigger value="notas">Notas</TabsTrigger>
+          <TabsTrigger value="coincidencias">Coincidencias{coincidencias.length > 0 ? ` (${coincidencias.length})` : ""}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="resumen">
+        <TabsContent value="detalles">
           {!isNew && (
             <Card className="archivo-card mb-3">
-              <CardHeader className="pb-2 text-center"><CardTitle className="font-serif text-lg">Datos vitales</CardTitle></CardHeader>
-              <CardContent className="mx-auto grid max-w-3xl gap-x-6 gap-y-3 text-center text-sm sm:grid-cols-2">
+              <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Información vital</CardTitle></CardHeader>
+              <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                 <Field label="Nombres" value={p.nombres} />
                 <Field label="Apellidos" value={p.apellidos} />
                 <Field label="Sexo" value={p.sexo} />
@@ -334,6 +345,31 @@ export default function PersonaDetail() {
                 <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
                 <Field label="Ocupación" value={p.ocupacion} />
                 <Field label="Religión" value={p.religion} />
+              </CardContent>
+            </Card>
+          )}
+          {!isNew && eventos.length > 0 && (
+            <Card className="archivo-card mb-3">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="font-serif text-lg">Otros hechos vitales</CardTitle>
+                <AgregarInfoSheet personaId={id!} onAdded={async () => {
+                  const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
+                  setEventos(data ?? []);
+                }} trigger={<Button size="sm" variant="ghost"><Sparkles className="h-3.5 w-3.5" /> Agregar</Button>} />
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {eventos.map((e: any) => (
+                    <li key={e.id} className="py-2 text-sm flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium capitalize">{e.tipo}</div>
+                        <div className="text-xs text-muted-foreground">{fmtDate(e.fecha) ?? e.fecha_aprox ?? "Sin fecha"}{e.lugar_original ? ` · ${e.lugar_original}` : ""}</div>
+                        {e.descripcion && <div className="mt-0.5 text-xs">{e.descripcion}</div>}
+                      </div>
+                      <CertezaBadge value={e.certeza} />
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}
@@ -391,14 +427,57 @@ export default function PersonaDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="familia">
-          <RelacionesPanel personaId={id!} personaSexo={p?.sexo} relaciones={relaciones} allPersonas={allPersonas} reload={async () => {
-            const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
-            setRelaciones(data ?? []);
-          }} disabled={isNew} />
+        <TabsContent value="conyuges">
+          <FamiliaSeccion
+            titulo="Cónyuges"
+            personas={fam.conyuges}
+            empty="Sin cónyuges registrados."
+            quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="conyuge" onAdded={async () => {
+              const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+              setRelaciones(data ?? []);
+            }} trigger={<Button size="sm" variant="outline">+ Cónyuge</Button>} />}
+          />
+          <div className="h-3" />
+          <FamiliaSeccion
+            titulo="Hijos"
+            personas={fam.hijos}
+            empty="Sin hijos registrados."
+            quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hijo" onAdded={async () => {
+              const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+              setRelaciones(data ?? []);
+            }} trigger={<Button size="sm" variant="outline">+ Hijo/a</Button>} />}
+          />
         </TabsContent>
 
-        <TabsContent value="fotos">
+        <TabsContent value="padres">
+          <FamiliaSeccion
+            titulo="Padres"
+            personas={fam.padres}
+            empty="Sin padres registrados."
+            quickAdd={<div className="flex gap-2">
+              <QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="padre" onAdded={async () => {
+                const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+                setRelaciones(data ?? []);
+              }} trigger={<Button size="sm" variant="outline">+ Padre</Button>} />
+              <QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="madre" onAdded={async () => {
+                const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+                setRelaciones(data ?? []);
+              }} trigger={<Button size="sm" variant="outline">+ Madre</Button>} />
+            </div>}
+          />
+          <div className="h-3" />
+          <FamiliaSeccion
+            titulo="Hermanos"
+            personas={fam.hermanos}
+            empty="Sin hermanos registrados."
+            quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hermano" onAdded={async () => {
+              const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+              setRelaciones(data ?? []);
+            }} trigger={<Button size="sm" variant="outline">+ Hermano/a</Button>} />}
+          />
+        </TabsContent>
+
+        <TabsContent value="recuerdos">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">Fotos en las que aparece esta persona.</p>
             <div className="flex items-center gap-2">
@@ -475,38 +554,7 @@ export default function PersonaDetail() {
         </TabsContent>
 
 
-        <TabsContent value="documentos">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">
-              Documentos en los que aparece esta persona (actas, censos, padrones, fotos escaneadas).
-            </p>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento y leerlo con IA</Link>
-            </Button>
-          </div>
-          {docs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin documentos vinculados todavía.</p>
-          ) : (
-            <ul className="grid gap-2">
-              {docs.map((d: any) => (
-                <li key={d.id} className="archivo-card px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link to={`/documentos`} className="font-medium hover:text-primary truncate block">{d.titulo}</Link>
-                      <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div>
-                      {d.resumen && <p className="mt-1 text-xs line-clamp-2">{d.resumen}</p>}
-                    </div>
-                    {d.url && (
-                      <Button asChild size="sm" variant="ghost">
-                        <a href={d.url} target="_blank" rel="noreferrer">Ver</a>
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </TabsContent>
+        {/* documentos content merged into fuentes below */}
 
         <TabsContent value="coincidencias">
           {coincidencias.length === 0 ? (
@@ -576,9 +624,14 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fuentes">
-          <p className="mb-3 text-sm text-muted-foreground">
-            Fuentes citadas para los datos vitales (eventos) de esta persona. Cada evento puede tener una fuente asociada.
-          </p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Fuentes y documentos vinculados (actas, censos, padrones, fotografías escaneadas).
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento</Link>
+            </Button>
+          </div>
           {(() => {
             const conFuente = eventos.filter((e: any) => e.fuente_id);
             const sinFuente = eventos.filter((e: any) => !e.fuente_id);
@@ -629,10 +682,78 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="notas">
-          <Textarea rows={12} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)} placeholder="Notas extensas, hipótesis, ideas…" />
+          <Card className="archivo-card">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="font-serif text-lg">Biografía y notas</CardTitle>
+              {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
+                const t = toast.loading("Escribiendo biografía con IA…");
+                try {
+                  const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
+                  toast.dismiss(t);
+                  if (error) throw error;
+                  if (data?.error) throw new Error(data.error);
+                  toast.success("Biografía generada");
+                  const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+                  if (fresh) setP(fresh);
+                } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+              }}><Sparkles className="h-3.5 w-3.5" /> Generar con IA</Button>}
+            </CardHeader>
+            <CardContent>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Escribe la historia de vida: contexto, momentos importantes, relatos familiares, anécdotas, viajes, hipótesis. Puedes generar un borrador con IA y luego ajustarlo.
+              </p>
+              <Textarea rows={14} value={p.notas ?? ""} onChange={(e) => set("notas", e.target.value)}
+                placeholder="Nació en… Vivió en… Trabajó como… Se casó con… Se distinguió por…" />
+              <div className="mt-3 flex justify-end">
+                <Button size="sm" onClick={save} disabled={loading}><Save className="h-3.5 w-3.5" /> Guardar biografía</Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode }) {
+  return (
+    <Card className="archivo-card">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="font-serif text-lg">{titulo} <span className="ml-1 text-xs text-muted-foreground">({personas.length})</span></CardTitle>
+        {quickAdd}
+      </CardHeader>
+      <CardContent>
+        {personas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {personas.map((x: any) => {
+              const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
+              const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
+              const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
+              return (
+                <li key={x.id}>
+                  <Link to={`/personas/${x.id}`} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3 hover:border-primary hover:bg-accent/30 transition">
+                    {x.foto_url ? (
+                      <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
+                        {(x.nombres?.[0] ?? "?").toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{x.nombres} {x.apellidos}</div>
+                      <div className="truncate text-xs text-muted-foreground">{sub}</div>
+                    </div>
+                    <span className="font-mono text-[10px] text-muted-foreground">{personaCode(x.id)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
