@@ -146,12 +146,21 @@
   }
   h1, h2, h3, h4, .font-display {
     font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: -0.022em;
   }
-  .font-serif { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; letter-spacing: -0.015em; font-weight: 500; }
+  h1 { font-size: clamp(1.85rem, 1.4rem + 1.6vw, 2.6rem); line-height: 1.1; }
+  h2 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.15; }
+  h3 { font-size: clamp(1.2rem, 1rem + 0.6vw, 1.5rem); line-height: 1.2; }
+  .font-serif { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; letter-spacing: -0.015em; font-weight: 600; }
   .font-sans, .font-helvetica { font-family: 'Helvetica Neue', Helvetica, 'Source Sans 3', Arial, sans-serif; }
   a.link, .text-link { color: hsl(var(--link)); }
+}
+
+/* Genealogy emphasis — names, places, surnames, countries render heavier */
+.gen-name, .gen-place, .gen-country, .gen-surname {
+  font-weight: 700;
+  letter-spacing: -0.012em;
 }
 
 @layer components {
