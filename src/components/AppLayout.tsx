@@ -20,6 +20,7 @@ import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
+  { to: "/sugerencias", label: "Sugerencias", icon: LightbulbIcon },
   { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
   { to: "/personas", label: "Personas", icon: Users },
   { to: "/familias", label: "Familias", icon: Heart },
