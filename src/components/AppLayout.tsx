@@ -47,30 +47,56 @@ const utilityNav = [
   { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
 ];
 
-function NavItems({ items }: { items: typeof primaryNav }) {
+type NavItem = { to: string; label: string; icon: any };
+
+function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
+  const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, items));
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  useEffect(() => { setOrdered(loadOrder(groupKey, items)); }, [groupKey, items.length]);
+
+  const onDrop = (toIdx: number) => {
+    if (dragIdx === null || dragIdx === toIdx) return;
+    const next = [...ordered];
+    const [m] = next.splice(dragIdx, 1);
+    next.splice(toIdx, 0, m);
+    setOrdered(next);
+    saveOrder(groupKey, next);
+    setDragIdx(null);
+  };
+
   return (
     <div className="space-y-1">
-      {items.map(({ to, label, icon: Icon }) => (
-        <NavLink
+      {ordered.map(({ to, label, icon: Icon }, idx) => (
+        <div
           key={to}
-          to={to}
-          className={({ isActive }) =>
-            cn(
-              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
-              isActive
-                ? "bg-primary/12 font-semibold text-foreground"
-                : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
-            )
-          }
+          draggable
+          onDragStart={() => setDragIdx(idx)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop(idx)}
+          className="group/row relative"
         >
-          <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
-        </NavLink>
+          <NavLink
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
+                isActive
+                  ? "bg-primary/12 font-semibold text-foreground"
+                  : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
+              )
+            }
+          >
+            <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />
+            <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
+          </NavLink>
+        </div>
       ))}
     </div>
   );
 }
 
-function NavGroup({ label, items }: { label: string; items: typeof primaryNav }) {
+function NavGroup({ groupKey, label, items }: { groupKey: string; label: string; items: NavItem[] }) {
   const { pathname } = useLocation();
   const containsActive = items.some((i) => pathname.startsWith(i.to));
   const [open, setOpen] = useState(containsActive);
@@ -83,7 +109,7 @@ function NavGroup({ label, items }: { label: string; items: typeof primaryNav })
         <span>{label}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
-      {open && <div className="mt-1"><NavItems items={items} /></div>}
+      {open && <div className="mt-1"><NavItems groupKey={groupKey} items={items} /></div>}
     </div>
   );
 }
