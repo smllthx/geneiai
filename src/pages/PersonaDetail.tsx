@@ -392,7 +392,7 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="familia">
-          <RelacionesPanel personaId={id!} relaciones={relaciones} allPersonas={allPersonas} reload={async () => {
+          <RelacionesPanel personaId={id!} personaSexo={p?.sexo} relaciones={relaciones} allPersonas={allPersonas} reload={async () => {
             const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
             setRelaciones(data ?? []);
           }} disabled={isNew} />
