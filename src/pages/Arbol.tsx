@@ -229,6 +229,41 @@ export default function Arbol() {
     <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}>{children}</div>
   );
 
+  // Determine highlight ring based on selected categoria
+  const catRing = (p: PersonaLite | undefined): string => {
+    if (!p || categoria === "predeterminada") return "";
+    if (categoria === "fuentes") {
+      const n = docsByPersona.get(p.id) ?? 0;
+      return n > 0 ? "ring-2 ring-emerald-400/70 rounded-2xl" : "opacity-60";
+    }
+    if (categoria === "pais") {
+      const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+      if (!nac) return "opacity-60";
+      // Stable hue from string
+      let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+      return `rounded-2xl ring-2`;
+    }
+    if (categoria === "historia") {
+      const y = (p as any).nac_fecha ? new Date((p as any).nac_fecha).getUTCFullYear() : (p as any).nac_rango_ini;
+      if (!y) return "opacity-60";
+      if (y < 1850) return "ring-2 ring-amber-500/70 rounded-2xl";
+      if (y < 1920) return "ring-2 ring-orange-500/70 rounded-2xl";
+      if (y < 1970) return "ring-2 ring-purple-500/70 rounded-2xl";
+      return "ring-2 ring-sky-500/70 rounded-2xl";
+    }
+    return "";
+  };
+  const catStyle = (p: PersonaLite | undefined): React.CSSProperties => {
+    if (!p || categoria !== "pais") return {};
+    const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+    if (!nac) return {};
+    let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return { boxShadow: `0 0 0 2px hsl(${h} 70% 55%)`, borderRadius: "1rem" };
+  };
+  const Hl = ({ p, children }: { p?: PersonaLite; children: React.ReactNode }) => (
+    <div className={catRing(p)} style={catStyle(p)}>{children}</div>
+  );
+
   const Draggable = TreeCard; // backwards-compat alias used by older sections below
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
