@@ -235,6 +235,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contradicciones: {
+        Row: {
+          created_at: string
+          descripcion: string | null
+          estado: string
+          eventos: string[]
+          id: string
+          metadata: Json
+          personas: string[]
+          severidad: string
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          eventos?: string[]
+          id?: string
+          metadata?: Json
+          personas?: string[]
+          severidad?: string
+          tipo: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          eventos?: string[]
+          id?: string
+          metadata?: Json
+          personas?: string[]
+          severidad?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credenciales_externas: {
         Row: {
           created_at: string
@@ -1459,6 +1504,11 @@ export type Database = {
         | "lapida"
         | "carta"
         | "otro"
+        | "familysearch"
+        | "myheritage"
+        | "relato_familiar"
+        | "periodico"
+        | "cementerio"
       evento_tipo:
         | "nacimiento"
         | "bautismo"
@@ -1638,6 +1688,11 @@ export const Constants = {
         "lapida",
         "carta",
         "otro",
+        "familysearch",
+        "myheritage",
+        "relato_familiar",
+        "periodico",
+        "cementerio",
       ],
       evento_tipo: [
         "nacimiento",
