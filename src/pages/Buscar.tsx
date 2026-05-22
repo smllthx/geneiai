@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Loader2, Sparkles } from "lucide-react";
 import { expandTerm, fuzzyScore, norm } from "@/lib/search/fuzzy";
+import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
+import PersonaName from "@/components/PersonaName";
 
 type Cat = "personas" | "documentos" | "eventos" | "hipotesis" | "lugares";
 
@@ -52,13 +54,18 @@ export default function Buscar() {
 
         const all: Hit[] = [];
 
+        // Detectar si el query parece un código de identificación (GDVB-TS5)
+        const codeNorm = normalizeCode(q);
+        const looksLikeCode = /^[A-Z2-9]{2,}-?[A-Z2-9]*$/i.test(q.trim()) && codeNorm.length >= 3;
+
         for (const r of p.data ?? []) {
           const variantes = (r.variantes_nombre ?? []).join(" ");
           const text = `${r.nombres} ${r.apellidos} ${variantes} ${r.notas ?? ""}`;
-          const score = fuzzyScore(q, text);
+          let score = fuzzyScore(q, text);
+          if (looksLikeCode && matchesCode(q, r.id)) score = 1;
           if (score >= 0.7) all.push({
             id: r.id, cat: "personas", label: `${r.nombres} ${r.apellidos}`.trim(),
-            sub: variantes ? `también: ${variantes}` : undefined,
+            sub: `${personaCode(r.id)}${variantes ? ` · también: ${variantes}` : ""}`,
             score, to: `/personas/${r.id}`,
           });
         }
@@ -127,11 +134,14 @@ export default function Buscar() {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar en todo el archivo: nombres, apellidos, lugares, palabras dentro de actas…"
+          placeholder="Nombre, apellido, código (ej. GDVB-TS5), lugar, palabra en acta…"
           className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Cada persona tiene un código único de 7 caracteres (estilo <code>GDVB-TS5</code>). Puedes copiarlo desde la ficha y pegarlo aquí para encontrarla al instante.
+      </p>
 
       {expansionInfo.length > 0 && (
         <div className="glass-card flex flex-wrap items-center gap-1.5 p-3 text-xs">
