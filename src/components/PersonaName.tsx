@@ -20,8 +20,8 @@ export default function PersonaName({ persona, showCode = true, asLink = true, c
 
   const inner = (
     <span className={cn("inline-flex flex-wrap items-baseline gap-1.5", className)}>
-      {nm && <span className={cn("font-bold text-foreground", txtSize)}>{nm}</span>}
-      {ap && <span className={cn("font-bold text-foreground", txtSize)}>{ap}</span>}
+      {nm && <span className={cn("gen-name font-extrabold text-foreground", txtSize)}>{nm}</span>}
+      {ap && <span className={cn("gen-surname font-extrabold text-foreground", txtSize)}>{ap}</span>}
       {showCode && persona.id && (
         <span className={cn("rounded-md border border-border/60 bg-foreground/5 px-1 py-0 font-mono font-semibold tracking-wider text-muted-foreground", codeSize)}>
           {personaCode(persona.id)}
