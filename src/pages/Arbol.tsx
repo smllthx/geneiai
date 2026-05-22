@@ -608,7 +608,7 @@ export default function Arbol() {
       ) : vista === "dinastica" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
-            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={Math.min(generaciones, 5)} />
+            <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
           </div>
         </div>
       ) : (
