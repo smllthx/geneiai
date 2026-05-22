@@ -76,6 +76,7 @@ export default function PersonaDetail() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(isNew);
   const [lugares, setLugares] = useLugares();
+  const lugaresById = useMemo(() => new Map((lugares ?? []).map((l: any) => [l.id, l])), [lugares]);
 
   useEffect(() => {
     if (!idValid) { setFetching(false); return; }
