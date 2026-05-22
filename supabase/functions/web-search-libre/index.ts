@@ -141,21 +141,25 @@ Deno.serve(async (req) => {
       insight = await lovableSummary(prompt);
     }
 
-    // Persist as sugerencias_externas
+    // Persist as sugerencias (tipo: web_libre)
     const rows = unique.map((h) => ({
       user_id: u.user.id,
-      person_id: persona_id,
-      fuente: h.fuente,
+      persona_id: persona_id,
+      tipo: "web_externa",
+      tipo_externo: h.fuente,
       titulo: h.titulo.slice(0, 240),
-      url: h.url.slice(0, 1000),
-      snippet: h.snippet.slice(0, 600),
-      estado: "pendiente" as const,
+      descripcion: h.snippet.slice(0, 600),
+      url_externa: h.url.slice(0, 1000),
+      origen: "web-search-libre",
+      confianza: h.fuente === "wikipedia" ? 75 : 55,
+      payload: { snippet: h.snippet, fuente: h.fuente },
     }));
     let inserted = 0;
     if (rows.length) {
-      const { count } = await sb.from("sugerencias_externas").insert(rows).select("*", { count: "exact", head: true });
-      inserted = count ?? rows.length;
+      const { data } = await sb.from("sugerencias").insert(rows).select("id");
+      inserted = data?.length ?? 0;
     }
+
 
     if (insight) {
       await sb.from("notificaciones").insert({
