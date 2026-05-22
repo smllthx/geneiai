@@ -109,6 +109,7 @@ const App = () => (
                   <Route path="/insights" element={<Insights />} />
                   <Route path="/busqueda-ia" element={<BusquedaIA />} />
                   <Route path="/fusionar" element={<Fusionar />} />
+                  <Route path="/sugerencias" element={<Sugerencias />} />
                   <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
