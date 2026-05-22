@@ -362,6 +362,14 @@ export default function Arbol() {
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setFullscreen((v) => !v)}
+          aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          className="glass grid h-9 w-9 place-items-center rounded-full text-foreground/70 transition hover:bg-foreground/5 hover:text-foreground"
+        >
+          {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
       </div>
 
       {/* Compact selector row */}
