@@ -24,6 +24,7 @@ export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
+  const [probandLocked, setProbandLocked] = useState(false);
   const [generaciones, setGeneraciones] = useState(4);
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
@@ -46,10 +47,13 @@ export default function Arbol() {
       ]);
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
-      if (!center && p?.length) {
-        const probandId = (profRes as any)?.data?.proband_id;
-        const valid = probandId && p.some((x: any) => x.id === probandId);
-        setCenter(valid ? probandId : p[0].id);
+      const probandId = (profRes as any)?.data?.proband_id;
+      const valid = probandId && p?.some((x: any) => x.id === probandId);
+      if (valid) {
+        setCenter(probandId);
+        setProbandLocked(true);
+      } else if (!center && p?.length) {
+        setCenter(p[0].id);
       }
       setLoadingTree(false);
     })();
@@ -192,7 +196,7 @@ export default function Arbol() {
         </div>
       );
     }
-    if (focusable && p.id !== center) {
+    if (focusable && p.id !== center && !probandLocked) {
       // override default navigation: single click focuses on this person in the tree
       return (
         <div className="relative group">
@@ -376,8 +380,23 @@ export default function Arbol() {
       <div className="mb-3 flex items-center gap-2 px-3 md:px-6">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Select value={center} onValueChange={setCenter}>
-            <SelectTrigger className="h-9 rounded-full pl-9 text-xs"><SelectValue placeholder="Persona central" /></SelectTrigger>
+          <Select
+            value={center}
+            onValueChange={(v) => {
+              if (probandLocked) {
+                toast.info("La persona principal ya está fijada y no se puede cambiar.");
+                return;
+              }
+              setCenter(v);
+            }}
+            disabled={probandLocked}
+          >
+            <SelectTrigger
+              className="h-9 rounded-full pl-9 text-xs disabled:opacity-100 disabled:cursor-default"
+              title={probandLocked ? "Persona principal fijada" : "Persona central"}
+            >
+              <SelectValue placeholder="Persona central" />
+            </SelectTrigger>
             <SelectContent>
               {personas.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>

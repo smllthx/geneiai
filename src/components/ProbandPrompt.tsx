@@ -53,17 +53,20 @@ export default function ProbandPrompt() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && guardar(true)}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={() => { /* irreversible: no se puede cerrar sin elegir */ }}>
+      <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Sparkles className="h-5 w-5 text-primary" /> ¿Quién es la persona principal?
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Elegí desde quién se construye tu árbol. Suele ser <strong>tú mismo/a</strong> o el descendiente más reciente.
-          Toda la app (árbol, investigaciones, insights) se centrará en esa persona por defecto.
+          Elegí desde quién se construye tu árbol. Suele ser <strong>tú mismo/a</strong>.
+          Toda la app (árbol, investigaciones, insights) se centrará en esa persona.
         </p>
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+          ⚠️ Esta elección es <strong>permanente</strong>. Una vez guardada no podrás cambiar la persona principal del árbol.
+        </div>
 
         {personas.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
@@ -84,9 +87,8 @@ export default function ProbandPrompt() {
           </Select>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="ghost" onClick={() => guardar(true)} disabled={saving}>Más tarde</Button>
-          <Button onClick={() => guardar(false)} disabled={!sel || saving}>Guardar</Button>
+        <DialogFooter>
+          <Button onClick={() => guardar(false)} disabled={!sel || saving}>Guardar definitivamente</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
