@@ -8,26 +8,71 @@ const corsHeaders = {
 
 const enc = encodeURIComponent;
 
+// Quita acentos / diacríticos
+const stripAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+// Variantes fonéticas comunes en español/italiano para tolerar errores ortográficos.
+function nameVariants(s: string): string[] {
+  const base = stripAccents((s ?? "").trim()).toLowerCase();
+  if (!base) return [];
+  const variants = new Set<string>([base]);
+  const swaps: [RegExp, string][] = [
+    [/v/g, "b"], [/b/g, "v"],
+    [/y/g, "i"], [/i/g, "y"],
+    [/z/g, "s"], [/s/g, "z"],
+    [/c([ei])/g, "s$1"], [/k/g, "c"],
+    [/ll/g, "y"], [/j/g, "g"], [/g([ei])/g, "j$1"],
+    [/ph/g, "f"], [/qu/g, "k"],
+    [/h/g, ""], // h muda
+  ];
+  for (const [re, rep] of swaps) variants.add(base.replace(re, rep));
+  // primer nombre / primer apellido aislados
+  const first = base.split(/\s+/)[0]; if (first) variants.add(first);
+  return [...variants].filter(Boolean);
+}
+
 function buildSearches(p: any) {
   const out: { plataforma: string; url: string; query: string }[] = [];
-  const nombres = p.nombres ?? "";
-  const apellidos = p.apellidos ?? "";
+  const nombres = (p.nombres ?? "").trim();
+  const apellidos = (p.apellidos ?? "").trim();
   const apellido1 = apellidos.split(/\s+/)[0] ?? "";
+  const nombre1 = nombres.split(/\s+/)[0] ?? "";
   const nac = p.nac_fecha ? new Date(p.nac_fecha).getUTCFullYear() : p.nac_rango_ini ?? null;
   const def = p.defuncion_fecha ? new Date(p.defuncion_fecha).getUTCFullYear() : null;
+  const lugar = p.nac_lugar ?? p.residencia ?? "";
+
+  // Margen amplio (±10 años) para tolerar fechas erróneas
+  const range = nac ? `${nac - 10}..${nac + 10}` : "";
 
   out.push({ plataforma: "FamilySearch", query: `${nombres} ${apellidos}`,
-    url: `https://www.familysearch.org/search/record/results?q.givenName=${enc(nombres)}&q.surname=${enc(apellidos)}${nac ? `&q.birthLikeDate.from=${nac-5}&q.birthLikeDate.to=${nac+5}` : ""}` });
+    url: `https://www.familysearch.org/search/record/results?q.givenName=${enc(nombres)}&q.surname=${enc(apellidos)}${nac ? `&q.birthLikeDate.from=${nac-10}&q.birthLikeDate.to=${nac+10}` : ""}` });
   out.push({ plataforma: "MyHeritage", query: `${nombres} ${apellidos}`,
-    url: `https://www.myheritage.es/research?formId=master&qname=Name+fnmo.${enc(nombres)}+lnmo.${enc(apellidos)}${nac ? `&qevents-event/-/start=Event+et.birth+ed.${nac}+ev.5` : ""}` });
+    url: `https://www.myheritage.es/research?formId=master&qname=Name+fnmo.${enc(nombres)}+lnmo.${enc(apellidos)}${nac ? `&qevents-event/-/start=Event+et.birth+ed.${nac}+ev.10` : ""}` });
   out.push({ plataforma: "Ancestry", query: `${nombres} ${apellidos}`,
-    url: `https://www.ancestry.com/search/?name=${enc(nombres)}+${enc(apellido1)}${nac ? `&birth=${nac}` : ""}` });
+    url: `https://www.ancestry.com/search/?name=${enc(nombres)}+${enc(apellido1)}${nac ? `&birth=${nac}` : ""}&name_x=1` });
   out.push({ plataforma: "Geneanet", query: `${nombres} ${apellido1}`,
-    url: `https://en.geneanet.org/fonds/individus/?go=1&nom=${enc(apellido1)}&prenom=${enc(nombres)}${nac ? `&place_birth=&date_naissance=${nac}` : ""}` });
-  out.push({ plataforma: "Google", query: `"${nombres} ${apellido1}" genealogía`,
-    url: `https://www.google.com/search?q=${enc(`"${nombres} ${apellido1}"${nac ? ` ${nac-5}..${nac+5}` : ""} genealogía`)}` });
+    url: `https://en.geneanet.org/fonds/individus/?go=1&nom=${enc(apellido1)}&prenom=${enc(nombres)}${nac ? `&date_naissance=${nac}` : ""}` });
+  out.push({ plataforma: "FindAGrave", query: `${nombres} ${apellido1}`,
+    url: `https://www.findagrave.com/memorial/search?firstname=${enc(nombre1)}&lastname=${enc(apellido1)}${nac ? `&birthyear=${nac}&birthyearfilter=10` : ""}` });
+  out.push({ plataforma: "WikiTree", query: `${nombre1} ${apellido1}`,
+    url: `https://www.wikitree.com/wiki/Special:SearchPerson?first_name=${enc(nombre1)}&last_name=${enc(apellido1)}${nac ? `&birth_year=${nac}` : ""}` });
+  out.push({ plataforma: "Archivo (Hispania/PARES)", query: `${nombres} ${apellidos}`,
+    url: `https://pares.cultura.gob.es/pares/cgi-bin/Pares?ARES_BUSQUEDAS101=Filtro&Tipo=&Nombre=${enc(nombres + " " + apellidos)}` });
+
+  // Buscadores generales — tolerantes a errores con OR de variantes
+  const variantesNom = nameVariants(nombre1).slice(0, 3);
+  const variantesApe = nameVariants(apellido1).slice(0, 3);
+  const orQuery = variantesNom.flatMap(n => variantesApe.map(a => `"${n} ${a}"`)).join(" OR ");
+  out.push({ plataforma: "Google (variantes)", query: orQuery,
+    url: `https://www.google.com/search?q=${enc(`(${orQuery})${range ? ` ${range}` : ""}${lugar ? ` "${lugar}"` : ""} (genealogía OR ancestros OR partida OR bautismo)`)}` });
+  out.push({ plataforma: "Bing", query: `${nombres} ${apellidos}`,
+    url: `https://www.bing.com/search?q=${enc(`"${nombres} ${apellido1}"${range ? ` ${range}` : ""} genealogía`)}` });
+  out.push({ plataforma: "DuckDuckGo", query: `${nombres} ${apellidos}`,
+    url: `https://duckduckgo.com/?q=${enc(`"${nombre1} ${apellido1}"${range ? ` ${range}` : ""} (familytree OR genealogía OR árbol)`)}` });
+  out.push({ plataforma: "Archive.org", query: `${apellido1}`,
+    url: `https://archive.org/search.php?query=${enc(`${apellido1} ${nombre1}${nac ? ` ${nac}` : ""}`)}` });
   if (def) out.push({ plataforma: "Google — defunción", query: `${nombres} ${apellido1} defunción`,
-    url: `https://www.google.com/search?q=${enc(`"${nombres} ${apellido1}" defunción ${def-10}..${def+10}`)}` });
+    url: `https://www.google.com/search?q=${enc(`"${nombre1} ${apellido1}" (defunción OR obituario OR esquela) ${def-10}..${def+10}`)}` });
   return out;
 }
 
