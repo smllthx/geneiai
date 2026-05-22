@@ -8,53 +8,53 @@
 
 @layer base {
   :root {
-    /* Minimalist warm paper */
-    --background: 36 25% 97%;
-    --foreground: 222 20% 12%;
+    /* Apple-clean canvas with the faintest cool tint */
+    --background: 210 30% 98%;
+    --foreground: 215 28% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 20% 12%;
+    --card-foreground: 215 28% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 20% 12%;
+    --popover-foreground: 215 28% 10%;
 
-    /* Single warm accent (rooted tone) */
-    --primary: 18 70% 48%;
+    /* FamilySearch-inspired navy blue */
+    --primary: 210 78% 38%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 36 18% 92%;
-    --secondary-foreground: 222 20% 18%;
+    --secondary: 210 22% 94%;
+    --secondary-foreground: 215 28% 16%;
 
-    --muted: 36 14% 93%;
-    --muted-foreground: 222 8% 42%;
+    --muted: 210 18% 95%;
+    --muted-foreground: 215 12% 40%;
 
-    /* Same family as primary, just lighter */
-    --accent: 18 70% 56%;
+    /* Lighter cousin of primary */
+    --accent: 198 82% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 90% 58%;
+    --destructive: 4 86% 56%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 36 14% 86%;
-    --input: 36 14% 88%;
-    --ring: 18 70% 48%;
+    --border: 215 16% 88%;
+    --input: 215 16% 90%;
+    --ring: 210 78% 38%;
 
-    --link: 18 70% 42%;
+    --link: 210 78% 38%;
 
-    --radius: 0.875rem;
+    --radius: 1rem;
 
-    /* Glass tokens — softer */
-    --glass-bg: 0 0% 100% / 0.65;
-    --glass-bg-strong: 0 0% 100% / 0.85;
-    --glass-border: 36 16% 82% / 0.5;
-    --glass-shadow: 222 30% 20% / 0.06;
-    --glass-highlight: 0 0% 100% / 0.7;
+    /* Liquid glass — translucent, cool, soft */
+    --glass-bg: 210 40% 99% / 0.55;
+    --glass-bg-strong: 210 40% 99% / 0.82;
+    --glass-border: 215 22% 80% / 0.45;
+    --glass-shadow: 215 40% 20% / 0.07;
+    --glass-highlight: 0 0% 100% / 0.75;
 
-    /* Subtle single radial — no rainbow mesh */
-    --mesh-1: 18 60% 70%;
-    --mesh-2: 36 50% 80%;
-    --mesh-3: 18 40% 75%;
-    --mesh-4: 36 30% 85%;
+    /* Cool, restrained ambient mesh */
+    --mesh-1: 210 80% 78%;
+    --mesh-2: 198 75% 82%;
+    --mesh-3: 220 60% 86%;
+    --mesh-4: 200 50% 90%;
 
     --sidebar-background: 220 30% 97%;
     --sidebar-foreground: 222 25% 18%;
@@ -146,12 +146,21 @@
   }
   h1, h2, h3, h4, .font-display {
     font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: -0.022em;
   }
-  .font-serif { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; letter-spacing: -0.015em; font-weight: 500; }
+  h1 { font-size: clamp(1.85rem, 1.4rem + 1.6vw, 2.6rem); line-height: 1.1; }
+  h2 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); line-height: 1.15; }
+  h3 { font-size: clamp(1.2rem, 1rem + 0.6vw, 1.5rem); line-height: 1.2; }
+  .font-serif { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; letter-spacing: -0.015em; font-weight: 600; }
   .font-sans, .font-helvetica { font-family: 'Helvetica Neue', Helvetica, 'Source Sans 3', Arial, sans-serif; }
   a.link, .text-link { color: hsl(var(--link)); }
+}
+
+/* Genealogy emphasis — names, places, surnames, countries render heavier */
+.gen-name, .gen-place, .gen-country, .gen-surname {
+  font-weight: 700;
+  letter-spacing: -0.012em;
 }
 
 @layer components {

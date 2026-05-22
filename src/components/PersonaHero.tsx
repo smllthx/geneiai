@@ -34,16 +34,17 @@ export default function PersonaHero({ p }: { p: any }) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {p?.nacionalidad || "Ficha genealógica"}
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="gen-country">{p?.nacionalidad || "Ficha genealógica"}</span>
           </p>
-          <h1 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-            {p?.nombres} {p?.apellidos} {sexoIcon && <span className="ml-1 text-2xl text-muted-foreground">{sexoIcon}</span>}
+          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
+            <span className="gen-name">{p?.nombres}</span> <span className="gen-surname">{p?.apellidos}</span>
+            {sexoIcon && <span className="ml-2 text-2xl font-semibold text-muted-foreground">{sexoIcon}</span>}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
-            {lifespan && <span>{lifespan}</span>}
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[15px] font-medium text-muted-foreground">
+            {lifespan && <span className="font-semibold">{lifespan}</span>}
             {edad && <><span>·</span><span>{edad}</span></>}
-            {p?.ocupacion && <><span>·</span><span>{p.ocupacion}</span></>}
+            {p?.ocupacion && <><span>·</span><span className="font-semibold">{p.ocupacion}</span></>}
             {p?.id && (
               <>
                 <span>·</span>
