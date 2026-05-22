@@ -42,7 +42,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { err: 
             <h2 className="mb-1 font-display text-lg font-semibold">Algo se rompió</h2>
             <p className="mb-4 text-sm text-muted-foreground">{this.state.err.message}</p>
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => applyHeal("clear-cache")}>
+              <Button className="flex-1" onClick={() => applyHeal("deep-repair")}>
                 <RefreshCw className="mr-1 h-4 w-4" /> Auto-reparar y reiniciar
               </Button>
             </div>
@@ -71,13 +71,20 @@ export default function SelfHealer() {
       setOpen(true);
     };
 
+    const isNoiseMessage = (m: string) =>
+      !m ||
+      m === "Script error." ||
+      m === "ResizeObserver loop limit exceeded" ||
+      m.startsWith("ResizeObserver loop completed");
+
     const onErr = (ev: ErrorEvent) => {
-      if (!ev?.message) return;
+      if (!ev?.message || isNoiseMessage(ev.message)) return;
       pushError?.({ message: ev.message, stack: ev.error?.stack, url: window.location.href, source: "auto" });
     };
     const onRej = (ev: PromiseRejectionEvent) => {
       const r = ev.reason;
       const msg = typeof r === "string" ? r : r?.message ?? "Promesa rechazada";
+      if (isNoiseMessage(msg)) return;
       pushError?.({ message: msg, stack: r?.stack, url: window.location.href, source: "auto" });
     };
     window.addEventListener("error", onErr);
@@ -222,9 +229,18 @@ export default function SelfHealer() {
             </p>
 
             {!diag && !loading && (
-              <Button onClick={() => diagnose(current)} className="w-full">
-                <Sparkles className="mr-1 h-4 w-4" /> Pedir diagnóstico a la IA
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={() => diagnose(current)} className="w-full">
+                  <Sparkles className="mr-1 h-4 w-4" /> Pedir diagnóstico a la IA
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => applyHeal("deep-repair")}
+                  className="w-full"
+                >
+                  <RefreshCw className="mr-1 h-4 w-4" /> Reparar todo y reiniciar
+                </Button>
+              </div>
             )}
             {loading && (
               <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
