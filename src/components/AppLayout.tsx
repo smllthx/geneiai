@@ -220,6 +220,7 @@ export default function AppLayout() {
       <MobileBottomNav />
       <AdaptiveViewport />
       <ProbandPrompt />
+      <KeyboardAwareScroller />
     </div>
   );
 }
