@@ -321,6 +321,7 @@ export default function PersonaDetail() {
         }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
         {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
         {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
+        {!isNew && <CoincidenciasWebButton personaId={id!} />}
         {!isNew && (
           <Button size="sm" variant="outline" onClick={async () => {
             const url = `${window.location.origin}/p/${id}`;
