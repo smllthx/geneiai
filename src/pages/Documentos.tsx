@@ -105,6 +105,22 @@ export default function Documentos() {
       <PageHeader
         title="Documentos y fuentes"
         subtitle="Organiza actas, fotos y archivos. Filtra por tipo, persona o fecha y transcribe con IA."
+        actions={
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const t = toast.loading("Analizando documentos con IA…");
+              try {
+                const { data, error } = await supabase.functions.invoke("documentos-a-sugerencias", { body: { max: 15 } });
+                if (error) throw error;
+                toast.dismiss(t);
+                toast.success(`${data?.creadas ?? 0} sugerencias · ${data?.duplicadas ?? 0} duplicadas omitidas`);
+              } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+            }}
+          >
+            <ScanLine className="h-4 w-4" /> Extraer personas → Sugerencias
+          </Button>
+        }
       />
 
       {/* Barra de filtros */}
