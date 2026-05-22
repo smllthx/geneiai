@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -17,8 +17,9 @@ import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import ProbandPrompt from "@/components/ProbandPrompt";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
+import { loadOrder, saveOrder } from "@/lib/navOrder";
 
-const primaryNav = [
+const primaryNavBase = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/sugerencias", label: "Sugerencias", icon: LightbulbIcon },
   { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
@@ -26,6 +27,7 @@ const primaryNav = [
   { to: "/familias", label: "Familias", icon: Heart },
   { to: "/documentos", label: "Documentos", icon: FileText },
   { to: "/fotos", label: "Fotos", icon: ImageIcon },
+  { to: "/calendario", label: "Calendario", icon: Calendar },
 ];
 const investigationNav = [
   { to: "/asistente", label: "Asistente IA", icon: Bot },
