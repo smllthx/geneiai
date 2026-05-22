@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical } from "lucide-react";
+import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { findRegion } from "@/lib/dna-regions";
+import { guardarEtnicidadArbol } from "@/lib/etnicidadArbol";
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#14b8a6", "#a855f7", "#3b82f6"];
 
@@ -115,6 +116,24 @@ export default function ADN() {
             />
             <Button variant="outline" disabled={importando} onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4" /> Importar test ADN
+            </Button>
+            <Button variant="outline" onClick={async () => {
+              const t = toast.loading("Calculando origen por árbol…");
+              try {
+                const { data: prof } = await supabase.from("profiles").select("proband_id").maybeSingle();
+                let probandId = prof?.proband_id;
+                if (!probandId) {
+                  const { data: ps } = await supabase.from("personas").select("id,nac_fecha").order("nac_fecha", { ascending: false }).limit(1);
+                  probandId = ps?.[0]?.id;
+                }
+                if (!probandId) { toast.dismiss(t); return toast.error("Crea al menos una persona primero"); }
+                const res = await guardarEtnicidadArbol(probandId);
+                toast.dismiss(t);
+                toast.success(`Calculado: ${res.insertados} orígenes (cobertura ${Math.round(res.cobertura * 100)}%)`);
+                load();
+              } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+            }}>
+              <Calculator className="h-4 w-4" /> Calcular por árbol
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nuevo origen</Button></DialogTrigger>
