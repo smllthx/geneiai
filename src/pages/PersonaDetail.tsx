@@ -554,38 +554,7 @@ export default function PersonaDetail() {
         </TabsContent>
 
 
-        <TabsContent value="documentos">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">
-              Documentos en los que aparece esta persona (actas, censos, padrones, fotos escaneadas).
-            </p>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento y leerlo con IA</Link>
-            </Button>
-          </div>
-          {docs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin documentos vinculados todavía.</p>
-          ) : (
-            <ul className="grid gap-2">
-              {docs.map((d: any) => (
-                <li key={d.id} className="archivo-card px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Link to={`/documentos`} className="font-medium hover:text-primary truncate block">{d.titulo}</Link>
-                      <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} · {d.estado}</div>
-                      {d.resumen && <p className="mt-1 text-xs line-clamp-2">{d.resumen}</p>}
-                    </div>
-                    {d.url && (
-                      <Button asChild size="sm" variant="ghost">
-                        <a href={d.url} target="_blank" rel="noreferrer">Ver</a>
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </TabsContent>
+        {/* documentos content merged into fuentes below */}
 
         <TabsContent value="coincidencias">
           {coincidencias.length === 0 ? (
