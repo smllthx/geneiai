@@ -17,6 +17,7 @@ export type PersonaLite = {
   defuncion_lugar?: string | null;
   viva?: string | null;
   ocupacion?: string | null;
+  foto_url?: string | null;
 };
 
 function completeness(p: PersonaLite): number {
