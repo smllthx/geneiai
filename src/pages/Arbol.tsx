@@ -386,9 +386,20 @@ export default function Arbol() {
 
 
   return (
-    <div className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto" : "-mx-3 md:-mx-6"} style={fullscreen ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.5rem)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.5rem)" } : undefined}>
+    <div
+      className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto" : "-mx-3 md:-mx-6"}
+      style={fullscreen ? {
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+      } : undefined}
+    >
       {/* Minimal top bar */}
-      <div className="sticky top-0 z-20 mb-2 flex items-center justify-between gap-2 bg-background/80 px-3 py-2 backdrop-blur-md md:px-6">
+      <div
+        className="sticky top-0 z-20 mb-2 flex items-center justify-between gap-2 bg-background/80 px-3 py-2 backdrop-blur-md md:px-6"
+        style={fullscreen ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" } : undefined}
+      >
         <h1 className="min-w-0 flex-1 font-display text-2xl font-bold leading-tight tracking-tight md:text-3xl">Árbol</h1>
         <div className="glass inline-flex rounded-full p-1">
           {([
