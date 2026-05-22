@@ -42,6 +42,8 @@ const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
 const Insights = lazy(() => import("./pages/Insights"));
 const BusquedaIA = lazy(() => import("./pages/BusquedaIA"));
 const Fusionar = lazy(() => import("./pages/Fusionar"));
+const Sugerencias = lazy(() => import("./pages/Sugerencias"));
+const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
 const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -74,6 +76,7 @@ const App = () => (
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/familysearch/callback" element={<ProtectedRoute><FamilySearchCallback /></ProtectedRoute>} />
+                <Route path="/p/:id" element={<PersonaPublica />} />
                 <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                   <Route path="/" element={<Navigate to="/inicio" replace />} />
                   <Route path="/index" element={<Navigate to="/inicio" replace />} />
@@ -106,6 +109,7 @@ const App = () => (
                   <Route path="/insights" element={<Insights />} />
                   <Route path="/busqueda-ia" element={<BusquedaIA />} />
                   <Route path="/fusionar" element={<Fusionar />} />
+                  <Route path="/sugerencias" element={<Sugerencias />} />
                   <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />

@@ -48,3 +48,6 @@ verify_jwt = false
 
 [functions.diagnose-error]
 verify_jwt = false
+
+[functions.compartir-persona]
+verify_jwt = false

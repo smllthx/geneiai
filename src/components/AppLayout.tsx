@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
-  Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
+  Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
+  { to: "/sugerencias", label: "Sugerencias", icon: LightbulbIcon },
   { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
   { to: "/personas", label: "Personas", icon: Users },
   { to: "/familias", label: "Familias", icon: Heart },
