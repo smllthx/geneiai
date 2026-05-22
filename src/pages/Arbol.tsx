@@ -281,7 +281,7 @@ export default function Arbol() {
           <div className="flex flex-col items-center gap-2">
             {padre ? <Ascendants pid={padre.id} gen={gen - 1} /> : null}
             {padre ? (
-              <Draggable p={padre}><PersonCard p={padre} compact /></Draggable>
+              <Draggable p={padre}><Hl p={padre}><PersonCard p={padre} compact /></Hl></Draggable>
             ) : (
               <QuickAddRelative personaId={pid} defaultTipo="padre" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="padre" onClick={() => {}} /></button>} />
@@ -290,7 +290,7 @@ export default function Arbol() {
           <div className="flex flex-col items-center gap-2">
             {madre ? <Ascendants pid={madre.id} gen={gen - 1} /> : null}
             {madre ? (
-              <Draggable p={madre}><PersonCard p={madre} compact /></Draggable>
+              <Draggable p={madre}><Hl p={madre}><PersonCard p={madre} compact /></Hl></Draggable>
             ) : (
               <QuickAddRelative personaId={pid} defaultTipo="madre" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="madre" onClick={() => {}} /></button>} />
@@ -583,9 +583,9 @@ export default function Arbol() {
             <Ascendants pid={persona.id} gen={generaciones} />
 
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Draggable p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Draggable>
+              <Draggable p={persona}><Hl p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Hl></Draggable>
               {conyugesDe(persona.id).map((c) => (
-                <Draggable key={c.id} p={c}><PersonCard p={c} /></Draggable>
+                <Draggable key={c.id} p={c}><Hl p={c}><PersonCard p={c} /></Hl></Draggable>
               ))}
               <QuickAddRelative personaId={persona.id} defaultTipo="conyuge" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="cónyuge" onClick={() => {}} /></button>} />
@@ -593,7 +593,7 @@ export default function Arbol() {
 
             <div className="flex flex-wrap justify-center gap-3">
               {hijosDe(persona.id).map((h) => (
-                <Draggable key={h.id} p={h}><PersonCard p={h} compact /></Draggable>
+                <Draggable key={h.id} p={h}><Hl p={h}><PersonCard p={h} compact /></Hl></Draggable>
               ))}
               <QuickAddRelative personaId={persona.id} defaultTipo="hijo" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="hijo/a" onClick={() => {}} /></button>} />
