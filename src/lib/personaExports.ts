@@ -347,8 +347,7 @@ export async function exportRetratoPDF(personaId: string) {
     doc.text(`${lifespan(p).trim()}${p.ocupacion ? " · " + p.ocupacion : ""}`, indent, y + 12);
     doc.setTextColor(20);
     y += 28;
-    const ppObj = padresDe(pid, rels as any, byId); const pp = ppObj.all;
-    for (const par of (padresDe(pid, rels as any, byId)).all) render(par.id, depth + 1);
+    for (const par of padresDe(pid, rels as any, byId).all) render(par.id, depth + 1);
   }
   render(personaId, 0);
 
