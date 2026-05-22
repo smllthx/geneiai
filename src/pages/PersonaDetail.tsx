@@ -244,6 +244,17 @@ export default function PersonaDetail() {
         {user && (editMode || isNew) && (
           <Button size="sm" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
         )}
+        {!isNew && <Button size="sm" onClick={async () => {
+          const t = toast.loading("Agente IA buscando más sobre esta persona…");
+          try {
+            const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: id } });
+            toast.dismiss(t);
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revisa en Búsqueda IA`);
+            notify("Búsqueda IA finalizada", { body: `${data.hallazgos?.length ?? 0} hallazgos para ${p.nombres} ${p.apellidos}`, url: "/busqueda-ia", tag: `bia-${id}` });
+          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+        }}><Sparkles className="h-4 w-4" /> Buscar más sobre esta persona con IA</Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
           const t = toast.loading("Investigando con IA…");
           try {

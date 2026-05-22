@@ -27,6 +27,7 @@ const primaryNav = [
 ];
 const investigationNav = [
   { to: "/asistente", label: "Asistente IA", icon: Bot },
+  { to: "/busqueda-ia", label: "Búsqueda IA", icon: Sparkles },
   { to: "/insights", label: "Insights IA", icon: Lightbulb },
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/coincidencias", label: "Coincidencias", icon: Compass },
