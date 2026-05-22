@@ -701,7 +701,8 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <TimelinePanel eventos={eventos} persona={p} />
+          <TimelineVisual eventos={eventos} persona={p} />
+          {!isNew && <ContextoHistorico personaId={id!} />}
         </TabsContent>
 
         <TabsContent value="notas">
