@@ -5,9 +5,26 @@ import type { ImportPersona, ImportFamilia } from "./gedcom";
 
 export type ImportSummary = {
   personasCreadas: number;
+  personasFusionadas: number;
   relacionesCreadas: number;
   errores: string[];
 };
+
+const norm = (s?: string) =>
+  (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const yearOf = (d?: string | null) => {
+  if (!d) return null;
+  const m = String(d).match(/(\d{4})/);
+  return m ? parseInt(m[1], 10) : null;
+};
+
 
 export async function persistImport(
   data: { personas: ImportPersona[]; familias: ImportFamilia[] },
