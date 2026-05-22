@@ -717,43 +717,51 @@ export default function PersonaDetail() {
 
 function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode }) {
   return (
-    <Card className="archivo-card">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="font-serif text-lg">{titulo} <span className="ml-1 text-xs text-muted-foreground">({personas.length})</span></CardTitle>
+    <section className="rounded-2xl bg-card/30 px-1 py-2">
+      <header className="flex items-center justify-between px-3 py-2">
+        <h3 className="font-serif text-base">
+          {titulo}
+          <span className="ml-2 text-xs font-normal text-muted-foreground">({personas.length})</span>
+        </h3>
         {quickAdd}
-      </CardHeader>
-      <CardContent>
-        {personas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{empty}</p>
-        ) : (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {personas.map((x: any) => {
-              const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
-              const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
-              const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
-              return (
-                <li key={x.id}>
-                  <Link to={`/personas/${x.id}`} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3 hover:border-primary hover:bg-accent/30 transition">
-                    {x.foto_url ? (
-                      <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 rounded-full object-cover" />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                        {(x.nombres?.[0] ?? "?").toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{x.nombres} {x.apellidos}</div>
-                      <div className="truncate text-xs text-muted-foreground">{sub}</div>
+      </header>
+      {personas.length === 0 ? (
+        <p className="px-3 pb-3 text-sm text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="divide-y divide-border/40">
+          {personas.map((x: any) => {
+            const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
+            const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
+            const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
+            return (
+              <li key={x.id}>
+                <Link
+                  to={`/personas/${x.id}`}
+                  className="flex items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
+                >
+                  {x.foto_url ? (
+                    <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
+                      {(x.nombres?.[0] ?? "?").toUpperCase()}
                     </div>
-                    <span className="font-mono text-[10px] text-muted-foreground">{personaCode(x.id)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium leading-snug break-words">
+                      {x.nombres} {x.apellidos}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{sub}</span>
+                      <span className="font-mono tracking-wider opacity-70">{personaCode(x.id)}</span>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
