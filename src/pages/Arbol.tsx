@@ -19,6 +19,7 @@ import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
+type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 
 export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
@@ -33,6 +34,8 @@ export default function Arbol() {
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [categoria, setCategoria] = useState<Categoria>("predeterminada");
+  const [docsByPersona, setDocsByPersona] = useState<Map<string, number>>(new Map());
   const [loadingTree, setLoadingTree] = useState(true);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
