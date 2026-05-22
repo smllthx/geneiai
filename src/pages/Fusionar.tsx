@@ -153,7 +153,7 @@ export default function Fusionar() {
     const t = toast.loading("Fusionando…");
     try {
       const res = await fusionarPersonas(a.id, b.id);
-      await supabase.from("coincidencias").update({ estado: "aceptada" }).eq("id", coincidencia_id);
+      await supabase.from("coincidencias").update({ estado: "fusionada" }).eq("id", coincidencia_id);
       toast.dismiss(t);
       toast.success(`Fusión completada (${res.summary.relaciones} relaciones)`);
       load();

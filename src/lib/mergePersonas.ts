@@ -8,8 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
  *  - Rellena campos vacíos del target con los del source.
  *  - Concatena notas.
  *  - Elimina la persona source.
- *
- * Devuelve un resumen con cuántos registros se reasignaron.
  */
 export async function fusionarPersonas(targetId: string, sourceId: string) {
   if (targetId === sourceId) throw new Error("Debes elegir dos personas distintas");
@@ -22,21 +20,20 @@ export async function fusionarPersonas(targetId: string, sourceId: string) {
 
   const summary: Record<string, number> = {};
 
-  // 1) Reasignar relaciones (persona_id y pariente_id)
-  const { count: r1 } = await supabase.from("relaciones").update({ persona_id: targetId }).eq("persona_id", sourceId).select("*", { count: "exact", head: true });
-  const { count: r2 } = await supabase.from("relaciones").update({ pariente_id: targetId }).eq("pariente_id", sourceId).select("*", { count: "exact", head: true });
-  summary.relaciones = (r1 ?? 0) + (r2 ?? 0);
-
-  // Eliminar autorelaciones que pudieran quedar (persona_id == pariente_id)
+  // 1) Relaciones (persona_id y pariente_id)
+  const { data: r1 } = await supabase.from("relaciones").update({ persona_id: targetId }).eq("persona_id", sourceId).select("id");
+  const { data: r2 } = await supabase.from("relaciones").update({ pariente_id: targetId }).eq("pariente_id", sourceId).select("id");
+  summary.relaciones = (r1?.length ?? 0) + (r2?.length ?? 0);
+  // Autorelaciones residuales
   await supabase.from("relaciones").delete().eq("persona_id", targetId).eq("pariente_id", targetId);
 
   // 2) Eventos
-  const { count: e } = await supabase.from("eventos").update({ persona_id: targetId }).eq("persona_id", sourceId).select("*", { count: "exact", head: true });
-  summary.eventos = e ?? 0;
+  const { data: ev } = await supabase.from("eventos").update({ persona_id: targetId }).eq("persona_id", sourceId).select("id");
+  summary.eventos = ev?.length ?? 0;
 
   // 3) Foto tags
-  const { count: ft } = await supabase.from("foto_tags").update({ persona_id: targetId }).eq("persona_id", sourceId).select("*", { count: "exact", head: true });
-  summary.foto_tags = ft ?? 0;
+  const { data: ft } = await supabase.from("foto_tags").update({ persona_id: targetId }).eq("persona_id", sourceId).select("id");
+  summary.foto_tags = ft?.length ?? 0;
 
   // 4) Fotos.personas_ids (array)
   const { data: fotos } = await supabase.from("fotos").select("id,personas_ids").contains("personas_ids", [sourceId]);
@@ -46,7 +43,7 @@ export async function fusionarPersonas(targetId: string, sourceId: string) {
   }
   summary.fotos = (fotos ?? []).length;
 
-  // 5) Documentos.personas_mencionadas (array uuid)
+  // 5) Documentos.personas_mencionadas
   const { data: docs } = await supabase.from("documentos").select("id,personas_mencionadas").contains("personas_mencionadas", [sourceId]);
   for (const d of docs ?? []) {
     const nuevos = Array.from(new Set((d.personas_mencionadas ?? []).map((x: string) => (x === sourceId ? targetId : x))));
@@ -55,10 +52,10 @@ export async function fusionarPersonas(targetId: string, sourceId: string) {
   summary.documentos = (docs ?? []).length;
 
   // 6) DNA estimates
-  const { count: dna } = await supabase.from("dna_estimates").update({ persona_id: targetId }).eq("persona_id", sourceId).select("*", { count: "exact", head: true });
-  summary.dna = dna ?? 0;
+  const { data: dna } = await supabase.from("dna_estimates").update({ persona_id: targetId }).eq("persona_id", sourceId).select("id");
+  summary.dna = dna?.length ?? 0;
 
-  // 7) Hipótesis.personas (array)
+  // 7) Hipótesis.personas
   const { data: hips } = await supabase.from("hipotesis").select("id,personas").contains("personas", [sourceId]);
   for (const h of hips ?? []) {
     const nuevos = Array.from(new Set((h.personas ?? []).map((x: string) => (x === sourceId ? targetId : x))));
@@ -66,7 +63,7 @@ export async function fusionarPersonas(targetId: string, sourceId: string) {
   }
   summary.hipotesis = (hips ?? []).length;
 
-  // 8) Contradicciones.personas (array)
+  // 8) Contradicciones.personas
   const { data: cons } = await supabase.from("contradicciones").select("id,personas").contains("personas", [sourceId]);
   for (const c of cons ?? []) {
     const nuevos = Array.from(new Set((c.personas ?? []).map((x: string) => (x === sourceId ? targetId : x))));
@@ -74,12 +71,12 @@ export async function fusionarPersonas(targetId: string, sourceId: string) {
   }
   summary.contradicciones = (cons ?? []).length;
 
-  // 9) Coincidencias (ref_a / ref_b) — eliminar las que queden de A↔A
+  // 9) Coincidencias
   await supabase.from("coincidencias").update({ ref_a: targetId }).eq("ref_a", sourceId);
   await supabase.from("coincidencias").update({ ref_b: targetId }).eq("ref_b", sourceId);
   await supabase.from("coincidencias").delete().eq("ref_a", targetId).eq("ref_b", targetId);
 
-  // 10) Foto principal / variantes / notas / campos vacíos
+  // 10) Rellenar campos vacíos del target
   const patch: any = {};
   const mergeText = (a?: string | null, b?: string | null) => {
     const aa = (a ?? "").trim(); const bb = (b ?? "").trim();
