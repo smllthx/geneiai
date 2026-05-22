@@ -94,5 +94,3 @@ export default function ProbandPrompt() {
     </Dialog>
   );
 }
-  );
-}
