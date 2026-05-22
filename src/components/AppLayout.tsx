@@ -42,6 +42,7 @@ const utilityNav = [
   { to: "/investigacion?tab=paralelo", label: "Agentes en paralelo", icon: Bot },
   { to: "/credenciales", label: "Credenciales", icon: KeyRound },
   { to: "/configuracion", label: "Configuración", icon: Settings },
+  { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
 ];
 
 function NavItems({ items }: { items: typeof primaryNav }) {
