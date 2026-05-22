@@ -152,11 +152,19 @@ async function splitPdfBase64(b64: string, chunkPages = CHUNK_PAGES): Promise<st
 }
 
 async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any | null> {
-  const aiRes = await fetch(GATEWAY, {
+  // Si el usuario configuró OPENAI_API_KEY, usamos su cuenta de OpenAI.
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const useOpenAI = !!openaiKey;
+  const url = useOpenAI ? "https://api.openai.com/v1/chat/completions" : GATEWAY_URL;
+  const apiKey = useOpenAI ? openaiKey! : LOVABLE_API_KEY;
+  // gpt-4o soporta visión + tool calling; gemini-2.5-pro vía gateway.
+  const model = useOpenAI ? "gpt-4o" : "google/gemini-2.5-pro";
+
+  const aiRes = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: userContent },
@@ -177,6 +185,7 @@ async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any 
   if (!tc) return null;
   try { return JSON.parse(tc.function.arguments); } catch { return null; }
 }
+
 
 async function pMap<T, R>(items: T[], fn: (x: T, i: number) => Promise<R>, concurrency = MAX_CONCURRENT): Promise<R[]> {
   const results: R[] = new Array(items.length);
@@ -249,6 +258,185 @@ function mergeExtractions(parts: any[], filename?: string): any {
   return merged;
 }
 
+async function processDocument(params: {
+  sb: any; userId: string; LOVABLE_API_KEY: string;
+  file_base64?: string; mime_type?: string; filename?: string; text_content?: string; documento_id?: string;
+}) {
+  const { sb, userId, LOVABLE_API_KEY, file_base64, mime_type, filename, text_content, documento_id } = params;
+
+  const chunkPayloads: Array<{ b64?: string; mime?: string; text?: string; label: string }> = [];
+  if (file_base64 && mime_type === "application/pdf") {
+    try {
+      const parts = await splitPdfBase64(file_base64, CHUNK_PAGES);
+      parts.forEach((b64, i) => chunkPayloads.push({
+        b64, mime: "application/pdf",
+        label: parts.length > 1 ? `${filename ?? "PDF"} (parte ${i + 1}/${parts.length})` : (filename ?? "PDF"),
+      }));
+      console.log(`PDF dividido en ${parts.length} chunks`);
+    } catch (e) {
+      console.error("split pdf", e);
+      chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "PDF" });
+    }
+  } else if (file_base64 && mime_type?.startsWith("image/")) {
+    chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "imagen" });
+  } else if (text_content && text_content.trim()) {
+    const MAX = 50000;
+    if (text_content.length <= MAX) chunkPayloads.push({ text: text_content, label: filename ?? "texto" });
+    else for (let i = 0, n = 1; i < text_content.length; i += MAX, n++) {
+      chunkPayloads.push({ text: text_content.slice(i, i + MAX), label: `${filename ?? "texto"} (parte ${n})` });
+    }
+  } else if (file_base64 && mime_type) {
+    chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "archivo" });
+  } else {
+    throw new Error("Sin contenido");
+  }
+
+  // Marcar inicio en actividad
+  await sb.from("actividad").insert({
+    user_id: userId, tipo: "ia_lectura_documento_inicio",
+    descripcion: `📥 Procesando "${filename ?? "documento"}" en segundo plano (${chunkPayloads.length} ${chunkPayloads.length === 1 ? "parte" : "partes"})…`,
+    metadata: { filename, chunks: chunkPayloads.length, estado: "en_curso" },
+  });
+
+  const results = await pMap(chunkPayloads, async (c) => {
+    const userContent: any[] = [{ type: "text", text: `Analiza este documento genealógico (${c.label}). Extrae todo lo verificable.` }];
+    if (c.text) userContent.push({ type: "text", text: `\n\nCONTENIDO:\n${c.text}` });
+    if (c.b64 && c.mime && (c.mime.startsWith("image/") || c.mime === "application/pdf")) {
+      userContent.push({ type: "image_url", image_url: { url: `data:${c.mime};base64,${c.b64}` } });
+    }
+    try { return await callAI(userContent, LOVABLE_API_KEY); }
+    catch (e: any) {
+      if (e?.message === "RATE_LIMIT" || e?.message === "NO_CREDITS") throw e;
+      console.error("chunk fail", c.label, e);
+      return null;
+    }
+  });
+
+  const ok = results.filter(Boolean);
+  if (!ok.length) throw new Error("La IA no devolvió datos estructurados de ningún chunk");
+  const ext = mergeExtractions(ok, filename);
+
+  const { data: existentes } = await sb.from("personas").select("id, nombres, apellidos, nac_fecha, nac_fecha_aprox, defuncion_fecha, bautismo_fecha, matrimonio_fecha, ocupacion, nacionalidad, religion, sexo, notas")
+    .eq("user_id", userId).limit(5000);
+  const idx = new Map<string, any>();
+  const idxLoose = new Map<string, any>();
+  for (const p of existentes ?? []) {
+    const year = yearOf(p.nac_fecha || p.nac_fecha_aprox);
+    idx.set(dedupeKey(p.nombres, p.apellidos, year), p);
+    idxLoose.set(`${norm(p.nombres)}|${norm(p.apellidos)}`, p);
+  }
+
+  const refToId = new Map<string, string>();
+  let personasCreadas = 0, personasReusadas = 0, personasActualizadas = 0;
+  for (const p of ext.personas ?? []) {
+    const year = yearOf(p.nac_fecha || p.nac_fecha_aprox);
+    let existing = idx.get(dedupeKey(p.nombres, p.apellidos, year));
+    if (!existing) existing = idxLoose.get(`${norm(p.nombres)}|${norm(p.apellidos)}`);
+
+    if (existing) {
+      const patch: any = {};
+      const setIf = (k: string, v: any) => { if (v && !existing[k]) patch[k] = v; };
+      setIf("sexo", p.sexo || null);
+      setIf("nac_fecha", toDate(p.nac_fecha));
+      setIf("nac_fecha_aprox", !toDate(p.nac_fecha) ? (p.nac_fecha_aprox || p.nac_fecha || null) : null);
+      setIf("defuncion_fecha", toDate(p.defuncion_fecha));
+      setIf("bautismo_fecha", toDate(p.bautismo_fecha));
+      setIf("matrimonio_fecha", toDate(p.matrimonio_fecha));
+      setIf("ocupacion", p.ocupacion || null);
+      setIf("nacionalidad", p.nacionalidad || null);
+      setIf("religion", p.religion || null);
+      const extraNota = [p.notas, p.rol ? `Rol: ${p.rol}` : null, filename ? `Doc: ${filename}` : null].filter(Boolean).join(" · ");
+      if (extraNota && !(existing.notas ?? "").includes(extraNota)) {
+        patch.notas = [(existing.notas ?? "").trim(), extraNota].filter(Boolean).join("\n");
+      }
+      if (Object.keys(patch).length) { await sb.from("personas").update(patch).eq("id", existing.id); personasActualizadas++; }
+      else personasReusadas++;
+      refToId.set(p.ref, existing.id);
+    } else {
+      const row: any = {
+        user_id: userId, nombres: p.nombres, apellidos: p.apellidos,
+        sexo: p.sexo || null,
+        nac_fecha: toDate(p.nac_fecha),
+        nac_fecha_aprox: !toDate(p.nac_fecha) ? (p.nac_fecha_aprox || p.nac_fecha || null) : null,
+        defuncion_fecha: toDate(p.defuncion_fecha),
+        bautismo_fecha: toDate(p.bautismo_fecha),
+        matrimonio_fecha: toDate(p.matrimonio_fecha),
+        ocupacion: p.ocupacion || null, nacionalidad: p.nacionalidad || null, religion: p.religion || null,
+        notas: [p.notas, p.rol ? `Rol: ${p.rol}` : null, filename ? `Doc: ${filename}` : null].filter(Boolean).join("\n"),
+        certeza: "probable", viva: "desconocido",
+        ids_externos: { extraido_de: filename ?? null, documento_id: documento_id ?? null },
+      };
+      const { data: ins, error } = await sb.from("personas").insert(row).select("id, nombres, apellidos, nac_fecha, nac_fecha_aprox").single();
+      if (error) { console.error("insert persona", error); continue; }
+      refToId.set(p.ref, ins.id);
+      personasCreadas++;
+      const y = yearOf(ins.nac_fecha || ins.nac_fecha_aprox);
+      idx.set(dedupeKey(ins.nombres, ins.apellidos, y), ins);
+      idxLoose.set(`${norm(ins.nombres)}|${norm(ins.apellidos)}`, ins);
+    }
+  }
+
+  const { data: evExist } = await sb.from("eventos").select("persona_id, tipo, fecha, fecha_aprox").eq("user_id", userId).limit(10000);
+  const evSeen = new Set((evExist ?? []).map((e: any) => `${e.persona_id}|${e.tipo}|${yearOf(e.fecha || e.fecha_aprox)}`));
+  let eventosCreados = 0;
+  for (const e of ext.eventos ?? []) {
+    const pid = refToId.get(e.persona_ref);
+    if (!pid) continue;
+    const fecha = toDate(e.fecha);
+    const y = yearOf(fecha || e.fecha_aprox || e.fecha);
+    const key = `${pid}|${e.tipo}|${y}`;
+    if (evSeen.has(key)) continue;
+    const { error } = await sb.from("eventos").insert({
+      user_id: userId, persona_id: pid, tipo: e.tipo, fecha,
+      fecha_aprox: !fecha ? (e.fecha_aprox || e.fecha || null) : null,
+      lugar_original: e.lugar || null, descripcion: e.descripcion || null, certeza: "probable",
+    });
+    if (!error) { eventosCreados++; evSeen.add(key); }
+  }
+
+  const { data: relExist } = await sb.from("relaciones").select("persona_id, pariente_id, tipo").eq("user_id", userId).limit(10000);
+  const relSeen = new Set((relExist ?? []).map((r: any) => `${r.persona_id}|${r.pariente_id}|${r.tipo}`));
+  let relacionesCreadas = 0;
+  const tipoMap: Record<string, string> = { padre: "padre", madre: "madre", conyuge: "conyuge", hijo: "hijo", padrino: "padrino", madrina: "madrina", testigo: "testigo" };
+  for (const r of ext.relaciones ?? []) {
+    const a = refToId.get(r.a_ref), b = refToId.get(r.b_ref);
+    if (!a || !b || a === b) continue;
+    const tipo = tipoMap[r.tipo] ?? r.tipo;
+    const key = `${a}|${b}|${tipo}`;
+    if (relSeen.has(key)) continue;
+    const { error } = await sb.from("relaciones").insert({
+      user_id: userId, persona_id: a, pariente_id: b, tipo,
+      naturaleza: "biologica", certeza: "probable",
+    });
+    if (!error) { relacionesCreadas++; relSeen.add(key); }
+  }
+
+  await sb.from("sugerencias").insert({
+    user_id: userId, tipo: "extraccion_documento",
+    titulo: `Documento leído: ${filename ?? ext.tipo_documento ?? "sin nombre"}`,
+    descripcion: ext.resumen?.slice(0, 4000) ?? "",
+    payload: {
+      tipo_documento: ext.tipo_documento, fecha_documento: ext.fecha_documento, lugar_documento: ext.lugar_documento,
+      transcripcion: (ext.transcripcion ?? "").slice(0, 8000), chunks: chunkPayloads.length,
+      personasCreadas, personasReusadas, personasActualizadas, eventosCreados, relacionesCreadas,
+      documento_id: documento_id ?? null,
+    },
+    confianza: 70, origen: "leer-documento-ia", estado: "pendiente",
+  });
+
+  await sb.from("actividad").insert({
+    user_id: userId, tipo: "ia_lectura_documento",
+    descripcion: `✅ "${filename ?? "documento"}" procesado (${chunkPayloads.length} ${chunkPayloads.length === 1 ? "parte" : "partes"}): +${personasCreadas} personas, ${personasActualizadas} actualizadas, ${eventosCreados} eventos, ${relacionesCreadas} relaciones`,
+    metadata: { filename, chunks: chunkPayloads.length, personasCreadas, personasActualizadas, personasReusadas, eventosCreados, relacionesCreadas, estado: "completado" },
+  });
+
+  return {
+    ok: true, resumen: ext.resumen, tipo_documento: ext.tipo_documento, chunks: chunkPayloads.length,
+    personasCreadas, personasReusadas, personasActualizadas, eventosCreados, relacionesCreadas,
+    transcripcion: (ext.transcripcion ?? "").slice(0, 4000),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -264,209 +452,39 @@ Deno.serve(async (req) => {
     if (!user) return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = await req.json();
-    const { file_base64, mime_type, filename, text_content, documento_id } = body as {
-      file_base64?: string; mime_type?: string; filename?: string; text_content?: string; documento_id?: string;
-    };
+    const { background, ...params } = body as any;
 
-    // Construir lista de chunks (uno por llamada AI)
-    const chunkPayloads: Array<{ b64?: string; mime?: string; text?: string; label: string }> = [];
-
-    if (file_base64 && mime_type === "application/pdf") {
-      try {
-        const parts = await splitPdfBase64(file_base64, CHUNK_PAGES);
-        parts.forEach((b64, i) => chunkPayloads.push({
-          b64, mime: "application/pdf",
-          label: parts.length > 1 ? `${filename ?? "PDF"} (parte ${i + 1}/${parts.length})` : (filename ?? "PDF"),
-        }));
-        console.log(`PDF dividido en ${parts.length} chunks`);
-      } catch (e) {
-        console.error("split pdf", e);
-        chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "PDF" });
-      }
-    } else if (file_base64 && mime_type?.startsWith("image/")) {
-      chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "imagen" });
-    } else if (text_content && text_content.trim()) {
-      // Partir texto largo en bloques de ~50k chars
-      const MAX = 50000;
-      if (text_content.length <= MAX) {
-        chunkPayloads.push({ text: text_content, label: filename ?? "texto" });
-      } else {
-        for (let i = 0, n = 1; i < text_content.length; i += MAX, n++) {
-          chunkPayloads.push({ text: text_content.slice(i, i + MAX), label: `${filename ?? "texto"} (parte ${n})` });
+    // Modo background: devolvemos rápido y procesamos con waitUntil
+    if (background) {
+      // @ts-ignore EdgeRuntime existe en Supabase Edge
+      const ert: any = (globalThis as any).EdgeRuntime;
+      const task = (async () => {
+        try { await processDocument({ sb, userId: user.id, LOVABLE_API_KEY, ...params }); }
+        catch (e: any) {
+          console.error("bg fail", e);
+          await sb.from("actividad").insert({
+            user_id: user.id, tipo: "ia_lectura_documento_error",
+            descripcion: `❌ Falló "${params.filename ?? "documento"}": ${e?.message ?? e}`,
+            metadata: { filename: params.filename, estado: "error", error: String(e?.message ?? e) },
+          });
         }
-      }
-    } else if (file_base64 && mime_type) {
-      chunkPayloads.push({ b64: file_base64, mime: mime_type, label: filename ?? "archivo" });
-    } else {
-      return new Response(JSON.stringify({ error: "Sin contenido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      })();
+      if (ert?.waitUntil) ert.waitUntil(task);
+      return new Response(JSON.stringify({
+        ok: true, background: true,
+        mensaje: "Procesando en segundo plano. Podés cambiar de sección, los resultados aparecerán en Inicio.",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Llamadas en paralelo (limitadas)
-    const results = await pMap(chunkPayloads, async (c) => {
-      const userContent: any[] = [{
-        type: "text",
-        text: `Analiza este documento genealógico (${c.label}). Extrae todo lo verificable.`,
-      }];
-      if (c.text) userContent.push({ type: "text", text: `\n\nCONTENIDO:\n${c.text}` });
-      if (c.b64 && c.mime) {
-        if (c.mime.startsWith("image/") || c.mime === "application/pdf") {
-          userContent.push({ type: "image_url", image_url: { url: `data:${c.mime};base64,${c.b64}` } });
-        }
-      }
-      try { return await callAI(userContent, LOVABLE_API_KEY); }
-      catch (e: any) {
-        if (e?.message === "RATE_LIMIT" || e?.message === "NO_CREDITS") throw e;
-        console.error("chunk fail", c.label, e);
-        return null;
-      }
-    });
-
-    const ok = results.filter(Boolean);
-    if (!ok.length) throw new Error("La IA no devolvió datos estructurados de ningún chunk");
-    const ext = mergeExtractions(ok, filename);
-
-    // De-dupe contra DB existente (nombre+apellido+año nacimiento)
-    const { data: existentes } = await sb.from("personas").select("id, nombres, apellidos, nac_fecha, nac_fecha_aprox, defuncion_fecha, bautismo_fecha, matrimonio_fecha, ocupacion, nacionalidad, religion, sexo, notas")
-      .eq("user_id", user.id).limit(5000);
-    const idx = new Map<string, any>();
-    const idxLoose = new Map<string, any>();
-    for (const p of existentes ?? []) {
-      const year = yearOf(p.nac_fecha || p.nac_fecha_aprox);
-      idx.set(dedupeKey(p.nombres, p.apellidos, year), p);
-      idxLoose.set(`${norm(p.nombres)}|${norm(p.apellidos)}`, p);
-    }
-
-    const refToId = new Map<string, string>();
-    let personasCreadas = 0, personasReusadas = 0, personasActualizadas = 0;
-
-    for (const p of ext.personas ?? []) {
-      const year = yearOf(p.nac_fecha || p.nac_fecha_aprox);
-      let existing = idx.get(dedupeKey(p.nombres, p.apellidos, year));
-      // Si tenemos año en doc pero existe sin año, considerarlo el mismo
-      if (!existing && year) existing = idxLoose.get(`${norm(p.nombres)}|${norm(p.apellidos)}`);
-      if (!existing && !year) existing = idxLoose.get(`${norm(p.nombres)}|${norm(p.apellidos)}`);
-
-      if (existing) {
-        // Update con campos faltantes
-        const patch: any = {};
-        const setIf = (k: string, v: any) => { if (v && !existing[k]) patch[k] = v; };
-        setIf("sexo", p.sexo || null);
-        setIf("nac_fecha", toDate(p.nac_fecha));
-        setIf("nac_fecha_aprox", !toDate(p.nac_fecha) ? (p.nac_fecha_aprox || p.nac_fecha || null) : null);
-        setIf("defuncion_fecha", toDate(p.defuncion_fecha));
-        setIf("bautismo_fecha", toDate(p.bautismo_fecha));
-        setIf("matrimonio_fecha", toDate(p.matrimonio_fecha));
-        setIf("ocupacion", p.ocupacion || null);
-        setIf("nacionalidad", p.nacionalidad || null);
-        setIf("religion", p.religion || null);
-        const extraNota = [p.notas, p.rol ? `Rol: ${p.rol}` : null, filename ? `Doc: ${filename}` : null].filter(Boolean).join(" · ");
-        if (extraNota && !(existing.notas ?? "").includes(extraNota)) {
-          patch.notas = [(existing.notas ?? "").trim(), extraNota].filter(Boolean).join("\n");
-        }
-        if (Object.keys(patch).length) {
-          await sb.from("personas").update(patch).eq("id", existing.id);
-          personasActualizadas++;
-        } else personasReusadas++;
-        refToId.set(p.ref, existing.id);
-      } else {
-        const row: any = {
-          user_id: user.id,
-          nombres: p.nombres, apellidos: p.apellidos,
-          sexo: p.sexo || null,
-          nac_fecha: toDate(p.nac_fecha),
-          nac_fecha_aprox: !toDate(p.nac_fecha) ? (p.nac_fecha_aprox || p.nac_fecha || null) : null,
-          defuncion_fecha: toDate(p.defuncion_fecha),
-          bautismo_fecha: toDate(p.bautismo_fecha),
-          matrimonio_fecha: toDate(p.matrimonio_fecha),
-          ocupacion: p.ocupacion || null,
-          nacionalidad: p.nacionalidad || null,
-          religion: p.religion || null,
-          notas: [p.notas, p.rol ? `Rol: ${p.rol}` : null, filename ? `Doc: ${filename}` : null].filter(Boolean).join("\n"),
-          certeza: "probable",
-          viva: "desconocido",
-          ids_externos: { extraido_de: filename ?? null, documento_id: documento_id ?? null },
-        };
-        const { data: ins, error } = await sb.from("personas").insert(row).select("id, nombres, apellidos, nac_fecha, nac_fecha_aprox").single();
-        if (error) { console.error("insert persona", error); continue; }
-        refToId.set(p.ref, ins.id);
-        personasCreadas++;
-        const y = yearOf(ins.nac_fecha || ins.nac_fecha_aprox);
-        idx.set(dedupeKey(ins.nombres, ins.apellidos, y), ins);
-        idxLoose.set(`${norm(ins.nombres)}|${norm(ins.apellidos)}`, ins);
-      }
-    }
-
-    // Eventos (dedupe por persona+tipo+fecha)
-    const { data: evExist } = await sb.from("eventos").select("persona_id, tipo, fecha, fecha_aprox").eq("user_id", user.id).limit(10000);
-    const evSeen = new Set((evExist ?? []).map(e => `${e.persona_id}|${e.tipo}|${yearOf(e.fecha || e.fecha_aprox)}`));
-    let eventosCreados = 0;
-    for (const e of ext.eventos ?? []) {
-      const pid = refToId.get(e.persona_ref);
-      if (!pid) continue;
-      const fecha = toDate(e.fecha);
-      const y = yearOf(fecha || e.fecha_aprox || e.fecha);
-      const key = `${pid}|${e.tipo}|${y}`;
-      if (evSeen.has(key)) continue;
-      const { error } = await sb.from("eventos").insert({
-        user_id: user.id, persona_id: pid, tipo: e.tipo, fecha,
-        fecha_aprox: !fecha ? (e.fecha_aprox || e.fecha || null) : null,
-        lugar_original: e.lugar || null, descripcion: e.descripcion || null, certeza: "probable",
-      });
-      if (!error) { eventosCreados++; evSeen.add(key); }
-    }
-
-    // Relaciones (dedupe por persona+pariente+tipo)
-    const { data: relExist } = await sb.from("relaciones").select("persona_id, pariente_id, tipo").eq("user_id", user.id).limit(10000);
-    const relSeen = new Set((relExist ?? []).map(r => `${r.persona_id}|${r.pariente_id}|${r.tipo}`));
-    let relacionesCreadas = 0;
-    const tipoMap: Record<string, string> = { padre: "padre", madre: "madre", conyuge: "conyuge", hijo: "hijo", padrino: "padrino", madrina: "madrina", testigo: "testigo" };
-    for (const r of ext.relaciones ?? []) {
-      const a = refToId.get(r.a_ref), b = refToId.get(r.b_ref);
-      if (!a || !b || a === b) continue;
-      const tipo = tipoMap[r.tipo] ?? r.tipo;
-      const key = `${a}|${b}|${tipo}`;
-      if (relSeen.has(key)) continue;
-      const { error } = await sb.from("relaciones").insert({
-        user_id: user.id, persona_id: a, pariente_id: b, tipo,
-        naturaleza: "biologica", certeza: "probable",
-      });
-      if (!error) { relacionesCreadas++; relSeen.add(key); }
-    }
-
-    await sb.from("sugerencias").insert({
-      user_id: user.id,
-      tipo: "extraccion_documento",
-      titulo: `Documento leído: ${filename ?? ext.tipo_documento ?? "sin nombre"}`,
-      descripcion: ext.resumen?.slice(0, 4000) ?? "",
-      payload: {
-        tipo_documento: ext.tipo_documento, fecha_documento: ext.fecha_documento, lugar_documento: ext.lugar_documento,
-        transcripcion: (ext.transcripcion ?? "").slice(0, 8000),
-        chunks: chunkPayloads.length,
-        personasCreadas, personasReusadas, personasActualizadas, eventosCreados, relacionesCreadas,
-        documento_id: documento_id ?? null,
-      },
-      confianza: 70, origen: "leer-documento-ia", estado: "pendiente",
-    });
-
-    await sb.from("actividad").insert({
-      user_id: user.id, tipo: "ia_lectura_documento",
-      descripcion: `IA leyó "${filename ?? "documento"}" (${chunkPayloads.length} ${chunkPayloads.length === 1 ? "parte" : "partes"}): +${personasCreadas} personas, ${personasActualizadas} actualizadas, ${eventosCreados} eventos, ${relacionesCreadas} relaciones`,
-      metadata: { filename, chunks: chunkPayloads.length, personasCreadas, personasActualizadas, personasReusadas, eventosCreados, relacionesCreadas },
-    });
-
-    return new Response(JSON.stringify({
-      ok: true,
-      resumen: ext.resumen, tipo_documento: ext.tipo_documento,
-      chunks: chunkPayloads.length,
-      personasCreadas, personasReusadas, personasActualizadas, eventosCreados, relacionesCreadas,
-      transcripcion: (ext.transcripcion ?? "").slice(0, 4000),
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const result = await processDocument({ sb, userId: user.id, LOVABLE_API_KEY, ...params });
+    return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("leer-documento-ia", e);
     const msg = e?.message === "RATE_LIMIT" ? "Límite de IA alcanzado, esperá un minuto."
-      : e?.message === "NO_CREDITS" ? "Sin créditos de Lovable AI."
+      : e?.message === "NO_CREDITS" ? "Sin créditos de IA."
       : (e instanceof Error ? e.message : "Error");
     const status = e?.message === "RATE_LIMIT" ? 429 : e?.message === "NO_CREDITS" ? 402 : 500;
     return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
+

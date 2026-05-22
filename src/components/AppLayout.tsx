@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
+import BackgroundJobs from "@/components/BackgroundJobs";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
@@ -159,6 +160,7 @@ export default function AppLayout() {
       </div>
 
       <SiriAssistant />
+      <BackgroundJobs />
       <MobileBottomNav />
       <AdaptiveViewport />
       <ProbandPrompt />

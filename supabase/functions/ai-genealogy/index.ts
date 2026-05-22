@@ -352,14 +352,21 @@ async function executeTool(
 }
 
 async function callModel(model: string, messages: any[], key: string) {
-  const r = await fetch(GATEWAY_URL, {
+  // Si el usuario configuró OPENAI_API_KEY, usamos OpenAI directo (su cuenta).
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const useOpenAI = !!openaiKey;
+  const url = useOpenAI ? "https://api.openai.com/v1/chat/completions" : GATEWAY_URL;
+  const apiKey = useOpenAI ? openaiKey! : key;
+  const useModel = useOpenAI ? "gpt-4o-mini" : model;
+  const r = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, tools, tool_choice: "auto" }),
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: useModel, messages, tools, tool_choice: "auto" }),
   });
   if (!r.ok) throw new Error(`gateway ${r.status}: ${await r.text()}`);
   return await r.json();
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
