@@ -160,6 +160,7 @@ export default function AppLayout() {
       </div>
 
       <SiriAssistant />
+      <BackgroundJobs />
       <MobileBottomNav />
       <AdaptiveViewport />
       <ProbandPrompt />
