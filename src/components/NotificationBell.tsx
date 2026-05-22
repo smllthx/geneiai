@@ -26,16 +26,21 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
+    let active = true;
     setPerm(notificationPermission());
     load();
+    const channelId = `notif-center-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const ch = supabase
-      .channel("notif-center")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "research_tasks" }, () => load())
+      .channel(channelId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "research_tasks" }, () => active && load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      active = false;
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const noLeidas = items.filter((i) => !i.leida).length;
