@@ -42,6 +42,8 @@ const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
 const Insights = lazy(() => import("./pages/Insights"));
 const BusquedaIA = lazy(() => import("./pages/BusquedaIA"));
 const Fusionar = lazy(() => import("./pages/Fusionar"));
+const Sugerencias = lazy(() => import("./pages/Sugerencias"));
+const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
 const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
