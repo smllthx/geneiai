@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
-import { Chrome, Loader2 } from "lucide-react";
+import { Chrome, Loader2, Apple } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -45,9 +45,9 @@ export default function Login() {
     toast.success("Cuenta creada. Revisa tu correo si se solicita confirmación.");
   };
 
-  const handleGoogle = async () => {
+  const handleOAuth = async (provider: "google" | "apple") => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
     setLoading(false);
     if (result.error) return toast.error(result.error.message);
     if (!result.redirected) navigate("/inicio", { replace: true });
@@ -67,10 +67,16 @@ export default function Login() {
             <CardDescription>Tus datos genealógicos son privados.</CardDescription>
           </CardHeader>
           <CardContent>
-              <Button type="button" variant="outline" className="mb-4 w-full" disabled={loading} onClick={handleGoogle}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
-                Entrar con Google
-              </Button>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <Button type="button" variant="outline" disabled={loading} onClick={() => handleOAuth("google")}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
+                  Google
+                </Button>
+                <Button type="button" variant="outline" disabled={loading} onClick={() => handleOAuth("apple")}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Apple className="h-4 w-4" />}
+                  Apple
+                </Button>
+              </div>
               <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Ingresar</TabsTrigger>
