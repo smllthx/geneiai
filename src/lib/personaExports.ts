@@ -91,7 +91,7 @@ export async function exportCuadroGenealogico(personaId: string) {
   // Pedigree positions: gen g has 2^g slots
   function ancestor(pid: string, g: number, idx: number): any | null {
     if (g === 0) return byId.get(pid);
-    const pp = padresDe(pid, rels as any, byId);
+    const ppObj = padresDe(pid, rels as any, byId); const pp = ppObj.all;
     if (!pp.length) return null;
     const padre = pp.find((x: any) => x.sexo === "masculino") ?? pp[0];
     const madre = pp.find((x: any) => x.sexo === "femenino") ?? pp[1];
@@ -129,7 +129,7 @@ export async function exportCuadroGenealogico(personaId: string) {
 export async function exportFamiliaPDF(personaId: string, conFuentes = false) {
   const { rels, byId, eventos, docs, persona } = await loadContext(personaId);
   if (!persona) throw new Error("Persona no encontrada");
-  const padres = padresDe(personaId, rels as any, byId);
+  const padres = padresDe(personaId, rels as any, byId).all;
   const conyuges = conyugesDe(personaId, rels as any, byId);
   const hijos = hijosDe(personaId, rels as any, byId);
   const hermanos = hermanosDe(personaId, rels as any, byId);
@@ -236,7 +236,7 @@ export async function exportAbanicoPDF(personaId: string) {
 
   function ancestor(pid: string, g: number, idx: number): any | null {
     if (g === 0) return byId.get(pid);
-    const pp = padresDe(pid, rels as any, byId);
+    const ppObj = padresDe(pid, rels as any, byId); const pp = ppObj.all;
     if (!pp.length) return null;
     const padre = pp.find((x: any) => x.sexo === "masculino") ?? pp[0];
     const madre = pp.find((x: any) => x.sexo === "femenino") ?? pp[1];
@@ -347,8 +347,8 @@ export async function exportRetratoPDF(personaId: string) {
     doc.text(`${lifespan(p).trim()}${p.ocupacion ? " · " + p.ocupacion : ""}`, indent, y + 12);
     doc.setTextColor(20);
     y += 28;
-    const pp = padresDe(pid, rels as any, byId);
-    for (const par of pp) render(par.id, depth + 1);
+    const ppObj = padresDe(pid, rels as any, byId); const pp = ppObj.all;
+    for (const par of (padresDe(pid, rels as any, byId)).all) render(par.id, depth + 1);
   }
   render(personaId, 0);
 
