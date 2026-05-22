@@ -1,10 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MapPin, Plus, X } from "lucide-react";
+import { MapPin, Plus, X, Loader2, Globe2 } from "lucide-react";
 import { toast } from "sonner";
+
+type NomSuggestion = {
+  display_name: string;
+  address?: {
+    country?: string; state?: string; region?: string; county?: string;
+    province?: string; city?: string; town?: string; village?: string;
+    municipality?: string; hamlet?: string; suburb?: string;
+  };
+};
+
+async function searchNominatim(q: string, signal: AbortSignal): Promise<NomSuggestion[]> {
+  if (q.trim().length < 3) return [];
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=es&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { signal, headers: { "Accept": "application/json" } });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+function suggestionToDraft(s: NomSuggestion) {
+  const a = s.address ?? {};
+  return {
+    pais: a.country ?? "",
+    region: a.state ?? a.region ?? "",
+    provincia: a.province ?? a.county ?? "",
+    ciudad: a.city ?? a.town ?? a.village ?? a.municipality ?? a.hamlet ?? a.suburb ?? "",
+    parroquia: "",
+  };
+}
 
 export interface Lugar {
   id: string;
