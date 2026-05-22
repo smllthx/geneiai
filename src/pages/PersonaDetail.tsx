@@ -244,36 +244,46 @@ export default function PersonaDetail() {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
         <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
-        {/* Compartir — anclado arriba a la derecha, estilo FamilySearch */}
         {!isNew && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-auto rounded-full"
-            onClick={async () => {
-              const url = `${window.location.origin}/p/${id}`;
-              try {
-                if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
-                else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
-              } catch {}
-            }}
-            title="Compartir ficha pública"
-          >
-            <Globe className="h-4 w-4" /> Compartir
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto rounded-full"
+              onClick={async () => {
+                const url = `${window.location.origin}/p/${id}`;
+                try {
+                  if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
+                  else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
+                } catch {}
+              }}
+              title="Compartir ficha pública"
+            >
+              <Share2 className="h-4 w-4" /> Compartir
+            </Button>
+            <PersonaQuickMenu
+              personaId={id!}
+              persona={p}
+              allPersonas={allPersonas}
+              relaciones={relaciones}
+              onDelete={eliminar}
+            />
+          </>
         )}
       </div>
 
       {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
 
-      {/* Acción horizontal destacada — Ver en árbol, justo bajo el badge "Probable" */}
+      {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
+
+      {/* Acción horizontal destacada — Ver árbol centrado en esta persona */}
       {!isNew && (
         <button
           type="button"
-          onClick={() => navigate("/arbol")}
+          onClick={() => navigate(`/arbol?centro=${id}`)}
           className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-[15px] font-semibold text-primary transition-colors hover:bg-primary/10"
         >
-          <GitBranch className="h-5 w-5" /> Ver en árbol familiar
+          <GitBranch className="h-5 w-5" /> Ver árbol de {p.nombres?.split(" ")[0] || "esta persona"}
         </button>
       )}
 
