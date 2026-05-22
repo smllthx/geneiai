@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
       if (error) console.error('insert error', error)
     }
 
-    return new Response(JSON.stringify({ procesados, creadas, duplicadas }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ procesados, creadas, duplicadas, mejoras }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     console.error(e)
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
