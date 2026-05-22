@@ -20,6 +20,9 @@ type Sugerencia = {
   estado: string;
   payload: any;
   created_at: string;
+  persona_id?: string | null;
+  url_externa?: string | null;
+  tipo_externo?: string | null;
 };
 
 export default function Sugerencias() {
