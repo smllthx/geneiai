@@ -16,6 +16,7 @@ import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import ProbandPrompt from "@/components/ProbandPrompt";
+import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 
 const primaryNav = [
   { to: "/inicio", label: "Inicio", icon: Home },
@@ -219,6 +220,7 @@ export default function AppLayout() {
       <MobileBottomNav />
       <AdaptiveViewport />
       <ProbandPrompt />
+      <KeyboardAwareScroller />
     </div>
   );
 }
