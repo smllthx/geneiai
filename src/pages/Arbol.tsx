@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 // SectionHeader removed — replaced by minimal sticky header
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,8 @@ type Vista = "ascendientes" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 
 export default function Arbol() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const centroParam = searchParams.get("centro");
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
@@ -57,8 +59,12 @@ export default function Arbol() {
       }
       setDocsByPersona(counts);
       const probandId = (profRes as any)?.data?.proband_id;
-      const valid = probandId && p?.some((x: any) => x.id === probandId);
-      if (valid) {
+      const validCentro = centroParam && p?.some((x: any) => x.id === centroParam);
+      const validProband = probandId && p?.some((x: any) => x.id === probandId);
+      if (validCentro) {
+        setCenter(centroParam!);
+        setProbandLocked(false); // permite explorar otra rama (tío, primo, etc.)
+      } else if (validProband) {
         setCenter(probandId);
         setProbandLocked(true);
       } else if (!center && p?.length) {
@@ -66,7 +72,7 @@ export default function Arbol() {
       }
       setLoadingTree(false);
     })();
-  }, [reloadKey]);
+  }, [reloadKey, centroParam]);
 
   // Hide bottom nav / Siri / sidebar when tree is fullscreen
   useEffect(() => {

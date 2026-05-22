@@ -14,7 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { calcularParentesco } from "@/lib/parentesco";
+import PersonaSmartInsights from "@/components/PersonaSmartInsights";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
@@ -240,36 +244,46 @@ export default function PersonaDetail() {
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
         <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
-        {/* Compartir — anclado arriba a la derecha, estilo FamilySearch */}
         {!isNew && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-auto rounded-full"
-            onClick={async () => {
-              const url = `${window.location.origin}/p/${id}`;
-              try {
-                if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
-                else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
-              } catch {}
-            }}
-            title="Compartir ficha pública"
-          >
-            <Globe className="h-4 w-4" /> Compartir
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto rounded-full"
+              onClick={async () => {
+                const url = `${window.location.origin}/p/${id}`;
+                try {
+                  if (navigator.share) await navigator.share({ title: `${p.nombres} ${p.apellidos}`, url });
+                  else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
+                } catch {}
+              }}
+              title="Compartir ficha pública"
+            >
+              <Share2 className="h-4 w-4" /> Compartir
+            </Button>
+            <PersonaQuickMenu
+              personaId={id!}
+              persona={p}
+              allPersonas={allPersonas}
+              relaciones={relaciones}
+              onDelete={eliminar}
+            />
+          </>
         )}
       </div>
 
       {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
 
-      {/* Acción horizontal destacada — Ver en árbol, justo bajo el badge "Probable" */}
+      {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
+
+      {/* Acción horizontal destacada — Ver árbol centrado en esta persona */}
       {!isNew && (
         <button
           type="button"
-          onClick={() => navigate("/arbol")}
+          onClick={() => navigate(`/arbol?centro=${id}`)}
           className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-[15px] font-semibold text-primary transition-colors hover:bg-primary/10"
         >
-          <GitBranch className="h-5 w-5" /> Ver en árbol familiar
+          <GitBranch className="h-5 w-5" /> Ver árbol de {p.nombres?.split(" ")[0] || "esta persona"}
         </button>
       )}
 
@@ -1171,3 +1185,100 @@ function FamilyList({ label, people, onClick }: { label: string; people: any[]; 
     </div>
   );
 }
+
+function PersonaQuickMenu({
+  personaId, persona, allPersonas, relaciones, onDelete,
+}: {
+  personaId: string;
+  persona: any;
+  allPersonas: any[];
+  relaciones: any[];
+  onDelete: () => void;
+}) {
+  const navigate = useNavigate();
+  const [parentescoOpen, setParentescoOpen] = useState(false);
+  const [parentescoTxt, setParentescoTxt] = useState<string>("");
+  const [loadingPar, setLoadingPar] = useState(false);
+
+  const verParentesco = async () => {
+    setLoadingPar(true);
+    setParentescoOpen(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let probandId: string | null = null;
+      if (user) {
+        const { data } = await supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle();
+        probandId = (data as any)?.proband_id ?? null;
+      }
+      if (!probandId) { setParentescoTxt("Aún no marcaste quién eres tú en el árbol. Definí tu persona de referencia en Inicio para calcular el parentesco."); return; }
+      if (probandId === personaId) { setParentescoTxt("Eres tú mismo."); return; }
+      const { data: relsAll } = await supabase.from("relaciones").select("persona_id,pariente_id,tipo");
+      const r = calcularParentesco(probandId, personaId, (relsAll ?? []) as any, allPersonas);
+      setParentescoTxt(r?.texto ? `${persona.nombres} ${persona.apellidos} es ${r.texto}.` : "No encontré un camino de parentesco registrado entre ustedes.");
+    } catch (e: any) {
+      setParentescoTxt(`No se pudo calcular: ${e.message ?? e}`);
+    } finally {
+      setLoadingPar(false);
+    }
+  };
+
+  const compartir = async () => {
+    const url = `${window.location.origin}/p/${personaId}`;
+    try {
+      if (navigator.share) await navigator.share({ title: `${persona.nombres} ${persona.apellidos}`, url });
+      else { await navigator.clipboard.writeText(url); toast.success("Enlace copiado"); }
+    } catch {}
+  };
+
+  const buscarIA = async () => {
+    const t = toast.loading("Buscando en internet con IA…");
+    try {
+      const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: personaId } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`+${data.hallazgos?.length ?? 0} hallazgos — revisá Búsqueda IA`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className="rounded-full" title="Más acciones">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuLabel>Acciones rápidas</DropdownMenuLabel>
+          <DropdownMenuItem onClick={verParentesco}>
+            <Users className="h-4 w-4" /> Mi parentesco con esta persona
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/arbol?centro=${personaId}`)}>
+            <GitBranch className="h-4 w-4" /> Ver árbol de esta persona
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={compartir}>
+            <Share2 className="h-4 w-4" /> Compartir persona (link público)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={buscarIA}>
+            <Search className="h-4 w-4" /> Buscar con IA en internet
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+            <Trash2 className="h-4 w-4" /> Eliminar persona
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={parentescoOpen} onOpenChange={setParentescoOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mi parentesco</DialogTitle></DialogHeader>
+          <p className="text-[15px] leading-relaxed">
+            {loadingPar ? "Calculando camino genealógico…" : parentescoTxt}
+          </p>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
