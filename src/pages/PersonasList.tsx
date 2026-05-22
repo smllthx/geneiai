@@ -38,7 +38,20 @@ export default function PersonasList() {
       <PageHeader
         title="Personas"
         subtitle="Toda persona del archivo. Cada una con su código único de identificación."
-        actions={<Button onClick={() => navigate("/personas/nueva")}><Plus className="h-4 w-4" /> Nueva persona</Button>}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/fusionar")}
+              title="Detectar y fusionar personas duplicadas"
+            >
+              <GitMerge className="h-4 w-4" /> Detectar duplicados
+            </Button>
+            <Button onClick={() => navigate("/personas/nueva")}>
+              <Plus className="h-4 w-4" /> Nueva persona
+            </Button>
+          </div>
+        }
       />
       <Input
         placeholder="Buscar por nombre, apellido o código (ej. GDVB-TS5)…"
