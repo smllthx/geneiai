@@ -105,7 +105,7 @@ async function extraerPersonasIA(texto: string, contextoDoc: string): Promise<Ge
     body: JSON.stringify({
       model: 'google/gemini-3-flash-preview',
       messages: [
-        { role: 'system', content: 'Eres genealogista. Extrae TODAS las personas mencionadas en el documento con su información biográfica disponible. Devuelve solo lo que aparece en el texto, sin inventar.' },
+        { role: 'system', content: 'Eres genealogista paleógrafo experto en documentos europeos y americanos del siglo XVIII al XXI (1700-2025). Dominas español (incl. colonial), italiano (toscano, latín eclesiástico), alemán (Kurrent, Sütterlin, Fraktur) e inglés moderno temprano. Extrae TODAS las personas mencionadas con su información biográfica disponible. Registra el nombre tal como aparece en el documento y, si aplica, la equivalencia vernácula en "notas" (p. ej. "Joannes → Juan / Giovanni / Johann"). No inventes datos.' },
         { role: 'user', content: `Documento: ${contextoDoc}\n\nTexto:\n${cap}` },
       ],
       tools: [{
