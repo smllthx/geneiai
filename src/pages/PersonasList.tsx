@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, EyeOff, Sparkles } from "lucide-react";
+import { Plus, EyeOff, Sparkles, GitMerge } from "lucide-react";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 
