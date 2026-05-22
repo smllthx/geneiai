@@ -43,54 +43,45 @@ export const PersonCard = memo(function PersonCard({
   const navigate = useNavigate();
   const yN = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
   const yD = yearOf(p.defuncion_fecha) ?? null;
-  const lifespan = yN || yD ? `${yN ?? "?"} – ${yD ?? (p.viva === "si" ? "vive" : "?")}` : "—";
-  const sexo = p.sexo === "femenino" ? "♀" : p.sexo === "masculino" ? "♂" : "";
-  const ringColor =
-    p.sexo === "femenino" ? "ring-pink-400/40"
-    : p.sexo === "masculino" ? "ring-sky-400/40"
-    : "ring-foreground/15";
+  const lifespan = yN || yD ? `${yN ?? "?"}–${yD ?? (p.viva === "si" ? "Vive" : "?")}` : "—";
+  const isF = p.sexo === "femenino";
+  const isM = p.sexo === "masculino";
+  // FamilySearch-style colored top bar
+  const topBar = isF ? "bg-pink-400" : isM ? "bg-sky-400" : "bg-foreground/20";
+  const avatarBg = isF ? "bg-pink-100 dark:bg-pink-950/40" : isM ? "bg-sky-100 dark:bg-sky-950/40" : "bg-foreground/5";
+  const avatarFg = isF ? "text-pink-600 dark:text-pink-300" : isM ? "text-sky-600 dark:text-sky-300" : "text-foreground/50";
   const pct = Math.round(completeness(p) * 100);
 
   return (
     <button
       onClick={onClick ?? (() => navigate(`/personas/${p.id}`))}
       className={cn(
-        "glass group flex flex-col gap-1.5 rounded-2xl px-3 py-2 text-left transition-all hover:scale-[1.02] hover:shadow-lg",
-        compact ? "min-w-[140px] max-w-[180px]" : "min-w-[160px] max-w-[220px]",
-        highlighted && "ring-2 ring-primary/60",
+        "group relative overflow-hidden rounded-2xl border border-border/60 bg-card text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+        compact ? "w-[140px]" : "w-[164px]",
+        highlighted && "ring-2 ring-primary",
         directLine && "ring-2 ring-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]",
       )}
     >
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 ring-2",
-            ringColor,
-          )}
-        >
-          <User className="h-5 w-5 text-foreground/60" />
+      <div className={cn("h-1.5 w-full", topBar)} />
+      <div className="flex flex-col items-center px-2 pb-2 pt-2.5">
+        <div className={cn("mb-1.5 flex h-12 w-12 items-center justify-center rounded-full", avatarBg)}>
+          <User className={cn("h-7 w-7", avatarFg)} />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-display text-sm font-semibold leading-tight">
-            {p.nombres} {p.apellidos}
+        <div className="line-clamp-2 w-full text-center font-display text-[12px] font-semibold leading-tight">
+          {p.nombres} {p.apellidos}
+        </div>
+        <div className="mt-1 text-[10px] tabular-nums text-muted-foreground">{lifespan}</div>
+        <div className="mt-1.5 flex w-full items-center gap-1">
+          <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                pct >= 70 ? "bg-emerald-500/70" : pct >= 40 ? "bg-amber-500/70" : "bg-foreground/25",
+              )}
+              style={{ width: `${pct}%` }}
+            />
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span>{lifespan}</span>
-            {sexo && <span className="opacity-60">{sexo}</span>}
-          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/10">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all",
-              pct >= 70 ? "bg-emerald-500/70" : pct >= 40 ? "bg-amber-500/70" : "bg-foreground/30",
-            )}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span className="text-[9px] tabular-nums text-muted-foreground">{pct}%</span>
       </div>
     </button>
   );
@@ -100,9 +91,11 @@ export function EmptySlot({ label, onClick }: { label: string; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="glass flex min-w-[140px] items-center gap-2 rounded-2xl border-dashed px-3 py-2 text-left text-xs text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
+      className="flex w-[140px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/40 px-2 py-3 text-[11px] text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
     >
-      <UserPlus className="h-4 w-4" />
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground/5">
+        <UserPlus className="h-4 w-4" />
+      </div>
       <span>Agregar {label}</span>
     </button>
   );
