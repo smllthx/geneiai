@@ -453,6 +453,15 @@ export default function PersonaDetail() {
               <LugarSelect value={p.entierro_lugar_id} onChange={(v) => set("entierro_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
             <div><Label>Ocupación</Label><Input value={p.ocupacion ?? ""} onChange={(e) => set("ocupacion", e.target.value)} /></div>
             <div><Label>Nacionalidad / origen</Label><Input value={p.nacionalidad ?? ""} onChange={(e) => set("nacionalidad", e.target.value)} /></div>
+            <div className="sm:col-span-2">
+              <NombresMultilingues
+                nombres={p.nombres}
+                apellidos={p.apellidos}
+                origen={p.nacionalidad}
+                nacionalidad={p.nacionalidad}
+                onApply={(v) => { set("nombres", v.nombres); set("apellidos", v.apellidos); }}
+              />
+            </div>
             <div><Label>Religión / rito</Label><Input value={p.religion ?? ""} onChange={(e) => set("religion", e.target.value)} /></div>
             <div><Label>Certeza</Label>
               <Select value={p.certeza} onValueChange={(v) => set("certeza", v)}>
