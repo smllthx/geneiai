@@ -89,6 +89,14 @@ export default function AppLayout() {
   const handleLogout = async () => { await signOut(); navigate("/login"); };
   const allMobileNav = [...primaryNav, ...investigationNav, ...utilityNav];
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("genaia:sidebar-collapsed") === "1";
+  });
+  useEffect(() => {
+    localStorage.setItem("genaia:sidebar-collapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
+
   // Notificaciones de aniversarios/cumpleaños: 1 vez al día por usuario
   useEffect(() => {
     if (!user) return;
@@ -101,7 +109,13 @@ export default function AppLayout() {
 
   return (
     <div className="relative flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 p-3 md:flex md:flex-col">
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 p-3 transition-[width,opacity,transform] duration-300 ease-out md:flex md:flex-col",
+          sidebarCollapsed ? "w-0 -translate-x-4 overflow-hidden p-0 opacity-0 pointer-events-none" : "w-64 opacity-100",
+        )}
+        aria-hidden={sidebarCollapsed}
+      >
         <div className="glass-strong flex h-full flex-col rounded-3xl">
           <div className="px-5 pt-5 pb-3">
             <div className="flex items-center gap-3">
@@ -110,7 +124,17 @@ export default function AppLayout() {
                 <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENAIA</h1>
                 <p className="mt-1 text-[11px] text-muted-foreground">Sanguineti · Aeschlimann</p>
               </div>
-              <div className="ml-auto"><NotificationBell /></div>
+              <div className="ml-auto flex items-center gap-1">
+                <NotificationBell />
+                <button
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
+                  aria-label="Ocultar menú"
+                  title="Ocultar menú"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
@@ -126,6 +150,19 @@ export default function AppLayout() {
           </div>
         </div>
       </aside>
+
+      {/* Floating re-open arrow when sidebar is collapsed (desktop only) */}
+      <button
+        onClick={() => setSidebarCollapsed(false)}
+        aria-label="Mostrar menú"
+        title="Mostrar menú GENAIA"
+        className={cn(
+          "fixed left-0 top-1/2 z-40 hidden -translate-y-1/2 items-center justify-center rounded-r-2xl border border-l-0 border-border bg-card/90 px-1.5 py-3 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-card hover:text-foreground hover:px-2 md:flex",
+          sidebarCollapsed ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
+        )}
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div
