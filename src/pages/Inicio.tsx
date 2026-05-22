@@ -324,7 +324,7 @@ export default function Inicio() {
           <h2 className="mb-3 font-display text-lg font-semibold">Apellidos principales</h2>
           {stats.apellidos.length === 0
             ? <p className="text-sm text-muted-foreground">Aún sin apellidos registrados.</p>
-            : <div className="flex flex-wrap gap-2">{stats.apellidos.map((a) => <span key={a} className="glass-pill">{a}</span>)}</div>}
+            : <div className="flex flex-wrap gap-2">{stats.apellidos.map((a) => <Link key={a} to={`/buscar?q=${encodeURIComponent(a)}`} className="glass-pill font-bold transition-colors hover:bg-primary/10 hover:text-primary">{a}</Link>)}</div>}
         </GlassCard>
       </div>
     </div>
