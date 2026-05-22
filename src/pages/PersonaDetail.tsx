@@ -819,7 +819,13 @@ export default function PersonaDetail() {
   );
 }
 
-function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode }) {
+function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode; lugaresMap?: Map<string, any> }) {
+  const lugarNombre = (id?: string | null) => {
+    if (!id || !lugaresMap) return null;
+    const l = lugaresMap.get(id);
+    if (!l) return null;
+    return [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ");
+  };
   return (
     <section className="rounded-2xl bg-card/30 px-1 py-2">
       <header className="flex items-center justify-between px-3 py-2">
@@ -837,6 +843,11 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string;
             const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
             const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
             const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
+            const matFecha = fmtDate(x.matrimonio_fecha);
+            const matLugar = lugarNombre(x.matrimonio_lugar_id);
+            const matLinea = matFecha || matLugar
+              ? `${matFecha ?? "Fecha desconocida"}${matLugar ? ` · ${matLugar}` : ""}`
+              : null;
             return (
               <li key={x.id}>
                 <Link
@@ -858,6 +869,12 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd }: { titulo: string;
                       <span>{sub}</span>
                       <span className="font-mono tracking-wider opacity-70">{personaCode(x.id)}</span>
                     </div>
+                    {matLinea && (
+                      <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[11px] text-rose-700 dark:text-rose-300">
+                        <span aria-hidden>💍</span>
+                        <span className="break-words">{matLinea}</span>
+                      </div>
+                    )}
                   </div>
                 </Link>
               </li>
