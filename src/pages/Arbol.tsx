@@ -380,8 +380,23 @@ export default function Arbol() {
       <div className="mb-3 flex items-center gap-2 px-3 md:px-6">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Select value={center} onValueChange={setCenter}>
-            <SelectTrigger className="h-9 rounded-full pl-9 text-xs"><SelectValue placeholder="Persona central" /></SelectTrigger>
+          <Select
+            value={center}
+            onValueChange={(v) => {
+              if (probandLocked) {
+                toast.info("La persona principal ya está fijada y no se puede cambiar.");
+                return;
+              }
+              setCenter(v);
+            }}
+            disabled={probandLocked}
+          >
+            <SelectTrigger
+              className="h-9 rounded-full pl-9 text-xs disabled:opacity-100 disabled:cursor-default"
+              title={probandLocked ? "Persona principal fijada" : "Persona central"}
+            >
+              <SelectValue placeholder="Persona central" />
+            </SelectTrigger>
             <SelectContent>
               {personas.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>
