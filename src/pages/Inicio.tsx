@@ -176,25 +176,62 @@ export default function Inicio() {
         <QuickAction icon={Plus} label="Importar / Exportar" to="/importar" />
       </div>
 
+      {/* Vistas recientes */}
+      {vistasRecientes.length > 0 && (
+        <GlassCard className="mb-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+              <History className="h-4 w-4 text-primary" /> Vistas recientes
+            </h2>
+            <Link to="/personas" className="text-xs text-link hover:underline">Ver todas →</Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {vistasRecientes.map((x) => (
+              <Link
+                key={x.id}
+                to={`/personas/${x.id}`}
+                className="group flex w-32 shrink-0 flex-col items-center gap-2 rounded-2xl bg-foreground/5 p-3 transition-all hover:bg-foreground/10"
+              >
+                {x.foto_url ? (
+                  <img src={x.foto_url} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-border/40 group-hover:ring-primary/50" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-foreground/10">
+                    <Users className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="w-full text-center text-xs font-bold leading-tight">
+                  {x.nombres} <br /> {x.apellidos}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
       {/* Mapa migratorio (ancho completo) */}
-      <GlassCard className="mb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-            <MapPin className="h-4 w-4 text-primary" /> Mapa migratorio familiar
-          </h2>
-          <Link to="/lugares" className="text-xs text-link hover:underline">Ver lugares →</Link>
-        </div>
-        <MigrationMap height={320} />
-        <p className="mt-2 text-xs text-muted-foreground">
-          Puntos por lugar de nacimiento y defunción · líneas indican migraciones individuales.
-        </p>
-      </GlassCard>
+      <Link to="/lugares" className="mb-4 block">
+        <GlassCard className="transition-all hover:bg-foreground/[0.02]">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+              <MapPin className="h-4 w-4 text-primary" /> Mapa migratorio familiar
+            </h2>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <MigrationMap height={320} />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Puntos por lugar de nacimiento y defunción · líneas indican migraciones individuales.
+          </p>
+        </GlassCard>
+      </Link>
 
       <div className="mb-4 grid gap-4 md:grid-cols-2">
         <GlassCard>
-          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-            <Clock className="h-4 w-4 text-primary" /> Timeline familiar
-          </h2>
+          <Link to="/linea-de-tiempo" className="mb-3 flex items-center justify-between hover:text-primary">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+              <Clock className="h-4 w-4 text-primary" /> Timeline familiar
+            </h2>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
           <div className="max-h-[420px] overflow-y-auto pr-2">
             <FamilyTimeline />
           </div>
@@ -202,18 +239,19 @@ export default function Inicio() {
 
         <div className="grid gap-4">
           <GlassCard>
-            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-              <UserX className="h-4 w-4 text-accent" /> Personas sin padres registrados
-            </h2>
+            <Link to="/personas" className="mb-3 flex items-center justify-between hover:text-primary">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+                <UserX className="h-4 w-4 text-accent" /> Personas sin padres registrados
+              </h2>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
             {sinPadres.length === 0 ? (
               <p className="text-sm text-muted-foreground">Todas las personas tienen al menos un padre/madre conectado.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {sinPadres.map((x) => (
                   <li key={x.id}>
-                    <Link to={`/personas/${x.id}`} className="text-sm hover:text-primary">
-                      {x.nombres} {x.apellidos}
-                    </Link>
+                    <PersonaName persona={x} size="sm" />
                   </li>
                 ))}
               </ul>
@@ -221,18 +259,19 @@ export default function Inicio() {
           </GlassCard>
 
           <GlassCard>
-            <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-              <ImageOff className="h-4 w-4 text-accent" /> Personas sin fotos
-            </h2>
+            <Link to="/fotos" className="mb-3 flex items-center justify-between hover:text-primary">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+                <ImageOff className="h-4 w-4 text-accent" /> Personas sin fotos
+              </h2>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
             {sinFotos.length === 0 ? (
               <p className="text-sm text-muted-foreground">Todas las personas tienen al menos una foto.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {sinFotos.map((x) => (
                   <li key={x.id}>
-                    <Link to={`/personas/${x.id}`} className="text-sm hover:text-primary">
-                      {x.nombres} {x.apellidos}
-                    </Link>
+                    <PersonaName persona={x} size="sm" />
                   </li>
                 ))}
               </ul>
@@ -266,15 +305,15 @@ export default function Inicio() {
           ) : (
             <ul className="divide-y divide-border/50">
               {recientes.map((p) => (
-                <li key={p.id}>
-                  <button className="flex w-full items-center gap-2 py-2 text-left text-sm hover:text-accent" onClick={() => navigate(`/personas/${p.id}`)}>
+                <li key={p.id} className="py-2">
+                  <Link to={`/personas/${p.id}`} className="flex items-center gap-2 hover:opacity-80">
                     {p.foto_url ? (
-                      <img src={p.foto_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                      <img src={p.foto_url} alt="" className="h-7 w-7 rounded-full object-cover" />
                     ) : (
                       <Users className="h-4 w-4 text-muted-foreground" />
                     )}
-                    {p.nombres} {p.apellidos}
-                  </button>
+                    <PersonaName persona={p} size="sm" asLink={false} />
+                  </Link>
                 </li>
               ))}
             </ul>
