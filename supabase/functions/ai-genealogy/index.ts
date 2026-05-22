@@ -1,24 +1,32 @@
-// AI genealogy assistant — multi-turn chat with tools that operate on the user's tree.
-// Uses Lovable AI Gateway (OpenAI-compatible) with tool calling.
-// Mutations are NOT applied directly: they are saved as `sugerencias` rows
-// that the user reviews and accepts in the UI.
+// AI genealogy assistant — agente multi-herramienta que opera sobre el árbol del usuario.
+// Lovable AI Gateway con tool-calling. Algunas herramientas crean sugerencias, otras ejecutan
+// acciones directas (crear persona, relación, lanzar mega-buscador, etc).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-3.1-pro-preview";
-const FALLBACK_MODEL = "google/gemini-3-flash-preview";
+const DEFAULT_MODEL = "google/gemini-3-flash-preview";
+const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
-const SYSTEM = `Sos un asistente experto en genealogía para el "Archivo Familiar" del usuario.
-Hablás siempre en español rioplatense, breve y preciso.
+const SYSTEM = `Sos GENAIA, asistente experto en genealogía del Archivo Familiar del usuario.
+Hablás español rioplatense, claro, breve y accionable.
 
-Tu trabajo:
-- Ayudás a buscar, completar y conectar personas, eventos, lugares y fuentes.
-- Cuando proponés un cambio (nueva persona, dato faltante, relación, fuente), llamás a la herramienta "propose_change". NUNCA modificás datos directamente.
-- Para buscar gente en el árbol del usuario usás "search_personas" (admite variantes y errores de tipeo).
-- Si te falta contexto, preguntá antes de proponer.
-- Marcá siempre el nivel de confianza (0-100) y el origen del dato.`;
+Capacidades:
+- Buscar personas (search_personas, get_persona, list_recent).
+- CREAR personas y relaciones DIRECTAMENTE (create_persona, create_relation) cuando el usuario lo pide explícitamente.
+- ACTUALIZAR datos (update_persona) cuando hay certeza.
+- LANZAR investigaciones automáticas: mega_search (5 agentes en paralelo), web_search (web libre), agent_investigar (IA).
+- DEFINIR la persona principal (set_proband).
+- VERIFICAR coherencia (check_coherence).
+- SUGERIR cambios sin aplicar (propose_change) cuando hay duda.
+- NAVEGAR: devolver intent navigate_to para guiar al usuario a una pantalla.
+
+Reglas:
+- Si el usuario dice "creá", "agregá", "conectá", "lanzá", "buscá" → ejecutá la herramienta directa.
+- Si dudás, pedí confirmación O usá propose_change.
+- Confirmá lo realizado en una frase breve, con bullets si hubo varias acciones.
+- Nunca inventes UUIDs: si necesitás un id, primero search_personas.`;
 
 type ToolDef = {
   type: "function";
@@ -30,10 +38,10 @@ const tools: ToolDef[] = [
     type: "function",
     function: {
       name: "search_personas",
-      description: "Busca personas en el árbol del usuario por nombre/apellido (acepta variantes y errores de tipeo).",
+      description: "Busca personas del árbol por nombre o apellido (tolerante a tipeos).",
       parameters: {
         type: "object",
-        properties: { query: { type: "string", description: "texto a buscar" }, limit: { type: "integer", default: 8 } },
+        properties: { query: { type: "string" }, limit: { type: "integer", default: 8 } },
         required: ["query"],
       },
     },
@@ -42,25 +50,148 @@ const tools: ToolDef[] = [
     type: "function",
     function: {
       name: "get_persona",
-      description: "Devuelve la ficha completa de una persona por id, incluyendo eventos y relaciones.",
+      description: "Devuelve ficha completa con eventos y relaciones.",
       parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
     },
   },
   {
     type: "function",
     function: {
+      name: "list_recent",
+      description: "Lista personas recientes o totales (útil para orientarse).",
+      parameters: { type: "object", properties: { limit: { type: "integer", default: 10 } } },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_persona",
+      description: "Crea una persona en el árbol del usuario. Devuelve su id.",
+      parameters: {
+        type: "object",
+        properties: {
+          nombres: { type: "string" },
+          apellidos: { type: "string" },
+          sexo: { type: "string", enum: ["masculino", "femenino", "otro"] },
+          nac_fecha: { type: "string", description: "YYYY-MM-DD" },
+          nac_lugar: { type: "string" },
+          defuncion_fecha: { type: "string" },
+          ocupacion: { type: "string" },
+          notas: { type: "string" },
+          viva: { type: "string", enum: ["si", "no", "desconocido"] },
+        },
+        required: ["nombres", "apellidos"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_persona",
+      description: "Actualiza campos de una persona existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          changes: { type: "object", description: "campos a actualizar" },
+        },
+        required: ["id", "changes"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_relation",
+      description: "Crea una relación entre dos personas (genera ambos lados automáticamente).",
+      parameters: {
+        type: "object",
+        properties: {
+          source_id: { type: "string", description: "uuid persona origen" },
+          target_id: { type: "string", description: "uuid persona destino" },
+          tipo: { type: "string", enum: ["padre", "madre", "hijo", "conyuge", "hermano"], description: "rol de target respecto de source" },
+        },
+        required: ["source_id", "target_id", "tipo"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_proband",
+      description: "Define la persona principal del árbol (centro por defecto).",
+      parameters: { type: "object", properties: { persona_id: { type: "string" } }, required: ["persona_id"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "mega_search",
+      description: "Lanza el mega-buscador (6 agentes en paralelo: FamilySearch avanzado, FamilySearch amplio, web libre, IA general, ascendientes IA, descendientes IA).",
+      parameters: { type: "object", properties: { persona_id: { type: "string" } }, required: ["persona_id"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "web_search",
+      description: "Búsqueda web libre sin API key (DuckDuckGo + Wikipedia + resumen IA). Crea sugerencias revisables.",
+      parameters: { type: "object", properties: { persona_id: { type: "string" } }, required: ["persona_id"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_investigar",
+      description: "Lanza investigación IA (hipótesis, ascendientes o descendientes).",
+      parameters: {
+        type: "object",
+        properties: {
+          persona_id: { type: "string" },
+          foco: { type: "string", enum: ["general", "ascendientes", "descendientes"], default: "general" },
+        },
+        required: ["persona_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "check_coherence",
+      description: "Verifica coherencia del árbol (fechas, padres, ciclos). Devuelve recuento por severidad.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "navigate_to",
+      description: "Devuelve una intención de navegación para que la UI lleve al usuario a una pantalla.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "ruta absoluta, ej /arbol o /personas/<id>" },
+          motivo: { type: "string" },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "propose_change",
-      description: "Crea una sugerencia para que el usuario revise y acepte (no modifica datos directamente).",
+      description: "Guarda una sugerencia para revisar (no aplica el cambio).",
       parameters: {
         type: "object",
         properties: {
           tipo: { type: "string", enum: ["nueva_persona", "actualizar_persona", "nueva_relacion", "nuevo_evento", "nueva_fuente", "otro"] },
           titulo: { type: "string" },
           descripcion: { type: "string" },
-          persona_id: { type: "string", description: "uuid si aplica" },
-          payload: { type: "object", description: "datos concretos del cambio propuesto" },
+          persona_id: { type: "string" },
+          payload: { type: "object" },
           confianza: { type: "integer", minimum: 0, maximum: 100 },
-          origen: { type: "string", description: "fuente o razonamiento" },
+          origen: { type: "string" },
         },
         required: ["tipo", "titulo", "payload", "confianza"],
       },
@@ -68,59 +199,156 @@ const tools: ToolDef[] = [
   },
 ];
 
-// Strip diacritics + lower for fuzzy match
-const norm = (s: string) =>
-  (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const norm = (s: string) => (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+async function invokeFn(name: string, body: unknown, auth: string) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${name}`;
+  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: auth, apikey: anon },
+    body: JSON.stringify(body),
+  });
+  return await r.json().catch(() => ({ ok: r.ok }));
+}
 
 async function executeTool(
   name: string,
   args: Record<string, unknown>,
-  ctx: { sb: ReturnType<typeof createClient>; userId: string },
+  ctx: { sb: ReturnType<typeof createClient>; userId: string; auth: string },
 ): Promise<unknown> {
-  if (name === "search_personas") {
-    const q = norm(String(args.query ?? ""));
-    const limit = Math.min(Number(args.limit ?? 8), 20);
-    const { data, error } = await ctx.sb
-      .from("personas")
-      .select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,ocupacion")
-      .eq("user_id", ctx.userId)
-      .limit(200);
-    if (error) return { error: error.message };
-    const scored = (data ?? [])
-      .map((p: any) => {
-        const full = norm(`${p.nombres} ${p.apellidos}`);
-        const inc = full.includes(q) || q.includes(full);
-        return { p, score: inc ? 1 : 0 };
-      })
-      .filter((x) => x.score > 0)
-      .slice(0, limit)
-      .map((x) => x.p);
-    return { results: scored };
+  try {
+    if (name === "search_personas") {
+      const q = norm(String(args.query ?? ""));
+      const limit = Math.min(Number(args.limit ?? 8), 20);
+      const { data } = await ctx.sb.from("personas")
+        .select("id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha")
+        .eq("user_id", ctx.userId).limit(200);
+      const scored = (data ?? []).filter((p: any) =>
+        norm(`${p.nombres} ${p.apellidos}`).includes(q)).slice(0, limit);
+      return { results: scored, total: scored.length };
+    }
+    if (name === "list_recent") {
+      const limit = Math.min(Number(args.limit ?? 10), 30);
+      const { data } = await ctx.sb.from("personas")
+        .select("id,nombres,apellidos,sexo,nac_fecha")
+        .eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(limit);
+      return { results: data ?? [] };
+    }
+    if (name === "get_persona") {
+      const id = String(args.id);
+      const [{ data: p }, { data: ev }, { data: rels }] = await Promise.all([
+        ctx.sb.from("personas").select("*").eq("user_id", ctx.userId).eq("id", id).maybeSingle(),
+        ctx.sb.from("eventos").select("tipo,fecha,descripcion,lugar_original").eq("user_id", ctx.userId).eq("persona_id", id),
+        ctx.sb.from("relaciones").select("tipo,pariente_id,certeza").eq("user_id", ctx.userId).eq("persona_id", id),
+      ]);
+      return { persona: p, eventos: ev ?? [], relaciones: rels ?? [] };
+    }
+    if (name === "create_persona") {
+      const row: any = { user_id: ctx.userId };
+      for (const k of ["nombres", "apellidos", "sexo", "nac_fecha", "nac_lugar", "defuncion_fecha", "ocupacion", "notas", "viva"]) {
+        if (args[k] != null && args[k] !== "") row[k] = args[k];
+      }
+      const { data, error } = await ctx.sb.from("personas").insert(row).select("id").single();
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, persona_id: data.id };
+    }
+    if (name === "update_persona") {
+      const id = String(args.id);
+      const changes = (args.changes as Record<string, unknown>) ?? {};
+      const { error } = await ctx.sb.from("personas").update(changes).eq("user_id", ctx.userId).eq("id", id);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+    if (name === "create_relation") {
+      const sourceId = String(args.source_id);
+      const targetId = String(args.target_id);
+      const tipo = String(args.tipo);
+      if (sourceId === targetId) return { ok: false, error: "ids iguales" };
+      const { data: src } = await ctx.sb.from("personas").select("sexo").eq("id", sourceId).maybeSingle();
+      let pairs: any[] = [];
+      if (tipo === "padre" || tipo === "madre") {
+        pairs = [
+          { persona_id: sourceId, pariente_id: targetId, tipo },
+          { persona_id: targetId, pariente_id: sourceId, tipo: "hijo" },
+        ];
+      } else if (tipo === "hijo") {
+        const tipoPadre = (src as any)?.sexo === "femenino" ? "madre" : "padre";
+        pairs = [
+          { persona_id: targetId, pariente_id: sourceId, tipo: tipoPadre },
+          { persona_id: sourceId, pariente_id: targetId, tipo: "hijo" },
+        ];
+      } else if (tipo === "conyuge" || tipo === "hermano") {
+        pairs = [
+          { persona_id: sourceId, pariente_id: targetId, tipo },
+          { persona_id: targetId, pariente_id: sourceId, tipo },
+        ];
+      }
+      const rows = pairs.map((p) => ({ ...p, user_id: ctx.userId, naturaleza: "biologica", certeza: "probable" }));
+      const { error } = await ctx.sb.from("relaciones").insert(rows);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, creadas: rows.length };
+    }
+    if (name === "set_proband") {
+      const persona_id = String(args.persona_id);
+      const { error } = await ctx.sb.from("profiles").update({ proband_id: persona_id, proband_asked: true }).eq("id", ctx.userId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+    if (name === "mega_search") {
+      const r = await invokeFn("mega-buscador", { persona_id: String(args.persona_id) }, ctx.auth);
+      return r;
+    }
+    if (name === "web_search") {
+      const r = await invokeFn("web-search-libre", { persona_id: String(args.persona_id) }, ctx.auth);
+      return r;
+    }
+    if (name === "agent_investigar") {
+      const r = await invokeFn("investigar-auto", {
+        person_id: String(args.persona_id),
+        foco: args.foco ? String(args.foco) : undefined,
+      }, ctx.auth);
+      return r;
+    }
+    if (name === "check_coherence") {
+      const [{ data: personas }, { data: rels }] = await Promise.all([
+        ctx.sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha").eq("user_id", ctx.userId),
+        ctx.sb.from("relaciones").select("persona_id,pariente_id,tipo").eq("user_id", ctx.userId),
+      ]);
+      // Lightweight checks
+      let errores = 0, avisos = 0;
+      const byId = new Map((personas ?? []).map((p: any) => [p.id, p]));
+      for (const r of (rels ?? [])) {
+        const a = byId.get((r as any).persona_id) as any;
+        const b = byId.get((r as any).pariente_id) as any;
+        if (!a || !b) continue;
+        if (((r as any).tipo === "padre" || (r as any).tipo === "madre") && a.nac_fecha && b.nac_fecha) {
+          if (new Date(a.nac_fecha) <= new Date(b.nac_fecha)) errores++;
+        }
+      }
+      return { ok: true, errores, avisos, personas: personas?.length ?? 0, relaciones: rels?.length ?? 0 };
+    }
+    if (name === "navigate_to") {
+      return { ok: true, navigate_to: String(args.path), motivo: args.motivo ?? null };
+    }
+    if (name === "propose_change") {
+      const { data, error } = await ctx.sb.from("sugerencias").insert({
+        user_id: ctx.userId,
+        tipo: String(args.tipo),
+        titulo: String(args.titulo),
+        descripcion: args.descripcion ? String(args.descripcion) : null,
+        persona_id: args.persona_id ? String(args.persona_id) : null,
+        payload: (args.payload as any) ?? {},
+        confianza: Math.max(0, Math.min(100, Number(args.confianza ?? 60))),
+        origen: args.origen ? String(args.origen) : "asistente-ia",
+      }).select("id").single();
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, sugerencia_id: data.id };
+    }
+    return { error: `tool desconocida: ${name}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
-  if (name === "get_persona") {
-    const id = String(args.id ?? "");
-    const [{ data: persona }, { data: eventos }, { data: rels }] = await Promise.all([
-      ctx.sb.from("personas").select("*").eq("user_id", ctx.userId).eq("id", id).maybeSingle(),
-      ctx.sb.from("eventos").select("tipo,fecha,fecha_aprox,descripcion,lugar_original").eq("user_id", ctx.userId).eq("persona_id", id),
-      ctx.sb.from("relaciones").select("tipo,naturaleza,pariente_id,certeza").eq("user_id", ctx.userId).eq("persona_id", id),
-    ]);
-    return { persona, eventos: eventos ?? [], relaciones: rels ?? [] };
-  }
-  if (name === "propose_change") {
-    const { data, error } = await ctx.sb.from("sugerencias").insert({
-      user_id: ctx.userId,
-      tipo: String(args.tipo),
-      titulo: String(args.titulo),
-      descripcion: args.descripcion ? String(args.descripcion) : null,
-      persona_id: args.persona_id ? String(args.persona_id) : null,
-      payload: (args.payload as Record<string, unknown>) ?? {},
-      confianza: Math.max(0, Math.min(100, Number(args.confianza ?? 60))),
-      origen: args.origen ? String(args.origen) : "asistente-ia",
-    }).select("id").single();
-    if (error) return { error: error.message };
-    return { ok: true, sugerencia_id: data.id };
-  }
-  return { error: `tool desconocida: ${name}` };
 }
 
 async function callModel(model: string, messages: any[], key: string) {
@@ -129,85 +357,73 @@ async function callModel(model: string, messages: any[], key: string) {
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, tools, tool_choice: "auto" }),
   });
-  if (!r.ok) {
-    const t = await r.text();
-    throw new Error(`gateway ${r.status}: ${t}`);
-  }
+  if (!r.ok) throw new Error(`gateway ${r.status}: ${await r.text()}`);
   return await r.json();
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
   try {
     const auth = req.headers.get("Authorization") ?? "";
     if (!auth.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "no auth" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: auth } } },
-    );
-    const { data: userData, error: uErr } = await sb.auth.getUser();
-    if (uErr || !userData.user) {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
+    const { data: userData } = await sb.auth.getUser();
+    if (!userData.user) {
       return new Response(JSON.stringify({ error: "invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const userId = userData.user.id;
-
     const body = await req.json();
-    const incoming: { role: string; content: string }[] = Array.isArray(body.messages) ? body.messages : [];
-
+    const incoming: any[] = Array.isArray(body.messages) ? body.messages : [];
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY no configurada" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    // Pull proband context to inject
+    const { data: prof } = await sb.from("profiles").select("proband_id").eq("id", userId).maybeSingle();
+    let probandCtx = "";
+    if ((prof as any)?.proband_id) {
+      const { data: p } = await sb.from("personas").select("id,nombres,apellidos").eq("id", (prof as any).proband_id).maybeSingle();
+      if (p) probandCtx = `\nPersona principal del árbol: ${(p as any).nombres} ${(p as any).apellidos} (id: ${(p as any).id}).`;
+    }
 
-    const messages: any[] = [{ role: "system", content: SYSTEM }, ...incoming];
-    const toolEvents: { name: string; args: any; result: any }[] = [];
-
-    let model = body.model && typeof body.model === "string" ? body.model : DEFAULT_MODEL;
+    const messages: any[] = [{ role: "system", content: SYSTEM + probandCtx }, ...incoming];
+    const toolEvents: any[] = [];
+    let model = (body.model as string) || DEFAULT_MODEL;
     let usedFallback = false;
 
-    for (let step = 0; step < 6; step++) {
+    for (let step = 0; step < 8; step++) {
       let resp: any;
       try {
         resp = await callModel(model, messages, key);
       } catch (e) {
         const msg = String((e as Error).message);
         if (!usedFallback && (msg.includes("404") || msg.includes("400"))) {
-          model = FALLBACK_MODEL;
-          usedFallback = true;
+          model = FALLBACK_MODEL; usedFallback = true;
           resp = await callModel(model, messages, key);
         } else if (msg.includes("429")) {
           return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Esperá un minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else if (msg.includes("402")) {
           return new Response(JSON.stringify({ error: "Sin créditos en Lovable AI. Agregá créditos en Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        } else {
-          throw e;
-        }
+        } else { throw e; }
       }
 
-      const choice = resp.choices?.[0];
-      const msg = choice?.message;
+      const msg = resp.choices?.[0]?.message;
       if (!msg) break;
-
       const toolCalls = msg.tool_calls ?? [];
       if (!toolCalls.length) {
-        return new Response(
-          JSON.stringify({ content: msg.content ?? "", tool_events: toolEvents, model }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ content: msg.content ?? "", tool_events: toolEvents, model }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-
       messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: toolCalls });
       for (const tc of toolCalls) {
         let args: Record<string, unknown> = {};
-        try { args = JSON.parse(tc.function.arguments ?? "{}"); } catch (_) { /* ignore */ }
-        const result = await executeTool(tc.function.name, args, { sb, userId });
+        try { args = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* ignore */ }
+        const result = await executeTool(tc.function.name, args, { sb, userId, auth });
         toolEvents.push({ name: tc.function.name, args, result });
-        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+        messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result).slice(0, 8000) });
       }
     }
 
@@ -216,8 +432,7 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

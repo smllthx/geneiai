@@ -17,8 +17,11 @@ export default function SiriAssistant() {
   const navigate = useNavigate();
 
   const submit = () => {
-    if (!text.trim()) return;
-    navigate(`/buscar?q=${encodeURIComponent(text)}`);
+    if (!text.trim()) {
+      navigate(`/asistente`);
+    } else {
+      navigate(`/asistente?prompt=${encodeURIComponent(text)}`);
+    }
     setOpen(false);
     setText("");
   };
