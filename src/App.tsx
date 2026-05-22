@@ -40,6 +40,8 @@ const ConfigurarApp = lazy(() => import("./pages/ConfigurarApp"));
 const Fuentes = lazy(() => import("./pages/Fuentes"));
 const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
 const Insights = lazy(() => import("./pages/Insights"));
+const BusquedaIA = lazy(() => import("./pages/BusquedaIA"));
+const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -101,6 +103,8 @@ const App = () => (
                   <Route path="/hipotesis" element={<Hipotesis />} />
                   <Route path="/inferencias" element={<Inferencias />} />
                   <Route path="/insights" element={<Insights />} />
+                  <Route path="/busqueda-ia" element={<BusquedaIA />} />
+                  <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
                   <Route path="/configuracion" element={<Configuracion />} />
