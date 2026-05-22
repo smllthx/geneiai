@@ -477,7 +477,7 @@ export default function PersonaDetail() {
           />
         </TabsContent>
 
-        <TabsContent value="fotos">
+        <TabsContent value="recuerdos">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">Fotos en las que aparece esta persona.</p>
             <div className="flex items-center gap-2">
