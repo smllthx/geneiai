@@ -720,26 +720,100 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
   );
 }
 
+type AgentDef = { key: string; label: string; fn: string; body: Record<string, unknown> };
+type AgentState = { status: "idle" | "running" | "done" | "error"; ms?: number; result?: any; error?: string };
+
 function BusquedasSugeridas({ persona, disabled }: any) {
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero.</p>;
   const sugs = generateExternalSearches(persona);
   const [running, setRunning] = useState(false);
+
+  const agents: AgentDef[] = [
+    { key: "advanced",  label: "Búsqueda avanzada (filtros + variantes)", fn: "buscar-externo-auto", body: { persona_id: persona.id, modo: "advanced" } },
+    { key: "broad",     label: "Búsqueda libre (sin filtros)",            fn: "buscar-externo-auto", body: { persona_id: persona.id, modo: "broad" } },
+    { key: "ia",        label: "IA: hipótesis y sugerencias",             fn: "investigar-auto",     body: { person_id: persona.id } },
+    { key: "asc",       label: "IA: ascendientes",                        fn: "investigar-auto",     body: { person_id: persona.id, foco: "ascendientes" } },
+    { key: "desc",      label: "IA: descendientes",                       fn: "investigar-auto",     body: { person_id: persona.id, foco: "descendientes" } },
+  ];
+
+  const initial: Record<string, AgentState> = Object.fromEntries(agents.map((a) => [a.key, { status: "idle" as const }]));
+  const [states, setStates] = useState<Record<string, AgentState>>(initial);
+
   const auto = async () => {
     setRunning(true);
+    setStates(Object.fromEntries(agents.map((a) => [a.key, { status: "running" as const }])));
     toast.info("Lanzando 5 agentes en paralelo…");
-    const { data, error } = await supabase.functions.invoke("mega-buscador", { body: { persona_id: persona.id } });
+
+    let totalSug = 0, totalHip = 0, ok = 0;
+
+    await Promise.all(agents.map(async (a) => {
+      const t0 = Date.now();
+      try {
+        const { data, error } = await supabase.functions.invoke(a.fn, { body: a.body });
+        const ms = Date.now() - t0;
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+        ok++;
+        totalSug += data?.sugerencias ?? data?.sugerencias_creadas ?? 0;
+        totalHip += data?.hipotesis_creadas ?? 0;
+        setStates((s) => ({ ...s, [a.key]: { status: "done", ms, result: data } }));
+      } catch (e: any) {
+        setStates((s) => ({ ...s, [a.key]: { status: "error", ms: Date.now() - t0, error: e.message ?? String(e) } }));
+      }
+    }));
+
     setRunning(false);
-    if (error) { toast.error(error.message); return; }
-    const ok = (data?.agents ?? []).filter((a: any) => a.ok).length;
-    toast.success(`${ok}/5 agentes · ${data?.sugerencias ?? 0} sugerencias · ${data?.hipotesis ?? 0} hipótesis.`);
+    toast.success(`${ok}/5 agentes · ${totalSug} sugerencias · ${totalHip} hipótesis.`);
   };
+
+  const dot = (s: AgentState["status"]) =>
+    s === "running" ? "bg-primary animate-pulse" :
+    s === "done"    ? "bg-emerald-500" :
+    s === "error"   ? "bg-destructive" :
+                      "bg-muted-foreground/30";
+
+  const totals = Object.values(states);
+  const doneCount = totals.filter((t) => t.status === "done").length;
+  const errCount = totals.filter((t) => t.status === "error").length;
+  const progress = ((doneCount + errCount) / agents.length) * 100;
+
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">{running ? `Progreso ${doneCount + errCount}/5` : "5 agentes paralelos"}</div>
         <Button size="sm" onClick={auto} disabled={running}>
-          <Sparkles className="h-4 w-4" /> {running ? "5 agentes buscando…" : "Mega-buscador (5 agentes)"}
+          <Sparkles className="h-4 w-4" /> {running ? "Buscando…" : "Mega-buscador (5 agentes)"}
         </Button>
       </div>
+
+      {(running || doneCount + errCount > 0) && (
+        <div className="space-y-2">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {agents.map((a) => {
+              const st = states[a.key];
+              const sumario = st.result
+                ? `${st.result.sugerencias ?? st.result.sugerencias_creadas ?? 0} sug · ${st.result.hipotesis_creadas ?? 0} hip`
+                : st.status === "error" ? (st.error ?? "error")
+                : st.status === "running" ? "ejecutando…"
+                : "en espera";
+              return (
+                <li key={a.key} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-xs">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${dot(st.status)}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-foreground">{a.label}</div>
+                    <div className="truncate text-muted-foreground">{sumario}</div>
+                  </div>
+                  {st.ms != null && <span className="shrink-0 tabular-nums text-muted-foreground">{(st.ms / 1000).toFixed(1)}s</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       <div className="grid gap-2 md:grid-cols-2">{sugs.map((s, i) => (
         <Card key={i} className="archivo-card"><CardHeader className="pb-2">
           <CardTitle className="font-serif text-base">{s.plataforma}</CardTitle>
@@ -755,6 +829,7 @@ function BusquedasSugeridas({ persona, disabled }: any) {
     </div>
   );
 }
+
 
 function TimelinePanel({ eventos, persona }: any) {
   const items = [
