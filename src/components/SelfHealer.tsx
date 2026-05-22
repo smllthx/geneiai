@@ -229,9 +229,18 @@ export default function SelfHealer() {
             </p>
 
             {!diag && !loading && (
-              <Button onClick={() => diagnose(current)} className="w-full">
-                <Sparkles className="mr-1 h-4 w-4" /> Pedir diagnóstico a la IA
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={() => diagnose(current)} className="w-full">
+                  <Sparkles className="mr-1 h-4 w-4" /> Pedir diagnóstico a la IA
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => applyHeal("deep-repair")}
+                  className="w-full"
+                >
+                  <RefreshCw className="mr-1 h-4 w-4" /> Reparar todo y reiniciar
+                </Button>
+              </div>
             )}
             {loading && (
               <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
