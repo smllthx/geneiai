@@ -527,6 +527,7 @@ export default function PersonaDetail() {
           <FamiliaSeccion
             titulo="Cónyuges"
             personas={fam.conyuges}
+            lugaresMap={lugaresById}
             empty="Sin cónyuges registrados."
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="conyuge" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
@@ -537,6 +538,7 @@ export default function PersonaDetail() {
           <FamiliaSeccion
             titulo="Hijos"
             personas={fam.hijos}
+            lugaresMap={lugaresById}
             empty="Sin hijos registrados."
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hijo" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
@@ -549,6 +551,7 @@ export default function PersonaDetail() {
           <FamiliaSeccion
             titulo="Padres"
             personas={fam.padres}
+            lugaresMap={lugaresById}
             empty="Sin padres registrados."
             quickAdd={<div className="flex gap-2">
               <QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="padre" onAdded={async () => {
@@ -565,6 +568,7 @@ export default function PersonaDetail() {
           <FamiliaSeccion
             titulo="Hermanos"
             personas={fam.hermanos}
+            lugaresMap={lugaresById}
             empty="Sin hermanos registrados."
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hermano" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
