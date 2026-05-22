@@ -56,14 +56,29 @@ export default function Fotos() {
       const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
-      const { error: insErr } = await supabase.from("fotos").insert({
+      const { data: inserted, error: insErr } = await supabase.from("fotos").insert({
         user_id: user.id, url: publicUrl, storage_path: path,
         titulo, descripcion: desc, fecha_aprox: fechaAprox,
-      });
+      }).select().single();
       if (insErr) throw insErr;
       toast.success("Foto subida");
       setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setOpen(false);
       load();
+
+      // Análisis IA contextual en segundo plano (año, lugar, clase social, edades, nacionalidad…)
+      if (inserted?.id) {
+        const t = toast.loading("Analizando foto con IA…");
+        supabase.functions.invoke("analizar-foto-contexto", { body: { foto_id: inserted.id, foto_url: publicUrl } })
+          .then(({ data, error }) => {
+            toast.dismiss(t);
+            if (error || data?.error) { toast.error("No se pudo analizar la foto"); return; }
+            const a = data?.analisis ?? {};
+            const partes = [a.ano_estimado || a.decada_estimada, a.lugar_estimado, a.clase_social].filter(Boolean);
+            toast.success(partes.length ? `Análisis: ${partes.join(" · ")}` : "Análisis listo");
+            load();
+          })
+          .catch(() => { toast.dismiss(t); });
+      }
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(false); }
   };

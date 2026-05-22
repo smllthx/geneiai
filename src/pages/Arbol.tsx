@@ -44,7 +44,7 @@ export default function Arbol() {
       setLoadingTree(true);
       const user = (await supabase.auth.getUser()).data.user;
       const [{ data: p }, { data: r }, profRes, { data: docs }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad").order("apellidos"),
+        supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url").order("apellidos"),
         supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
         user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
         supabase.from("documentos").select("personas_mencionadas"),

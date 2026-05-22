@@ -1,11 +1,13 @@
-import { User } from "lucide-react";
+import { useRef, useState } from "react";
+import { User, Camera, Loader2 } from "lucide-react";
 import CertezaBadge from "@/components/CertezaBadge";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 
-export default function PersonaHero({ p }: { p: any }) {
+export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (patch: any) => void }) {
   const yN = yearOf(p?.nac_fecha) ?? p?.nac_rango_ini ?? null;
   const yD = yearOf(p?.defuncion_fecha) ?? null;
   const lifespan = yN || yD ? `${yN ?? "?"} – ${yD ?? (p?.viva === "si" ? "vive" : "?")}` : "";
@@ -14,6 +16,30 @@ export default function PersonaHero({ p }: { p: any }) {
   const ring = p?.sexo === "femenino" ? "ring-pink-400/50"
     : p?.sexo === "masculino" ? "ring-sky-400/50"
     : "ring-primary/30";
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadPortrait = async (file: File) => {
+    if (!p?.id) return;
+    setUploading(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user!;
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/retrato-${p.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("fotos").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
+      const { error: updErr } = await supabase.from("personas").update({ foto_url: publicUrl }).eq("id", p.id);
+      if (updErr) throw updErr;
+      toast.success("Retrato actualizado");
+      onUpdated?.({ foto_url: publicUrl });
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo subir el retrato");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="glass-strong relative mb-5 overflow-hidden rounded-3xl p-5 md:p-8">
@@ -26,13 +52,30 @@ export default function PersonaHero({ p }: { p: any }) {
         }}
       />
       <div className="relative flex flex-col items-center gap-5 text-center">
-        <div className={`flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground/5 ring-4 ${ring} md:h-32 md:w-32`}>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          title={p?.foto_url ? "Cambiar retrato" : "Subir retrato"}
+          className={`group relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground/5 ring-4 ${ring} md:h-36 md:w-36`}
+        >
           {p?.foto_url ? (
             <img src={p.foto_url} alt={`${p.nombres ?? ""} ${p.apellidos ?? ""}`} className="h-full w-full object-cover" />
           ) : (
-            <User className="h-12 w-12 text-foreground/40" />
+            <User className="h-14 w-14 text-foreground/40" />
           )}
-        </div>
+          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[10px] font-semibold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+            {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+            {uploading ? "Subiendo" : (p?.foto_url ? "Cambiar" : "Subir")}
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPortrait(f); }}
+          />
+        </button>
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             <span className="gen-country">{p?.nacionalidad || "Ficha genealógica"}</span>
