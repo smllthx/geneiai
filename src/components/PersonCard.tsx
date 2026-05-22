@@ -67,10 +67,10 @@ export const PersonCard = memo(function PersonCard({
         <div className={cn("mb-1.5 flex h-12 w-12 items-center justify-center rounded-full", avatarBg)}>
           <User className={cn("h-7 w-7", avatarFg)} />
         </div>
-        <div className="line-clamp-2 w-full text-center font-display text-[12px] font-semibold leading-tight">
-          {p.nombres} {p.apellidos}
+        <div className="line-clamp-2 w-full text-center font-display text-[13.5px] font-extrabold leading-tight tracking-tight">
+          <span className="gen-name">{p.nombres}</span> <span className="gen-surname">{p.apellidos}</span>
         </div>
-        <div className="mt-1 text-[10px] tabular-nums text-muted-foreground">{lifespan}</div>
+        <div className="mt-1 text-[11px] font-semibold tabular-nums text-muted-foreground">{lifespan}</div>
         <div className="mt-1.5 flex w-full items-center gap-1">
           <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-foreground/10">
             <div
