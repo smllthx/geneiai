@@ -55,6 +55,12 @@ export default function Asistente() {
     setSugerencias((data ?? []) as Sugerencia[]);
   };
   useEffect(() => { loadSugerencias(); }, []);
+  const [params] = useSearchParams();
+  useEffect(() => {
+    const p = params.get("prompt");
+    if (p) { send(p); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
   const send = async (textParam?: string) => {
