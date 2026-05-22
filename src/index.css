@@ -216,6 +216,30 @@
   }
 }
 
+/* Calm, FamilySearch-like motion — tone down hover lifts and snappy transitions */
+.transition-all, .transition, .transition-transform, .transition-colors, .transition-opacity {
+  transition-duration: 120ms !important;
+  transition-timing-function: cubic-bezier(0.2, 0, 0.2, 1) !important;
+}
+/* Neutralize translate/scale hover lifts globally — keep shadow/border feedback */
+.hover\:-translate-y-0\.5:hover,
+.hover\:-translate-y-1:hover,
+.hover\:translate-y-0\.5:hover,
+.hover\:scale-\[1\.01\]:hover,
+.hover\:scale-\[1\.02\]:hover,
+.hover\:scale-105:hover {
+  transform: none !important;
+}
+.active\:scale-95:active,
+.active\:scale-\[0\.98\]:active { transform: scale(0.995) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* Adaptive density — applied via <html data-density="..."> */
 html { font-size: 16px; }
 html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
