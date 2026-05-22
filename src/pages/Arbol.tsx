@@ -10,6 +10,7 @@ import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import TreeInsights from "@/components/TreeInsights";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -37,13 +38,19 @@ export default function Arbol() {
   useEffect(() => {
     (async () => {
       setLoadingTree(true);
-      const [{ data: p }, { data: r }] = await Promise.all([
+      const user = (await supabase.auth.getUser()).data.user;
+      const [{ data: p }, { data: r }, profRes] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva").order("apellidos"),
         supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
+        user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
       ]);
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
-      if (!center && p?.[0]) setCenter(p[0].id);
+      if (!center && p?.length) {
+        const probandId = (profRes as any)?.data?.proband_id;
+        const valid = probandId && p.some((x: any) => x.id === probandId);
+        setCenter(valid ? probandId : p[0].id);
+      }
       setLoadingTree(false);
     })();
   }, [reloadKey]);
@@ -398,6 +405,8 @@ export default function Arbol() {
           🖱️ Arrastra una persona <strong>sobre otra</strong> para crear una relación.
         </p>
       )}
+
+      {persona && <TreeInsights personaId={persona.id} personaNombre={`${persona.nombres} ${persona.apellidos}`} />}
 
       {/* Floating tools panel — agrupa todo lo demás */}
       <Sheet>

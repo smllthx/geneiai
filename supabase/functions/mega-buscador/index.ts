@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     const tasks = [
       callFn("buscar-externo-auto", { persona_id, modo: "advanced" }),
       callFn("buscar-externo-auto", { persona_id, modo: "broad" }),
+      callFn("web-search-libre", { persona_id }),
       callFn("investigar-auto", { person_id: persona_id }),
       callFn("investigar-auto", { person_id: persona_id, foco: "ascendientes" }),
       callFn("investigar-auto", { person_id: persona_id, foco: "descendientes" }),

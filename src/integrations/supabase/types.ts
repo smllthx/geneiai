@@ -1132,18 +1132,32 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          proband_asked: boolean
+          proband_id: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           id: string
+          proband_asked?: boolean
+          proband_id?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           id?: string
+          proband_asked?: boolean
+          proband_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_proband_id_fkey"
+            columns: ["proband_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
