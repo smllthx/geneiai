@@ -117,6 +117,35 @@ export default function Importar() {
     finally { setBusy(false); }
   };
 
+  const handleImportMH = async () => {
+    if (!mhFile) return toast.error("Selecciona el GEDCOM exportado de MyHeritage.");
+    const name = mhFile.name.toLowerCase();
+    if (!name.endsWith(".ged") && !name.endsWith(".gedcom")) {
+      return toast.error("MyHeritage exporta en formato GEDCOM (.ged).");
+    }
+    setMhBusy(true); setMhSummary(null);
+    const t = toast.loading("Procesando GEDCOM de MyHeritage…");
+    try {
+      const data = parseGedcom(await mhFile.text());
+      if (!data.personas.length) throw new Error("No se encontraron personas en el archivo.");
+      const result = await persistImport(data, "MyHeritage");
+      setMhSummary(result);
+      toast.dismiss(t);
+      result.errores.length === 0
+        ? toast.success(`${result.personasCreadas} nuevas · ${result.personasFusionadas} fusionadas · ${result.relacionesCreadas} relaciones`)
+        : toast.warning("Importación parcial. Revisa los errores.");
+      notify("MyHeritage importado", {
+        body: `+${result.personasCreadas} nuevas · ${result.personasFusionadas} fusionadas`,
+        url: "/personas",
+        tag: "mh-import",
+      });
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error al importar de MyHeritage");
+    } finally { setMhBusy(false); }
+  };
+
+
   const conectarFS = async () => {
     try {
       const redirectUri = `${window.location.origin}/familysearch/callback`;
