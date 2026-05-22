@@ -635,26 +635,70 @@ export default function PersonaDetail() {
   );
 }
 
-function RelacionesPanel({ personaId, relaciones, allPersonas, reload, disabled }: any) {
+function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, reload, disabled }: any) {
   const [tipo, setTipo] = useState("padre");
-  const [pariente, setPariente] = useState("");
+  const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState<any | null>(null);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return (allPersonas || [])
+      .filter((x: any) => x.id !== personaId)
+      .filter((x: any) => {
+        const name = `${x.nombres ?? ""} ${x.apellidos ?? ""}`.toLowerCase();
+        return name.includes(q) || matchesCode(query, x.id);
+      })
+      .slice(0, 8);
+  }, [allPersonas, query, personaId]);
+
   const add = async () => {
-    if (!pariente) return;
+    if (!picked) return;
     const user = (await supabase.auth.getUser()).data.user!;
-    const { error } = await supabase.from("relaciones").insert({ user_id: user.id, persona_id: personaId, pariente_id: pariente, tipo: tipo as any });
+    const { error } = await supabase.from("relaciones").insert({ user_id: user.id, persona_id: personaId, pariente_id: picked.id, tipo: tipo as any });
     if (error) return toast.error(error.message);
-    setPariente(""); reload();
+    const inv = tipo === "padre" || tipo === "madre" ? "hijo"
+      : tipo === "hijo" ? (personaSexo === "femenino" ? "madre" : "padre")
+      : tipo === "conyuge" ? "conyuge"
+      : tipo === "hermano" ? "hermano" : null;
+    if (inv) {
+      await supabase.from("relaciones").insert({ user_id: user.id, persona_id: picked.id, pariente_id: personaId, tipo: inv as any });
+    }
+    setQuery(""); setPicked(null); reload();
   };
   const del = async (rid: string) => { await supabase.from("relaciones").delete().eq("id", rid); reload(); };
+
+  // Normaliza: una línea por OTRO pariente, desde la perspectiva de la persona actual.
+  const view = useMemo(() => {
+    const out = new Map<string, { id: string; tipo: string; other: any }>();
+    const labelInv = (t: string, otherSex?: string | null) =>
+      t === "padre" || t === "madre" ? "hijo"
+      : t === "hijo" ? (otherSex === "femenino" ? "madre" : "padre")
+      : t;
+    for (const r of relaciones || []) {
+      let other: any = null; let t = r.tipo as string;
+      if (r.persona_id === personaId) {
+        other = r.pariente ?? allPersonas.find((x: any) => x.id === r.pariente_id);
+      } else if (r.pariente_id === personaId) {
+        other = allPersonas.find((x: any) => x.id === r.persona_id);
+        t = labelInv(r.tipo, other?.sexo);
+      } else continue;
+      if (!other || other.id === personaId) continue;
+      const key = `${other.id}:${t}`;
+      if (!out.has(key)) out.set(key, { id: r.id, tipo: t, other });
+    }
+    return Array.from(out.values());
+  }, [relaciones, personaId, allPersonas]);
+
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero para añadir relaciones.</p>;
   return (
     <Card className="archivo-card"><CardContent className="space-y-4 pt-6">
       <div className="flex flex-wrap gap-2">
-        <QuickAddRelative personaId={personaId} defaultTipo="padre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Padre</Button>} />
-        <QuickAddRelative personaId={personaId} defaultTipo="madre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Madre</Button>} />
-        <QuickAddRelative personaId={personaId} defaultTipo="conyuge" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Cónyuge</Button>} />
-        <QuickAddRelative personaId={personaId} defaultTipo="hijo" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hijo/a</Button>} />
-        <QuickAddRelative personaId={personaId} defaultTipo="hermano" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hermano/a</Button>} />
+        <QuickAddRelative personaId={personaId} personaSexo={personaSexo} defaultTipo="padre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Padre</Button>} />
+        <QuickAddRelative personaId={personaId} personaSexo={personaSexo} defaultTipo="madre" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Madre</Button>} />
+        <QuickAddRelative personaId={personaId} personaSexo={personaSexo} defaultTipo="conyuge" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Cónyuge</Button>} />
+        <QuickAddRelative personaId={personaId} personaSexo={personaSexo} defaultTipo="hijo" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hijo/a</Button>} />
+        <QuickAddRelative personaId={personaId} personaSexo={personaSexo} defaultTipo="hermano" onAdded={reload} trigger={<Button size="sm" variant="outline">+ Hermano/a</Button>} />
       </div>
       <div className="border-t border-border pt-4">
         <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Vincular persona ya existente</p>
@@ -667,17 +711,36 @@ function RelacionesPanel({ personaId, relaciones, allPersonas, reload, disabled 
               <SelectItem value="hermano">Hermano/a</SelectItem><SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={pariente} onValueChange={setPariente}>
-            <SelectTrigger><SelectValue placeholder="Elegir pariente…" /></SelectTrigger>
-            <SelectContent>{allPersonas.filter((x: any) => x.id !== personaId).map((x: any) =>
-              <SelectItem key={x.id} value={x.id}>{x.nombres} {x.apellidos}</SelectItem>)}</SelectContent>
-          </Select>
-          <Button onClick={add}>Vincular</Button>
+          <div className="relative">
+            <Input
+              value={picked ? `${picked.nombres} ${picked.apellidos}` : query}
+              onChange={(e) => { setPicked(null); setQuery(e.target.value); }}
+              placeholder="Buscar por nombre o código (ej. GDVB-TS5)…"
+            />
+            {!picked && matches.length > 0 && (
+              <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border bg-popover text-sm shadow-lg">
+                {matches.map((m: any) => (
+                  <li key={m.id}>
+                    <button type="button" onClick={() => { setPicked(m); setQuery(""); }}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-accent">
+                      <span className="truncate">{m.nombres} {m.apellidos}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{personaCode(m.id)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <Button onClick={add} disabled={!picked}>Vincular</Button>
         </div>
       </div>
-      <ul className="divide-y divide-border">{relaciones.map((r: any) => (
-        <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-          <span><strong className="capitalize">{r.tipo}</strong>: {r.pariente?.nombres} {r.pariente?.apellidos}</span>
+      <ul className="divide-y divide-border">{view.map((r) => (
+        <li key={r.id + r.other.id} className="flex items-center justify-between py-2 text-sm">
+          <span>
+            <strong className="capitalize">{r.tipo}</strong>:{" "}
+            <Link to={`/personas/${r.other.id}`} className="hover:text-primary">{r.other.nombres} {r.other.apellidos}</Link>
+            <span className="ml-2 font-mono text-[10px] text-muted-foreground">{personaCode(r.other.id)}</span>
+          </span>
           <Button size="sm" variant="ghost" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
         </li>
       ))}</ul>
