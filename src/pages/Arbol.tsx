@@ -19,6 +19,7 @@ import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
+type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 
 export default function Arbol() {
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
@@ -33,6 +34,8 @@ export default function Arbol() {
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [categoria, setCategoria] = useState<Categoria>("predeterminada");
+  const [docsByPersona, setDocsByPersona] = useState<Map<string, number>>(new Map());
   const [loadingTree, setLoadingTree] = useState(true);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
@@ -40,13 +43,19 @@ export default function Arbol() {
     (async () => {
       setLoadingTree(true);
       const user = (await supabase.auth.getUser()).data.user;
-      const [{ data: p }, { data: r }, profRes] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva").order("apellidos"),
+      const [{ data: p }, { data: r }, profRes, { data: docs }] = await Promise.all([
+        supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad").order("apellidos"),
         supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
         user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
+        supabase.from("documentos").select("personas_mencionadas"),
       ]);
       setPersonas((p as any) ?? []);
       setRels(r ?? []);
+      const counts = new Map<string, number>();
+      for (const d of docs ?? []) {
+        for (const pid of (d as any).personas_mencionadas ?? []) counts.set(pid, (counts.get(pid) ?? 0) + 1);
+      }
+      setDocsByPersona(counts);
       const probandId = (profRes as any)?.data?.proband_id;
       const valid = probandId && p?.some((x: any) => x.id === probandId);
       if (valid) {
@@ -220,6 +229,41 @@ export default function Arbol() {
     <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}>{children}</div>
   );
 
+  // Determine highlight ring based on selected categoria
+  const catRing = (p: PersonaLite | undefined): string => {
+    if (!p || categoria === "predeterminada") return "";
+    if (categoria === "fuentes") {
+      const n = docsByPersona.get(p.id) ?? 0;
+      return n > 0 ? "ring-2 ring-emerald-400/70 rounded-2xl" : "opacity-60";
+    }
+    if (categoria === "pais") {
+      const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+      if (!nac) return "opacity-60";
+      // Stable hue from string
+      let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+      return `rounded-2xl ring-2`;
+    }
+    if (categoria === "historia") {
+      const y = (p as any).nac_fecha ? new Date((p as any).nac_fecha).getUTCFullYear() : (p as any).nac_rango_ini;
+      if (!y) return "opacity-60";
+      if (y < 1850) return "ring-2 ring-amber-500/70 rounded-2xl";
+      if (y < 1920) return "ring-2 ring-orange-500/70 rounded-2xl";
+      if (y < 1970) return "ring-2 ring-purple-500/70 rounded-2xl";
+      return "ring-2 ring-sky-500/70 rounded-2xl";
+    }
+    return "";
+  };
+  const catStyle = (p: PersonaLite | undefined): React.CSSProperties => {
+    if (!p || categoria !== "pais") return {};
+    const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+    if (!nac) return {};
+    let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return { boxShadow: `0 0 0 2px hsl(${h} 70% 55%)`, borderRadius: "1rem" };
+  };
+  const Hl = ({ p, children }: { p?: PersonaLite; children: React.ReactNode }) => (
+    <div className={catRing(p)} style={catStyle(p)}>{children}</div>
+  );
+
   const Draggable = TreeCard; // backwards-compat alias used by older sections below
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
@@ -237,7 +281,7 @@ export default function Arbol() {
           <div className="flex flex-col items-center gap-2">
             {padre ? <Ascendants pid={padre.id} gen={gen - 1} /> : null}
             {padre ? (
-              <Draggable p={padre}><PersonCard p={padre} compact /></Draggable>
+              <Draggable p={padre}><Hl p={padre}><PersonCard p={padre} compact /></Hl></Draggable>
             ) : (
               <QuickAddRelative personaId={pid} defaultTipo="padre" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="padre" onClick={() => {}} /></button>} />
@@ -246,7 +290,7 @@ export default function Arbol() {
           <div className="flex flex-col items-center gap-2">
             {madre ? <Ascendants pid={madre.id} gen={gen - 1} /> : null}
             {madre ? (
-              <Draggable p={madre}><PersonCard p={madre} compact /></Draggable>
+              <Draggable p={madre}><Hl p={madre}><PersonCard p={madre} compact /></Hl></Draggable>
             ) : (
               <QuickAddRelative personaId={pid} defaultTipo="madre" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="madre" onClick={() => {}} /></button>} />
@@ -414,6 +458,32 @@ export default function Arbol() {
         </Select>
       </div>
 
+      {/* Configuración del árbol: resaltado por categoría */}
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
+        {([
+          ["predeterminada", "Predeterminada"],
+          ["pais", "País"],
+          ["fuentes", "Fuentes"],
+          ["historia", "Historia"],
+        ] as [Categoria, string][]).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setCategoria(k)}
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+              categoria === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-foreground/5"
+            }`}
+          >{label}</button>
+        ))}
+        {categoria !== "predeterminada" && (
+          <span className="ml-1 text-[10px] text-muted-foreground">
+            {categoria === "fuentes" && "Resalta personas con documentos vinculados."}
+            {categoria === "pais" && "Color por nacionalidad."}
+            {categoria === "historia" && "Color por época de nacimiento."}
+          </span>
+        )}
+      </div>
+
+
       {agentProgress.total > 0 && (
         <div className="mx-3 mb-3 rounded-2xl border border-border bg-card/70 p-3 shadow-sm md:mx-6">
           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
@@ -539,9 +609,9 @@ export default function Arbol() {
             <Ascendants pid={persona.id} gen={generaciones} />
 
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Draggable p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Draggable>
+              <Draggable p={persona}><Hl p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Hl></Draggable>
               {conyugesDe(persona.id).map((c) => (
-                <Draggable key={c.id} p={c}><PersonCard p={c} /></Draggable>
+                <Draggable key={c.id} p={c}><Hl p={c}><PersonCard p={c} /></Hl></Draggable>
               ))}
               <QuickAddRelative personaId={persona.id} defaultTipo="conyuge" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="cónyuge" onClick={() => {}} /></button>} />
@@ -549,7 +619,7 @@ export default function Arbol() {
 
             <div className="flex flex-wrap justify-center gap-3">
               {hijosDe(persona.id).map((h) => (
-                <Draggable key={h.id} p={h}><PersonCard p={h} compact /></Draggable>
+                <Draggable key={h.id} p={h}><Hl p={h}><PersonCard p={h} compact /></Hl></Draggable>
               ))}
               <QuickAddRelative personaId={persona.id} defaultTipo="hijo" onAdded={reload}
                 trigger={<button className="block"><EmptySlot label="hijo/a" onClick={() => {}} /></button>} />

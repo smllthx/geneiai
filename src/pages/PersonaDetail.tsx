@@ -28,6 +28,9 @@ import { personaCode, matchesCode } from "@/lib/personaCode";
 import { pushRecent } from "@/lib/recent";
 import TimelineVisual from "@/components/TimelineVisual";
 import ContextoHistorico from "@/components/ContextoHistorico";
+import PersonaExports from "@/components/PersonaExports";
+import VincularFuente from "@/components/VincularFuente";
+import RecentChanges from "@/components/RecentChanges";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -315,6 +318,7 @@ export default function PersonaDetail() {
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Buscar descendientes</Button>}
         {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+        {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
         <Button size="sm" variant="ghost" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Ver en árbol</Button>
       </div>
 
@@ -653,9 +657,15 @@ export default function PersonaDetail() {
             <p className="text-sm text-muted-foreground">
               Fuentes y documentos vinculados (actas, censos, padrones, fotografías escaneadas).
             </p>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {!isNew && <VincularFuente personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} onLinked={async () => {
+                const { data } = await supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]);
+                setDocs(data ?? []);
+              }} />}
+              <Button asChild size="sm" variant="outline">
+                <Link to="/importar"><Sparkles className="mr-1 h-3.5 w-3.5" /> Subir documento</Link>
+              </Button>
+            </div>
           </div>
           {(() => {
             const conFuente = eventos.filter((e: any) => e.fuente_id);
@@ -705,6 +715,7 @@ export default function PersonaDetail() {
         <TabsContent value="timeline">
           <TimelineVisual eventos={eventos} persona={p} />
           {!isNew && <ContextoHistorico personaId={id!} />}
+          {!isNew && <div className="mt-4"><RecentChanges personaId={id!} /></div>}
         </TabsContent>
 
         <TabsContent value="notas">
