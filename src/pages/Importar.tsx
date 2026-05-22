@@ -215,10 +215,12 @@ export default function Importar() {
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="ia"><Sparkles className="h-3.5 w-3.5" /> IA: Leer documento</TabsTrigger>
           <TabsTrigger value="familysearch">FamilySearch</TabsTrigger>
+          <TabsTrigger value="myheritage">MyHeritage</TabsTrigger>
           <TabsTrigger value="gedcom">GEDCOM / CSV / JSON</TabsTrigger>
           <TabsTrigger value="exportar">Exportar</TabsTrigger>
           <TabsTrigger value="otros">Otras plataformas</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="ia">
           <GlassCard>
