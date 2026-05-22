@@ -1,5 +1,7 @@
 import { User } from "lucide-react";
 import CertezaBadge from "@/components/CertezaBadge";
+import { personaCode } from "@/lib/personaCode";
+import { toast } from "sonner";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 
@@ -42,6 +44,19 @@ export default function PersonaHero({ p }: { p: any }) {
             {lifespan && <span>{lifespan}</span>}
             {edad && <><span>·</span><span>{edad}</span></>}
             {p?.ocupacion && <><span>·</span><span>{p.ocupacion}</span></>}
+            {p?.id && (
+              <>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(personaCode(p.id)); toast.success("Código copiado"); }}
+                  className="rounded-md border border-border/60 bg-foreground/5 px-1.5 py-0.5 font-mono text-[11px] tracking-wider hover:bg-foreground/10"
+                  title="Código único — toca para copiar"
+                >
+                  {personaCode(p.id)}
+                </button>
+              </>
+            )}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {p?.certeza && <CertezaBadge value={p.certeza} />}
