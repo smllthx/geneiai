@@ -74,7 +74,7 @@ export default function Calendario() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={Calendar} title="Calendario familiar" subtitle="Cumpleaños, aniversarios y eventos de vida" />
+      <PageHeader title="Calendario familiar" subtitle="Cumpleaños, aniversarios y eventos de vida" />
 
       <Tabs defaultValue="mes" className="w-full">
         <TabsList>
