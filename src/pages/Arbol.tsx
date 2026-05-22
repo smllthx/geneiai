@@ -196,7 +196,7 @@ export default function Arbol() {
         </div>
       );
     }
-    if (focusable && p.id !== center) {
+    if (focusable && p.id !== center && !probandLocked) {
       // override default navigation: single click focuses on this person in the tree
       return (
         <div className="relative group">
