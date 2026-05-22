@@ -315,10 +315,54 @@ export default function Importar() {
           </GlassCard>
         </TabsContent>
 
+        <TabsContent value="myheritage">
+          <GlassCard>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary"><Link2 className="h-5 w-5" /></div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-lg font-semibold">MyHeritage · Importar árbol</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  MyHeritage no expone una API pública para sincronización en vivo, pero sí permite exportar tu árbol completo como GEDCOM. Esta pestaña lo procesa con auto‑fusión de duplicados (alta confianza).
+                </p>
+                <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>En MyHeritage entra a tu árbol → <strong>Gestionar árbol</strong> → <strong>Exportar a GEDCOM</strong>.</li>
+                  <li>Espera el correo con el enlace de descarga y guarda el archivo <code>.ged</code>.</li>
+                  <li>Súbelo aquí abajo. Las personas que ya tienes (mismo nombre+apellido y año de nacimiento ±2) se fusionan; las nuevas entran como certeza «probable».</li>
+                </ol>
+                <div className="mt-3 space-y-3">
+                  <Input
+                    type="file"
+                    accept=".ged,.gedcom"
+                    onChange={(e) => { setMhFile(e.target.files?.[0] ?? null); setMhSummary(null); }}
+                  />
+                  {mhFile && <p className="text-xs text-muted-foreground">{mhFile.name} · {(mhFile.size / 1024).toFixed(1)} KB</p>}
+                  <Button onClick={handleImportMH} disabled={!mhFile || mhBusy}>
+                    {mhBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {mhBusy ? "Importando…" : "Importar GEDCOM de MyHeritage"}
+                  </Button>
+                </div>
+                {mhSummary && (
+                  <div className="mt-4 rounded-2xl bg-foreground/5 p-4 text-sm">
+                    <p className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      <strong>{mhSummary.personasCreadas}</strong> nuevas · <strong>{mhSummary.personasFusionadas}</strong> fusionadas · <strong>{mhSummary.relacionesCreadas}</strong> relaciones
+                    </p>
+                    {mhSummary.errores.length > 0 && (
+                      <ul className="mt-2 list-disc pl-5 text-xs text-destructive">
+                        {mhSummary.errores.map((e, i) => <li key={i}>{e}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </GlassCard>
+        </TabsContent>
+
         <TabsContent value="gedcom">
           <GlassCard>
             <h3 className="font-display text-lg font-semibold">Subir archivo</h3>
-            <p className="mt-1 text-sm text-muted-foreground">.ged, .gedcom, .csv, .xlsx, .json</p>
+            <p className="mt-1 text-sm text-muted-foreground">.ged, .gedcom, .csv, .xlsx, .json — con auto‑fusión de duplicados</p>
             <div className="mt-3 space-y-3">
               <Input type="file" accept=".ged,.gedcom,.csv,.xlsx,.xls,.json,application/json,text/csv"
                 onChange={(e) => { setFile(e.target.files?.[0] ?? null); setSummary(null); }} />
@@ -330,7 +374,10 @@ export default function Importar() {
             </div>
             {summary && (
               <div className="mt-4 rounded-2xl bg-foreground/5 p-4 text-sm">
-                <p className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> <strong>{summary.personasCreadas}</strong> personas, <strong>{summary.relacionesCreadas}</strong> relaciones</p>
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <strong>{summary.personasCreadas}</strong> nuevas · <strong>{summary.personasFusionadas}</strong> fusionadas · <strong>{summary.relacionesCreadas}</strong> relaciones
+                </p>
                 {summary.errores.length > 0 && (
                   <ul className="mt-2 list-disc pl-5 text-xs text-destructive">
                     {summary.errores.map((e, i) => <li key={i}>{e}</li>)}
@@ -351,17 +398,18 @@ export default function Importar() {
 
         <TabsContent value="otros">
           <GlassCard>
-            <h3 className="font-display text-lg font-semibold">MyHeritage · Ancestry · Geneanet</h3>
+            <h3 className="font-display text-lg font-semibold">Ancestry · Geneanet · Otros</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Estas plataformas no tienen API pública abierta para sincronización en vivo. La forma confiable es:
+              Estas plataformas tampoco exponen API pública. El flujo es el mismo que MyHeritage:
             </p>
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
               <li>Exporta tu árbol como GEDCOM desde la plataforma origen.</li>
               <li>Sube el archivo en la pestaña <strong>GEDCOM / CSV / JSON</strong>.</li>
-              <li>Los duplicados se detectan automáticamente.</li>
+              <li>Los duplicados se fusionan automáticamente.</li>
             </ol>
           </GlassCard>
         </TabsContent>
+
       </Tabs>
     </div>
   );
