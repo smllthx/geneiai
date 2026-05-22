@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -26,6 +26,7 @@ const primaryNav = [
 ];
 const investigationNav = [
   { to: "/asistente", label: "Asistente IA", icon: Bot },
+  { to: "/insights", label: "Insights IA", icon: Lightbulb },
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/coincidencias", label: "Coincidencias", icon: Compass },
   { to: "/adn", label: "ADN / Origen", icon: Dna },

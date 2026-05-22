@@ -39,6 +39,7 @@ const AgentesParalelo = lazy(() => import("./pages/AgentesParalelo"));
 const ConfigurarApp = lazy(() => import("./pages/ConfigurarApp"));
 const Fuentes = lazy(() => import("./pages/Fuentes"));
 const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
+const Insights = lazy(() => import("./pages/Insights"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -99,6 +100,7 @@ const App = () => (
                   <Route path="/pistas" element={<Pistas />} />
                   <Route path="/hipotesis" element={<Hipotesis />} />
                   <Route path="/inferencias" element={<Inferencias />} />
+                  <Route path="/insights" element={<Insights />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
                   <Route path="/configuracion" element={<Configuracion />} />
