@@ -8,11 +8,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
 import { toast } from "sonner";
 
+type Notificacion = { id: string; titulo: string; mensaje: string | null; url: string | null; leida: boolean | null; created_at: string };
+type Sugerencia = { id: string; persona_id: string | null; titulo: string; descripcion: string | null; tipo: string | null; origen: string | null; confianza: number | null };
+type Inferencia = { id: string; person_id: string | null; inferred_field: string; inferred_value: string; explanation: string | null; confidence_score: number | null };
+type ResearchTask = { id: string; person_id: string | null; tipo: string; estado: string; descripcion: string | null; created_at: string };
+
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+
 export default function NotificationBell() {
-  const [items, setItems] = useState<any[]>([]);
-  const [sugs, setSugs] = useState<any[]>([]);
-  const [infs, setInfs] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [items, setItems] = useState<Notificacion[]>([]);
+  const [sugs, setSugs] = useState<Sugerencia[]>([]);
+  const [infs, setInfs] = useState<Inferencia[]>([]);
+  const [tasks, setTasks] = useState<ResearchTask[]>([]);
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
   const load = async () => {
@@ -26,16 +33,21 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
+    let active = true;
     setPerm(notificationPermission());
     load();
+    const channelId = `notif-center-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const ch = supabase
-      .channel("notif-center")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "research_tasks" }, () => load())
+      .channel(channelId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notificaciones" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sugerencias" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "generated_inferences" }, () => active && load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "research_tasks" }, () => active && load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      active = false;
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const noLeidas = items.filter((i) => !i.leida).length;
@@ -50,13 +62,13 @@ export default function NotificationBell() {
     if (p === "granted") {
       try {
         const { data } = await supabase.functions.invoke("vapid-public");
-        const key = (data as any)?.key;
+        const key = (data as { key?: string } | null)?.key;
         if (key) {
           const ok = await subscribeToPush(key);
           if (ok) toast.success("Avisos push activados en este dispositivo");
         }
-      } catch (e: any) {
-        toast.error("No se pudo activar push: " + (e?.message ?? e));
+      } catch (e: unknown) {
+        toast.error("No se pudo activar push: " + errorMessage(e));
       }
     }
   };
