@@ -31,6 +31,8 @@ import ContextoHistorico from "@/components/ContextoHistorico";
 import PersonaExports from "@/components/PersonaExports";
 import VincularFuente from "@/components/VincularFuente";
 import RecentChanges from "@/components/RecentChanges";
+import NombresMultilingues from "@/components/NombresMultilingues";
+import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
