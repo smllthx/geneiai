@@ -76,6 +76,7 @@ const App = () => (
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/familysearch/callback" element={<ProtectedRoute><FamilySearchCallback /></ProtectedRoute>} />
+                <Route path="/p/:id" element={<PersonaPublica />} />
                 <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                   <Route path="/" element={<Navigate to="/inicio" replace />} />
                   <Route path="/index" element={<Navigate to="/inicio" replace />} />
