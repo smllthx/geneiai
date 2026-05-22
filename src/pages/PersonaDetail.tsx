@@ -25,6 +25,7 @@ import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
 import { personaCode, matchesCode } from "@/lib/personaCode";
+import { pushRecent } from "@/lib/recent";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -77,6 +78,7 @@ export default function PersonaDetail() {
         if (error) throw error;
         if (!data) { setNotFound(true); setFetching(false); return; }
         setP(data);
+        pushRecent(data.id);
         const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
           supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
           supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
