@@ -59,10 +59,9 @@ export default function BusquedaIA() {
     } finally { setBusy(false); }
   };
 
-  const actuar = async (id: string | undefined, estado: "aceptada" | "descartada" | "convertida") => {
+  const actuar = async (id: string | undefined, accion: "aceptada" | "rechazada" | "hipotesis") => {
     if (!id) return;
-    if (estado === "convertida") {
-      // Crear hipótesis a partir del hallazgo
+    if (accion === "hipotesis") {
       const h = historial.find((x) => x.id === id);
       if (h) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -76,8 +75,10 @@ export default function BusquedaIA() {
         });
         toast.success("Guardado como hipótesis");
       }
+      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", id);
+    } else {
+      await supabase.from("sugerencias").update({ estado: accion }).eq("id", id);
     }
-    await supabase.from("sugerencias").update({ estado }).eq("id", id);
     await cargarHistorial();
   };
 
@@ -187,8 +188,8 @@ export default function BusquedaIA() {
                 {h.persona_id && <Link to={`/personas/${h.persona_id}`} className="text-xs text-link hover:underline">Ver persona →</Link>}
                 <div className="ml-auto flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => actuar(h.id, "aceptada")}><Check className="h-3.5 w-3.5" /> Confirmar</Button>
-                  <Button size="sm" variant="outline" onClick={() => actuar(h.id, "convertida")}><Lightbulb className="h-3.5 w-3.5" /> Hipótesis</Button>
-                  <Button size="sm" variant="ghost" onClick={() => actuar(h.id, "descartada")}><X className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => actuar(h.id, "hipotesis")}><Lightbulb className="h-3.5 w-3.5" /> Hipótesis</Button>
+                  <Button size="sm" variant="ghost" onClick={() => actuar(h.id, "rechazada")}><X className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
             </GlassCard>
