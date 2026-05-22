@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -17,8 +17,9 @@ import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import ProbandPrompt from "@/components/ProbandPrompt";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
+import { loadOrder, saveOrder } from "@/lib/navOrder";
 
-const primaryNav = [
+const primaryNavBase = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/sugerencias", label: "Sugerencias", icon: LightbulbIcon },
   { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
@@ -26,6 +27,7 @@ const primaryNav = [
   { to: "/familias", label: "Familias", icon: Heart },
   { to: "/documentos", label: "Documentos", icon: FileText },
   { to: "/fotos", label: "Fotos", icon: ImageIcon },
+  { to: "/calendario", label: "Calendario", icon: Calendar },
 ];
 const investigationNav = [
   { to: "/asistente", label: "Asistente IA", icon: Bot },
@@ -45,30 +47,56 @@ const utilityNav = [
   { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
 ];
 
-function NavItems({ items }: { items: typeof primaryNav }) {
+type NavItem = { to: string; label: string; icon: any };
+
+function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
+  const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, items));
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  useEffect(() => { setOrdered(loadOrder(groupKey, items)); }, [groupKey, items.length]);
+
+  const onDrop = (toIdx: number) => {
+    if (dragIdx === null || dragIdx === toIdx) return;
+    const next = [...ordered];
+    const [m] = next.splice(dragIdx, 1);
+    next.splice(toIdx, 0, m);
+    setOrdered(next);
+    saveOrder(groupKey, next);
+    setDragIdx(null);
+  };
+
   return (
     <div className="space-y-1">
-      {items.map(({ to, label, icon: Icon }) => (
-        <NavLink
+      {ordered.map(({ to, label, icon: Icon }, idx) => (
+        <div
           key={to}
-          to={to}
-          className={({ isActive }) =>
-            cn(
-              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
-              isActive
-                ? "bg-primary/12 font-semibold text-foreground"
-                : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
-            )
-          }
+          draggable
+          onDragStart={() => setDragIdx(idx)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop(idx)}
+          className="group/row relative"
         >
-          <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
-        </NavLink>
+          <NavLink
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
+                isActive
+                  ? "bg-primary/12 font-semibold text-foreground"
+                  : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
+              )
+            }
+          >
+            <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />
+            <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
+          </NavLink>
+        </div>
       ))}
     </div>
   );
 }
 
-function NavGroup({ label, items }: { label: string; items: typeof primaryNav }) {
+function NavGroup({ groupKey, label, items }: { groupKey: string; label: string; items: NavItem[] }) {
   const { pathname } = useLocation();
   const containsActive = items.some((i) => pathname.startsWith(i.to));
   const [open, setOpen] = useState(containsActive);
@@ -81,7 +109,7 @@ function NavGroup({ label, items }: { label: string; items: typeof primaryNav })
         <span>{label}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
-      {open && <div className="mt-1"><NavItems items={items} /></div>}
+      {open && <div className="mt-1"><NavItems groupKey={groupKey} items={items} /></div>}
     </div>
   );
 }
@@ -90,7 +118,7 @@ export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate("/login"); };
-  const allMobileNav = [...primaryNav, ...investigationNav, ...utilityNav];
+  const allMobileNav = [...primaryNavBase, ...investigationNav, ...utilityNav];
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -141,9 +169,9 @@ export default function AppLayout() {
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
-            <NavItems items={primaryNav} />
-            <NavGroup label="Investigación" items={investigationNav} />
-            <NavGroup label="Herramientas" items={utilityNav} />
+            <NavItems groupKey="primary" items={primaryNavBase} />
+            <NavGroup groupKey="investigation" label="Investigación" items={investigationNav} />
+            <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
             <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
@@ -171,7 +199,7 @@ export default function AppLayout() {
         <div
           className="glass-strong fixed inset-x-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
           style={{
-            top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)",
+            top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
           }}
         >
           <Sheet>
@@ -193,7 +221,7 @@ export default function AppLayout() {
                   <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
-              <NavItems items={allMobileNav} />
+              <NavItems groupKey="mobile" items={allMobileNav} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" /> Cerrar sesión
               </Button>
@@ -210,7 +238,7 @@ export default function AppLayout() {
           style={{
             paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
             paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.5rem)",
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 5rem)",
           }}
         >
           <Outlet />

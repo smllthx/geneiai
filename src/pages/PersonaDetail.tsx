@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { calcularParentesco } from "@/lib/parentesco";
@@ -1241,6 +1241,35 @@ function PersonaQuickMenu({
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
   };
 
+  const [cuadroOpen, setCuadroOpen] = useState(false);
+  const [cuadroUrl, setCuadroUrl] = useState<string | null>(null);
+  const [cuadroLoading, setCuadroLoading] = useState(false);
+
+  const generarCuadro = async () => {
+    setCuadroOpen(true);
+    setCuadroUrl(null);
+    setCuadroLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generar-cuadro-persona", { body: { persona } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setCuadroUrl(data.imageUrl);
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudo generar el cuadro");
+      setCuadroOpen(false);
+    } finally {
+      setCuadroLoading(false);
+    }
+  };
+
+  const descargarCuadro = () => {
+    if (!cuadroUrl) return;
+    const a = document.createElement("a");
+    a.href = cuadroUrl;
+    a.download = `cuadro-${(persona.nombres + "-" + persona.apellidos).replace(/\s+/g, "_")}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -1249,13 +1278,19 @@ function PersonaQuickMenu({
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>Acciones rápidas</DropdownMenuLabel>
           <DropdownMenuItem onClick={verParentesco}>
             <Users className="h-4 w-4" /> Mi parentesco con esta persona
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate(`/arbol?centro=${personaId}`)}>
             <GitBranch className="h-4 w-4" /> Ver árbol de esta persona
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={generarCuadro}>
+            <ImageIcon className="h-4 w-4" /> Generar cuadro con IA
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/calendario`)}>
+            <Calendar className="h-4 w-4" /> Ver en calendario
           </DropdownMenuItem>
           <DropdownMenuItem onClick={compartir}>
             <Share2 className="h-4 w-4" /> Compartir persona (link público)
@@ -1276,6 +1311,30 @@ function PersonaQuickMenu({
           <p className="text-[15px] leading-relaxed">
             {loadingPar ? "Calculando camino genealógico…" : parentescoTxt}
           </p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cuadroOpen} onOpenChange={setCuadroOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Cuadro generado con IA</DialogTitle>
+          </DialogHeader>
+          {cuadroLoading && (
+            <div className="grid h-64 place-items-center">
+              <div className="text-center space-y-3">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <p className="text-sm text-muted-foreground">Pintando el cuadro genealógico…</p>
+              </div>
+            </div>
+          )}
+          {cuadroUrl && (
+            <div className="space-y-3">
+              <img src={cuadroUrl} alt={`Cuadro de ${persona.nombres} ${persona.apellidos}`} className="w-full rounded-xl border" />
+              <Button onClick={descargarCuadro} className="w-full gap-2">
+                <Download className="h-4 w-4" /> Descargar imagen
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

@@ -45,6 +45,7 @@ const Fusionar = lazy(() => import("./pages/Fusionar"));
 const Sugerencias = lazy(() => import("./pages/Sugerencias"));
 const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
 const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
+const Calendario = lazy(() => import("./pages/Calendario"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -113,6 +114,7 @@ const App = () => (
                   <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
+                  <Route path="/calendario" element={<Calendario />} />
                   <Route path="/configuracion" element={<Configuracion />} />
                   <Route path="/configurar-app" element={<ConfigurarApp />} />
                 </Route>
