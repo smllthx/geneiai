@@ -29,6 +29,10 @@ export default function Importar() {
   const [iaFile, setIaFile] = useState<File | null>(null);
   const [iaBusy, setIaBusy] = useState(false);
   const [iaResult, setIaResult] = useState<any>(null);
+  const [mhFile, setMhFile] = useState<File | null>(null);
+  const [mhBusy, setMhBusy] = useState(false);
+  const [mhSummary, setMhSummary] = useState<ImportSummary | null>(null);
+
 
   const fileToBase64 = (f: File) => new Promise<string>((resolve, reject) => {
     const r = new FileReader();
