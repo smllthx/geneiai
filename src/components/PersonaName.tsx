@@ -15,7 +15,7 @@ export default function PersonaName({ persona, showCode = true, asLink = true, c
   if (!persona) return null;
   const nm = (persona.nombres ?? "").trim();
   const ap = (persona.apellidos ?? "").trim();
-  const txtSize = size === "sm" ? "text-sm" : "text-[15px]";
+  const txtSize = size === "sm" ? "text-[15px]" : "text-[17px]";
   const codeSize = size === "sm" ? "text-[10px]" : "text-[11px]";
 
   const inner = (
