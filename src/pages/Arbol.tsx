@@ -406,6 +406,8 @@ export default function Arbol() {
         </p>
       )}
 
+      {persona && <TreeInsights personaId={persona.id} personaNombre={`${persona.nombres} ${persona.apellidos}`} />}
+
       {/* Floating tools panel — agrupa todo lo demás */}
       <Sheet>
         <SheetTrigger asChild>
