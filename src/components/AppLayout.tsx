@@ -118,7 +118,7 @@ export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate("/login"); };
-  const allMobileNav = [...primaryNav, ...investigationNav, ...utilityNav];
+  const allMobileNav = [...primaryNavBase, ...investigationNav, ...utilityNav];
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -169,9 +169,9 @@ export default function AppLayout() {
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
-            <NavItems items={primaryNav} />
-            <NavGroup label="Investigación" items={investigationNav} />
-            <NavGroup label="Herramientas" items={utilityNav} />
+            <NavItems groupKey="primary" items={primaryNavBase} />
+            <NavGroup groupKey="investigation" label="Investigación" items={investigationNav} />
+            <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
             <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
@@ -199,7 +199,7 @@ export default function AppLayout() {
         <div
           className="glass-strong fixed inset-x-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
           style={{
-            top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)",
+            top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
           }}
         >
           <Sheet>
@@ -221,7 +221,7 @@ export default function AppLayout() {
                   <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
-              <NavItems items={allMobileNav} />
+              <NavItems groupKey="mobile" items={allMobileNav} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" /> Cerrar sesión
               </Button>
