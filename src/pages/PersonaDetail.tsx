@@ -391,6 +391,11 @@ export default function PersonaDetail() {
               </CardContent>
             </Card>
           )}
+          {!isNew && (
+            <div className="mb-3">
+              <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
+            </div>
+          )}
           {!isNew && eventos.length > 0 && (
             <Card className="archivo-card mb-3">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
