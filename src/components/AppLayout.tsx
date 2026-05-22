@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -42,6 +42,7 @@ const utilityNav = [
   { to: "/investigacion?tab=paralelo", label: "Agentes en paralelo", icon: Bot },
   { to: "/credenciales", label: "Credenciales", icon: KeyRound },
   { to: "/configuracion", label: "Configuración", icon: Settings },
+  { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
 ];
 
 function NavItems({ items }: { items: typeof primaryNav }) {
