@@ -18,6 +18,7 @@ import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pen
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
+import AgregarInfoSheet from "@/components/AgregarInfoSheet";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
