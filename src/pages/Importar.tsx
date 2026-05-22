@@ -47,7 +47,11 @@ export default function Importar() {
   const handleIaLeer = async () => {
     if (!iaFile) return toast.error("Selecciona un archivo");
     setIaBusy(true); setIaResult(null);
-    const t = toast.loading("IA leyendo el documento…");
+    const sizeMB = iaFile.size / (1024 * 1024);
+    const heavy = sizeMB > 2;
+    const t = toast.loading(heavy
+      ? `IA leyendo "${iaFile.name}" (${sizeMB.toFixed(1)} MB)… Puede tardar varios minutos en archivos grandes.`
+      : "IA leyendo el documento…");
     try {
       const mime = iaFile.type || "application/octet-stream";
       const isText = mime.startsWith("text/") || /\.(txt|csv|json|md|ged|gedcom)$/i.test(iaFile.name);
@@ -58,7 +62,6 @@ export default function Importar() {
       } else if (isText) {
         payload.text_content = await iaFile.text();
       } else {
-        // intentar como texto igualmente
         try { payload.text_content = await iaFile.text(); }
         catch { payload.file_base64 = await fileToBase64(iaFile); }
       }
@@ -67,7 +70,9 @@ export default function Importar() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setIaResult(data);
-      toast.success(`+${data.personasCreadas} personas · +${data.eventosCreados} eventos · +${data.relacionesCreadas} relaciones`);
+      const parts = data.chunks > 1 ? ` · ${data.chunks} partes` : "";
+      const upd = data.personasActualizadas ? ` · ${data.personasActualizadas} actualizadas` : "";
+      toast.success(`+${data.personasCreadas ?? 0} personas${upd} · +${data.eventosCreados ?? 0} eventos · +${data.relacionesCreadas ?? 0} relaciones${parts}`);
       notify("Documento procesado por IA", {
         body: `+${data.personasCreadas ?? 0} personas · +${data.eventosCreados ?? 0} eventos · +${data.relacionesCreadas ?? 0} relaciones`,
         url: "/personas",
