@@ -526,9 +526,9 @@ export default function PersonaDetail() {
 
         <TabsContent value="conyuges">
           <MatrimonioResumen
-            titulo={`Matrimonio${fam.conyuges[0] ? ` con ${fam.conyuges[0].nombres ?? ""} ${fam.conyuges[0].apellidos ?? ""}`.trim() : ""}`}
-            fecha={p?.matrimonio_fecha ?? fam.conyuges[0]?.matrimonio_fecha}
-            lugarId={p?.matrimonio_lugar_id ?? fam.conyuges[0]?.matrimonio_lugar_id}
+            titulo={`Matrimonio${fam.conyuges[0] ? ` con ${(fam.conyuges[0] as any).nombres ?? ""} ${(fam.conyuges[0] as any).apellidos ?? ""}`.trim() : ""}`}
+            fecha={p?.matrimonio_fecha ?? (fam.conyuges[0] as any)?.matrimonio_fecha}
+            lugarId={p?.matrimonio_lugar_id ?? (fam.conyuges[0] as any)?.matrimonio_lugar_id}
             lugaresMap={lugaresById}
           />
           <FamiliaSeccion
