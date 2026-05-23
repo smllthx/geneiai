@@ -44,6 +44,14 @@ export default function QuickAddRelative({
     supabase.from("personas").select("id, nombres, apellidos, sexo, nac_fecha, nac_rango_ini").then(({ data }) => setAll(data ?? []));
   }, [open]);
 
+  // Mantener el sexo coherente con el tipo elegido (padre→masculino, madre→femenino)
+  // solo cuando se está CREANDO una persona nueva (no cuando se eligió una existente).
+  useEffect(() => {
+    if (picked) return;
+    if (tipo === "padre") setSexo("masculino");
+    else if (tipo === "madre") setSexo("femenino");
+  }, [tipo, picked]);
+
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
