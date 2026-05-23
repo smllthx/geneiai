@@ -115,12 +115,24 @@ export default function QuickAddRelative({
       if (!parienteId) { toast.error("Selecciona o crea una persona"); setBusy(false); return; }
       if (parienteId === personaId) { toast.error("No puedes vincular a la misma persona"); setBusy(false); return; }
 
+      // Guard: evitar relaciones contradictorias entre las mismas dos personas
+      // (p.ej. ya son padre/madre/hijo y se intenta agregar como cónyuge, o viceversa).
+      const { data: existentes } = await supabase
+        .from("relaciones").select("tipo")
+        .or(`and(persona_id.eq.${personaId},pariente_id.eq.${parienteId}),and(persona_id.eq.${parienteId},pariente_id.eq.${personaId})`);
+      const tipos = new Set((existentes ?? []).map((r: any) => r.tipo));
+      const esFamiliar = (t: string) => ["padre", "madre", "hijo"].includes(t);
+      const incompatibles =
+        (tipo === "conyuge" && [...tipos].some(esFamiliar)) ||
+        (esFamiliar(tipo) && tipos.has("conyuge"));
+      if (incompatibles) {
+        toast.error("Esta persona ya tiene una relación incompatible (padre/madre/hijo o cónyuge). Edita la relación existente primero.");
+        setBusy(false); return;
+      }
+
       // Evitar duplicar la relación directa
-      const { data: existing } = await supabase
-        .from("relaciones").select("id")
-        .eq("persona_id", personaId).eq("pariente_id", parienteId).eq("tipo", tipo as any)
-        .maybeSingle();
-      if (!existing) {
+      const yaDirecta = tipos.has(tipo) && (existentes ?? []).some((r: any) => r.tipo === tipo);
+      if (!yaDirecta) {
         const { error: e2 } = await supabase.from("relaciones").insert({
           user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: tipo as any,
         });
@@ -131,8 +143,8 @@ export default function QuickAddRelative({
       const { data: existingInv } = await supabase
         .from("relaciones").select("id")
         .eq("persona_id", parienteId).eq("pariente_id", personaId).eq("tipo", inv as any)
-        .maybeSingle();
-      if (!existingInv) {
+        .limit(1);
+      if (!existingInv || existingInv.length === 0) {
         await supabase.from("relaciones").insert({
           user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: inv as any,
         });
