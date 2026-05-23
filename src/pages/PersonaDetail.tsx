@@ -555,6 +555,21 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="padres">
+          {(() => {
+            const padre = fam.padres.find((x: any) => x.sexo === "masculino") as any;
+            const madre = fam.padres.find((x: any) => x.sexo === "femenino") as any;
+            const fecha = padre?.matrimonio_fecha ?? madre?.matrimonio_fecha;
+            const lugarId = padre?.matrimonio_lugar_id ?? madre?.matrimonio_lugar_id;
+            const nombres = [padre, madre].filter(Boolean).map((x: any) => x.nombres?.split(" ")[0]).filter(Boolean).join(" y ");
+            return (
+              <MatrimonioResumen
+                titulo={`Matrimonio de los padres${nombres ? ` (${nombres})` : ""}`}
+                fecha={fecha}
+                lugarId={lugarId}
+                lugaresMap={lugaresById}
+              />
+            );
+          })()}
           <FamiliaSeccion
             titulo="Padres"
             personas={fam.padres}
