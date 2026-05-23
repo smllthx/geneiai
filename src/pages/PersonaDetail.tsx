@@ -845,6 +845,26 @@ export default function PersonaDetail() {
   );
 }
 
+function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: string; fecha?: string | null; lugarId?: string | null; lugaresMap?: Map<string, any> }) {
+  const fechaTxt = fmtDate(fecha);
+  const l = lugarId && lugaresMap ? lugaresMap.get(lugarId) : null;
+  const lugarTxt = l ? [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ") : null;
+  if (!fechaTxt && !lugarTxt) return null;
+  return (
+    <div className="mb-3 rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] via-transparent to-pink-500/[0.05] px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-base">💍</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-sm font-semibold tracking-tight">{titulo}</div>
+          <div className="mt-0.5 text-[13px] text-muted-foreground break-words">
+            {fechaTxt ?? "Fecha desconocida"}{lugarTxt ? ` · ${lugarTxt}` : ""}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode; lugaresMap?: Map<string, any> }) {
   const lugarNombre = (id?: string | null) => {
     if (!id || !lugaresMap) return null;
