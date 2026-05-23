@@ -525,6 +525,12 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="conyuges">
+          <MatrimonioResumen
+            titulo={`Matrimonio${fam.conyuges[0] ? ` con ${(fam.conyuges[0] as any).nombres ?? ""} ${(fam.conyuges[0] as any).apellidos ?? ""}`.trim() : ""}`}
+            fecha={p?.matrimonio_fecha ?? (fam.conyuges[0] as any)?.matrimonio_fecha}
+            lugarId={p?.matrimonio_lugar_id ?? (fam.conyuges[0] as any)?.matrimonio_lugar_id}
+            lugaresMap={lugaresById}
+          />
           <FamiliaSeccion
             titulo="Cónyuges"
             personas={fam.conyuges}
@@ -549,6 +555,21 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="padres">
+          {(() => {
+            const padre = fam.padres.find((x: any) => x.sexo === "masculino") as any;
+            const madre = fam.padres.find((x: any) => x.sexo === "femenino") as any;
+            const fecha = padre?.matrimonio_fecha ?? madre?.matrimonio_fecha;
+            const lugarId = padre?.matrimonio_lugar_id ?? madre?.matrimonio_lugar_id;
+            const nombres = [padre, madre].filter(Boolean).map((x: any) => x.nombres?.split(" ")[0]).filter(Boolean).join(" y ");
+            return (
+              <MatrimonioResumen
+                titulo={`Matrimonio de los padres${nombres ? ` (${nombres})` : ""}`}
+                fecha={fecha}
+                lugarId={lugarId}
+                lugaresMap={lugaresById}
+              />
+            );
+          })()}
           <FamiliaSeccion
             titulo="Padres"
             personas={fam.padres}
@@ -820,6 +841,26 @@ export default function PersonaDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: string; fecha?: string | null; lugarId?: string | null; lugaresMap?: Map<string, any> }) {
+  const fechaTxt = fmtDate(fecha);
+  const l = lugarId && lugaresMap ? lugaresMap.get(lugarId) : null;
+  const lugarTxt = l ? [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ") : null;
+  if (!fechaTxt && !lugarTxt) return null;
+  return (
+    <div className="mb-3 rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] via-transparent to-pink-500/[0.05] px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-base">💍</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-sm font-semibold tracking-tight">{titulo}</div>
+          <div className="mt-0.5 text-[13px] text-muted-foreground break-words">
+            {fechaTxt ?? "Fecha desconocida"}{lugarTxt ? ` · ${lugarTxt}` : ""}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
