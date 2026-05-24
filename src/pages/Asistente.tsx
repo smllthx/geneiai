@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Bot, Send, Sparkles, Loader2, User, Wand2, ListChecks, Check, X, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { isCreditOrAiError, localAssistantReply } from "@/lib/offlineAi";
 
 type ToolEvent = { name: string; args?: any; result?: any };
 type Msg = { role: "user" | "assistant"; content: string; tools?: ToolEvent[] };
@@ -71,10 +72,14 @@ export default function Asistente() {
     setInput("");
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-genealogy", {
+      let { data, error } = await supabase.functions.invoke("ai-genealogy", {
         body: { messages: next.map((m) => ({ role: m.role, content: m.content })) },
       });
-      if (error) throw error;
+      if (error || data?.error) {
+        if (!isCreditOrAiError(error ?? data?.error)) throw (error ?? new Error(data.error));
+        data = await localAssistantReply(text);
+        toast.info("GENAIA respondió en modo local sin gastar créditos.");
+      }
       const events: ToolEvent[] = data?.tool_events ?? [];
       setMessages((m) => [...m, { role: "assistant", content: data?.content || "(sin respuesta)", tools: events }]);
       // Auto-actions on UI side
@@ -91,7 +96,9 @@ export default function Asistente() {
       if (mega) toast.success(`Mega-buscador: ${mega.result.sugerencias ?? 0} hallazgos`);
       if (events.some((e) => e.name === "propose_change")) await loadSugerencias();
     } catch (e: any) {
-      toast.error(e?.message ?? "Error consultando al asistente");
+      const data = await localAssistantReply(text);
+      setMessages((m) => [...m, { role: "assistant", content: data.content, tools: data.tool_events }]);
+      toast.info("Modo local activado: sin créditos ni bloqueo.");
     } finally {
       setLoading(false);
     }
