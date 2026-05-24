@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Lightbulb } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Lightbulb } from "lucide-react";
+import { localPersonaInsight } from "@/lib/offlineAi";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 
@@ -61,18 +61,10 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
     insights.push({ icon: "🏛️", texto: `Vivió en el siglo ${siglo}.` });
   }
 
-  // Solicitar una curiosidad extra a la IA (1 sola, tipo "¿sabías que…?")
+  // Curiosidad extra local: no llama a IA externa, así no gasta créditos ni rompe si no hay saldo.
   useEffect(() => {
     if (!persona?.id) return;
-    let cancel = false;
-    (async () => {
-      try {
-        const { data } = await supabase.functions.invoke("persona-curiosidad", { body: { persona_id: persona.id } });
-        if (cancel) return;
-        if (data?.curiosidad) setExtra([{ icon: "✨", texto: data.curiosidad }]);
-      } catch { /* silencio */ }
-    })();
-    return () => { cancel = true; };
+    setExtra([{ icon: "✨", texto: localPersonaInsight(persona) }]);
   }, [persona?.id]);
 
   const all = [...insights, ...extra];
@@ -85,9 +77,7 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
           <Lightbulb className="h-4 w-4" />
         </div>
         <h2 className="font-display text-lg font-bold tracking-tight">Smart Insights</h2>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-          <Sparkles className="h-3 w-3" /> IA
-        </span>
+        <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">Local</span>
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
         {all.map((i, idx) => (
