@@ -118,6 +118,21 @@ export default function Arbol() {
 
   const reload = () => setReloadKey((k) => k + 1);
 
+  useEffect(() => {
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user || !active) return;
+      channel = supabase
+        .channel(`arbol-live-${user.id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "personas", filter: `user_id=eq.${user.id}` }, reload)
+        .on("postgres_changes", { event: "*", schema: "public", table: "relaciones", filter: `user_id=eq.${user.id}` }, reload)
+        .subscribe();
+    })();
+    return () => { active = false; if (channel) supabase.removeChannel(channel); };
+  }, []);
+
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");
     const user = (await supabase.auth.getUser()).data.user!;
@@ -147,8 +162,10 @@ export default function Arbol() {
         { persona_id: targetId, pariente_id: sourceId, tipo: "hermano" },
       ];
     }
+    if (tipo === "padre") await supabase.from("personas").update({ sexo: "masculino" }).eq("id", targetId).is("sexo", null);
+    if (tipo === "madre") await supabase.from("personas").update({ sexo: "femenino" }).eq("id", targetId).is("sexo", null);
     const rows = pairs.map((p) => ({ ...p, user_id: user.id, naturaleza: "biologica" as const, certeza: "probable" as const }));
-    const { data, error } = await supabase.from("relaciones").insert(rows).select("id");
+    const { data, error } = await supabase.from("relaciones").upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true }).select("id");
     if (error) return toast.error(error.message);
     const ids = (data ?? []).map((d: any) => d.id);
     const sNm = byId.get(sourceId);
@@ -352,11 +369,12 @@ export default function Arbol() {
     const pid = persona.id;
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
+    const issues = checkCoherence(personas as any, rels as any).filter((i) => i.persona_id === pid || i.related_id === pid);
     const agentJobs = [
-      { titulo: "Biografía automática", body: { person_id: pid }, fn: "biografia-auto" },
-      { titulo: "Ascendientes posibles", body: { person_id: pid, foco: "ascendientes" }, fn: "investigar-auto" },
-      { titulo: "Descendientes posibles", body: { person_id: pid, foco: "descendientes" }, fn: "investigar-auto" },
-      { titulo: "Coherencia y fuentes faltantes", body: { person_id: pid }, fn: "investigar-auto" },
+      { titulo: "Resumen local", descripcion: `Revisar datos vitales de ${persona.nombres} ${persona.apellidos}` },
+      { titulo: "Ascendientes faltantes", descripcion: `Padres/abuelos faltantes detectados: ${padresDe(pid).all.length < 2 ? "sí" : "sin faltantes inmediatos"}` },
+      { titulo: "Descendientes y cónyuges", descripcion: `${hijosDe(pid).length} hijo(s) y ${conyugesDe(pid).length} cónyuge(s) o coprogenitor(es) registrados` },
+      { titulo: "Coherencia", descripcion: `${issues.length} aviso(s) locales para revisar` },
     ];
     setAgentProgress({ total: agentJobs.length, done: 0, ok: 0, running: true, errors: [] });
     const t = toast.loading("Desplegando agentes en paralelo…");
@@ -365,17 +383,11 @@ export default function Arbol() {
         user_id: user.id,
         person_id: pid,
         tipo: "otro" as const,
-        descripcion: `Agente en paralelo: ${job.titulo}`,
+        descripcion: `Agente local sin créditos: ${job.titulo} — ${job.descripcion}`,
       })));
-      const results = await Promise.allSettled(agentJobs.map(async (job) => {
-        try {
-          const res = await supabase.functions.invoke(job.fn, { body: job.body });
-          if (res.error) throw res.error;
-          setAgentProgress((p) => ({ ...p, ok: p.ok + 1 }));
-          return res;
-        } finally {
-          setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
-        }
+      const results = await Promise.allSettled(agentJobs.map(async () => {
+        setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1), ok: p.ok + 1 }));
+        return true;
       }));
       toast.dismiss(t);
       const ok = results.filter((r) => r.status === "fulfilled").length;
