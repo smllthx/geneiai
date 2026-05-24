@@ -675,7 +675,8 @@ export default function Arbol() {
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    ["padre", "Padre / madre"],
+                    ["padre", "Padre"],
+                    ["madre", "Madre"],
                     ["hijo", "Hijo/a"],
                     ["conyuge", "Cónyuge"],
                     ["hermano", "Hermano/a"],
