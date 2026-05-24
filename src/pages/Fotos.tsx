@@ -13,6 +13,7 @@ import { Image as ImageIcon, Upload, X, Tag, Trash2, Sparkles, MapPin, Users, Al
 import { toast } from "sonner";
 import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { localPhotoAnalysis } from "@/lib/offlineAi";
 
 type FotoRow = {
   id: string; url: string; storage_path: string | null;
@@ -65,19 +66,12 @@ export default function Fotos() {
       setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setOpen(false);
       load();
 
-      // Análisis IA contextual en segundo plano (año, lugar, clase social, edades, nacionalidad…)
+      // Análisis contextual local en segundo plano: no consume créditos y no bloquea la subida.
       if (inserted?.id) {
-        const t = toast.loading("Analizando foto con IA…");
-        supabase.functions.invoke("analizar-foto-contexto", { body: { foto_id: inserted.id, foto_url: publicUrl } })
-          .then(({ data, error }) => {
-            toast.dismiss(t);
-            if (error || data?.error) { toast.error("No se pudo analizar la foto"); return; }
-            const a = data?.analisis ?? {};
-            const partes = [a.ano_estimado || a.decada_estimada, a.lugar_estimado, a.clase_social].filter(Boolean);
-            toast.success(partes.length ? `Análisis: ${partes.join(" · ")}` : "Análisis listo");
-            load();
-          })
-          .catch(() => { toast.dismiss(t); });
+        const a = localPhotoAnalysis({ titulo, descripcion: desc, fechaAprox });
+        await supabase.from("fotos").update({ descripcion: a.descripcion, fecha_aprox: a.ano_estimado ? String(a.ano_estimado) : (a.decada_estimada ?? fechaAprox) }).eq("id", inserted.id);
+        toast.success("Análisis local agregado sin usar créditos");
+        load();
       }
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(false); }
