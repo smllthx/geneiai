@@ -77,16 +77,12 @@ Deno.serve(async (req) => {
       documentos: docs ?? [],
     };
 
-    const aiRes = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },
-        ],
-      }),
+    const aiRes = await _aiFetch(req, {
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },
+      ],
     });
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite alcanzado" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de IA" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
