@@ -366,21 +366,26 @@ async function executeTool(
   }
 }
 
-async function callModel(model: string, messages: any[], key: string) {
-  // Si el usuario configuró OPENAI_API_KEY, usamos OpenAI directo (su cuenta).
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const useOpenAI = !!openaiKey;
-  const url = useOpenAI ? "https://api.openai.com/v1/chat/completions" : GATEWAY_URL;
-  const apiKey = useOpenAI ? openaiKey! : key;
-  const useModel = useOpenAI ? "gpt-4o-mini" : model;
-  const r = await fetch(url, {
+async function callModel(model: string, messages: any[], _key: string, req: Request) {
+  // pickAiTarget prioriza: tu OpenAI key en Configuración > OPENAI_API_KEY secret > Lovable Gateway.
+  const target = await _pickAiTarget(req.headers.get("Authorization"), model);
+  const envOpenAI = Deno.env.get("OPENAI_API_KEY");
+  const finalKey = target.provider === "openai-user" ? target.key : (envOpenAI || target.key);
+  const finalUrl = target.provider === "openai-user" || envOpenAI
+    ? "https://api.openai.com/v1/chat/completions"
+    : target.url;
+  const finalModel = (target.provider === "openai-user" || envOpenAI)
+    ? (target.model.startsWith("gpt-") ? target.model : "gpt-4o-mini")
+    : target.model;
+  const r = await fetch(finalUrl, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: useModel, messages, tools, tool_choice: "auto" }),
+    headers: { Authorization: `Bearer ${finalKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: finalModel, messages, tools, tool_choice: "auto" }),
   });
   if (!r.ok) throw new Error(`gateway ${r.status}: ${await r.text()}`);
   return await r.json();
 }
+
 
 
 Deno.serve(async (req) => {
