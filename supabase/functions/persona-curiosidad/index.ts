@@ -53,10 +53,10 @@ Deno.serve(async (req) => {
       p.religion && `Religión: ${p.religion}`,
     ].filter(Boolean).join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${KEY}` },
-      body: JSON.stringify({
+    const res = await _aiFetch(req, {
+      body: undefined, // placeholder, replaced below
+    } as any) as any; void res;
+    const res2 = await _aiFetch(req, {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "Eres un historiador familiar. Devuelve UNA curiosidad breve (máx. 200 caracteres) de contexto histórico relevante para esta persona — por ejemplo qué pasaba en su país/oficio/religión en su año de nacimiento, o qué generación le tocó vivir. No inventes hechos personales. Responde solo el texto, sin comillas." },
