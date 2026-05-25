@@ -90,7 +90,7 @@ async function ai(messages: any[], tool?: any, model = "google/gemini-2.5-flash"
   if (!key) throw new Error("LOVABLE_API_KEY no configurada");
   const body: any = { model, messages };
   if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
-  const r = await fetch(GATEWAY, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const r = await _aiFetch(req, body);
   if (r.status === 429) throw new Error("rate_limited");
   if (r.status === 402) throw new Error("no_credits");
   if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
