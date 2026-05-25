@@ -34,9 +34,12 @@ async function callGemini(model: string, prompt: string, system?: string, authHe
   return { text: data.choices?.[0]?.message?.content ?? "" };
 }
 
-async function callOpenAI(model: string, prompt: string, system?: string) {
-  const key = Deno.env.get("OPENAI_API_KEY");
-  if (!key) throw new Error("OPENAI_API_KEY no configurada");
+async function callOpenAI(model: string, prompt: string, system?: string, authHeader?: string | null) {
+  // Prioriza la API key personal del usuario (app_config.openai_api_key)
+  const target = await pickAiTarget(authHeader ?? null, model.startsWith("openai/") ? model : `openai/${model}`);
+  const key = target.provider === "openai-user" ? target.key : Deno.env.get("OPENAI_API_KEY");
+  if (!key) throw new Error("OPENAI_API_KEY no configurada. Agrégala en Configuración → IA o como secret.");
+  model = target.provider === "openai-user" ? target.model : model;
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
