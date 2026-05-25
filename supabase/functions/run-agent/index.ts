@@ -13,11 +13,11 @@ async function callGemini(model: string, prompt: string, system?: string, authHe
   const target = await pickAiTarget(authHeader ?? null, model);
   const key = target.key;
   if (!key) throw new Error("LOVABLE_API_KEY no configurada");
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetch(target.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: target.model,
       messages: [
         ...(system ? [{ role: "system", content: system }] : []),
         { role: "user", content: prompt },
