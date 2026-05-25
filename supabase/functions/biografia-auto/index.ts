@@ -2,6 +2,21 @@
 // (datos vitales, eventos, relaciones, documentos vinculados) y la guarda en el
 // campo `notas` de la persona, conservando lo que ya hubiera tras un separador.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+
+// === user-AI helper (auto-inyectado) ===
+async function _aiFetch(req: Request, body: any) {
+  const auth = req.headers.get("Authorization");
+  const target = await _pickAiTarget(auth, body?.model);
+  const finalBody = { ...body, model: target.model };
+  return fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify(finalBody),
+  });
+}
+// =======================================
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,8 +39,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
+    // La key (tu OpenAI o Lovable) la elige _aiFetch.
 
     const auth = req.headers.get("Authorization") ?? "";
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: auth } } });
@@ -63,16 +77,12 @@ Deno.serve(async (req) => {
       documentos: docs ?? [],
     };
 
-    const aiRes = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },
-        ],
-      }),
+    const aiRes = await _aiFetch(req, {
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },
+      ],
     });
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite alcanzado" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de IA" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -1,6 +1,21 @@
 // Genera UNA curiosidad breve sobre una persona del árbol, usando contexto local
 // (nombre, lugar, oficio, fechas). No inventa hechos no presentes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+
+// === user-AI helper (auto-inyectado) ===
+async function _aiFetch(req: Request, body: any) {
+  const auth = req.headers.get("Authorization");
+  const target = await _pickAiTarget(auth, body?.model);
+  const finalBody = { ...body, model: target.model };
+  return fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify(finalBody),
+  });
+}
+// =======================================
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -26,8 +41,7 @@ Deno.serve(async (req) => {
     const { data: p } = await supa.from("personas").select("*").eq("id", persona_id).maybeSingle();
     if (!p) throw new Error("Persona no encontrada");
 
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("LOVABLE_API_KEY no configurado");
+    // La key se decide en _aiFetch: tu OpenAI key (si está en Configuración) o Lovable.
 
     const ctx = [
       `Nombre: ${p.nombres ?? ""} ${p.apellidos ?? ""}`,
@@ -39,16 +53,12 @@ Deno.serve(async (req) => {
       p.religion && `Religión: ${p.religion}`,
     ].filter(Boolean).join("\n");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${KEY}` },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "Eres un historiador familiar. Devuelve UNA curiosidad breve (máx. 200 caracteres) de contexto histórico relevante para esta persona — por ejemplo qué pasaba en su país/oficio/religión en su año de nacimiento, o qué generación le tocó vivir. No inventes hechos personales. Responde solo el texto, sin comillas." },
-          { role: "user", content: ctx || "Persona sin datos." },
-        ],
-      }),
+    const res = await _aiFetch(req, {
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: "Eres un historiador familiar. Devuelve UNA curiosidad breve (máx. 200 caracteres) de contexto histórico relevante para esta persona — por ejemplo qué pasaba en su país/oficio/religión en su año de nacimiento, o qué generación le tocó vivir. No inventes hechos personales. Responde solo el texto, sin comillas." },
+        { role: "user", content: ctx || "Persona sin datos." },
+      ],
     });
     if (!res.ok) throw new Error(`AI ${res.status}`);
     const j = await res.json();

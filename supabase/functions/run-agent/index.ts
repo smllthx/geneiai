@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pickAiTarget } from "../_shared/userAi.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,14 +8,16 @@ const corsHeaders = {
 
 type Provider = "gemini" | "openai" | "anthropic";
 
-async function callGemini(model: string, prompt: string, system?: string): Promise<{ text: string }> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
+async function callGemini(model: string, prompt: string, system?: string, authHeader?: string | null): Promise<{ text: string }> {
+  // Usa la key de OpenAI del usuario si está configurada; si no, Lovable AI Gateway.
+  const target = await pickAiTarget(authHeader ?? null, model);
+  const key = target.key;
   if (!key) throw new Error("LOVABLE_API_KEY no configurada");
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await fetch(target.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: target.model,
       messages: [
         ...(system ? [{ role: "system", content: system }] : []),
         { role: "user", content: prompt },
@@ -31,9 +34,12 @@ async function callGemini(model: string, prompt: string, system?: string): Promi
   return { text: data.choices?.[0]?.message?.content ?? "" };
 }
 
-async function callOpenAI(model: string, prompt: string, system?: string) {
-  const key = Deno.env.get("OPENAI_API_KEY");
-  if (!key) throw new Error("OPENAI_API_KEY no configurada");
+async function callOpenAI(model: string, prompt: string, system?: string, authHeader?: string | null) {
+  // Prioriza la API key personal del usuario (app_config.openai_api_key)
+  const target = await pickAiTarget(authHeader ?? null, model.startsWith("openai/") ? model : `openai/${model}`);
+  const key = target.provider === "openai-user" ? target.key : Deno.env.get("OPENAI_API_KEY");
+  if (!key) throw new Error("OPENAI_API_KEY no configurada. Agrégala en Configuración → IA o como secret.");
+  model = target.provider === "openai-user" ? target.model : model;
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -101,8 +107,8 @@ Deno.serve(async (req) => {
     let text = "";
     try {
       const provider = run.provider as Provider;
-      if (provider === "gemini") text = (await callGemini(run.modelo, run.prompt, system)).text;
-      else if (provider === "openai") text = (await callOpenAI(run.modelo, run.prompt, system)).text;
+      if (provider === "gemini") text = (await callGemini(run.modelo, run.prompt, system, auth)).text;
+      else if (provider === "openai") text = (await callOpenAI(run.modelo, run.prompt, system, auth)).text;
       else if (provider === "anthropic") text = (await callAnthropic(run.modelo, run.prompt, system)).text;
       else throw new Error(`Proveedor desconocido: ${provider}`);
 
