@@ -107,8 +107,8 @@ Deno.serve(async (req) => {
     let text = "";
     try {
       const provider = run.provider as Provider;
-      if (provider === "gemini") text = (await callGemini(run.modelo, run.prompt, system)).text;
-      else if (provider === "openai") text = (await callOpenAI(run.modelo, run.prompt, system)).text;
+      if (provider === "gemini") text = (await callGemini(run.modelo, run.prompt, system, auth)).text;
+      else if (provider === "openai") text = (await callOpenAI(run.modelo, run.prompt, system, auth)).text;
       else if (provider === "anthropic") text = (await callAnthropic(run.modelo, run.prompt, system)).text;
       else throw new Error(`Proveedor desconocido: ${provider}`);
 
