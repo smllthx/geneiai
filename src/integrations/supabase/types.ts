@@ -107,11 +107,13 @@ export type Database = {
       app_config: {
         Row: {
           acento: string
+          ai_preferred_provider: string
           asistente_voz: boolean
           configurado: boolean
           idioma: string
           investigacion_auto: boolean
           modelo_default: string
+          openai_api_key: string | null
           proveedor_default: Database["public"]["Enums"]["agent_provider"]
           proveedores_activos: Json
           region_busqueda: string | null
@@ -121,11 +123,13 @@ export type Database = {
         }
         Insert: {
           acento?: string
+          ai_preferred_provider?: string
           asistente_voz?: boolean
           configurado?: boolean
           idioma?: string
           investigacion_auto?: boolean
           modelo_default?: string
+          openai_api_key?: string | null
           proveedor_default?: Database["public"]["Enums"]["agent_provider"]
           proveedores_activos?: Json
           region_busqueda?: string | null
@@ -135,11 +139,13 @@ export type Database = {
         }
         Update: {
           acento?: string
+          ai_preferred_provider?: string
           asistente_voz?: boolean
           configurado?: boolean
           idioma?: string
           investigacion_auto?: boolean
           modelo_default?: string
+          openai_api_key?: string | null
           proveedor_default?: Database["public"]["Enums"]["agent_provider"]
           proveedores_activos?: Json
           region_busqueda?: string | null
