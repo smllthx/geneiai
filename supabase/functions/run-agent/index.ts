@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pickAiTarget } from "../_shared/userAi.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,8 +8,10 @@ const corsHeaders = {
 
 type Provider = "gemini" | "openai" | "anthropic";
 
-async function callGemini(model: string, prompt: string, system?: string): Promise<{ text: string }> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
+async function callGemini(model: string, prompt: string, system?: string, authHeader?: string | null): Promise<{ text: string }> {
+  // Usa la key de OpenAI del usuario si está configurada; si no, Lovable AI Gateway.
+  const target = await pickAiTarget(authHeader ?? null, model);
+  const key = target.key;
   if (!key) throw new Error("LOVABLE_API_KEY no configurada");
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
