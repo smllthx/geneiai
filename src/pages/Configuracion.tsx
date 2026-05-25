@@ -20,16 +20,49 @@ export default function Configuracion() {
   const [d, setD] = useState({ apellido_base: "", variante: "" });
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [aiCfg, setAiCfg] = useState<{ openai_api_key: string; ai_preferred_provider: string; hasKey: boolean }>({ openai_api_key: "", ai_preferred_provider: "auto", hasKey: false });
 
   const load = async () => {
-    const [{ data: v }, { data: a }] = await Promise.all([
+    const user = (await supabase.auth.getUser()).data.user;
+    const [{ data: v }, { data: a }, { data: cfg }] = await Promise.all([
       supabase.from("variantes_apellido").select("*").order("apellido_base"),
       supabase.from("external_accounts").select("*").eq("provider", "familysearch").maybeSingle(),
+      user ? supabase.from("app_config").select("openai_api_key,ai_preferred_provider").maybeSingle() : Promise.resolve({ data: null } as any),
     ]);
     setVariantes(v ?? []);
     setFsAccount(a);
+    if (cfg) {
+      const k = (cfg as any).openai_api_key as string | null;
+      setAiCfg({
+        openai_api_key: k ? `••••••••${k.slice(-4)}` : "",
+        ai_preferred_provider: (cfg as any).ai_preferred_provider ?? "auto",
+        hasKey: !!k,
+      });
+    }
   };
   useEffect(() => { load(); }, []);
+
+  const saveOpenAIKey = async (rawKey: string, provider: string) => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión requerida");
+    const value: any = { user_id: user.id, ai_preferred_provider: provider };
+    // No sobrescribir si el campo muestra los puntos enmascarados
+    if (rawKey && !rawKey.includes("•")) value.openai_api_key = rawKey.trim();
+    const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
+    if (error) return toast.error(error.message);
+    toast.success("Configuración de IA guardada. Tus llamadas de IA usarán tu cuenta de OpenAI.");
+    load();
+  };
+
+  const clearOpenAIKey = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+    const { error } = await supabase.from("app_config").upsert({ user_id: user.id, openai_api_key: null, ai_preferred_provider: "auto" } as any, { onConflict: "user_id" });
+    if (error) return toast.error(error.message);
+    toast.success("API key de OpenAI eliminada.");
+    load();
+  };
+
 
   const toggleAutoSync = async (on: boolean) => {
     if (!fsAccount) return;
