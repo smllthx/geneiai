@@ -423,12 +423,12 @@ Deno.serve(async (req) => {
     for (let step = 0; step < 8; step++) {
       let resp: any;
       try {
-        resp = await callModel(model, messages, key);
+        resp = await callModel(model, messages, key, req);
       } catch (e) {
         const msg = String((e as Error).message);
         if (!usedFallback && (msg.includes("404") || msg.includes("400"))) {
           model = FALLBACK_MODEL; usedFallback = true;
-          resp = await callModel(model, messages, key);
+          resp = await callModel(model, messages, key, req);
         } else if (msg.includes("429")) {
           return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Esperá un minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else if (msg.includes("402")) {
