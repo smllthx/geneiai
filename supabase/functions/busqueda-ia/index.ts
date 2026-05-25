@@ -5,6 +5,21 @@
 // - Analiza con Lovable AI para extraer nombres/fechas/lugares/relaciones + confianza
 // - Guarda como `sugerencias` (tipo "hallazgo_ia") asociadas a la persona si aplica
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+
+// === user-AI helper (auto-inyectado) ===
+async function _aiFetch(req: Request, body: any) {
+  const auth = req.headers.get("Authorization");
+  const target = await _pickAiTarget(auth, body?.model);
+  const finalBody = { ...body, model: target.model };
+  return fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify(finalBody),
+  });
+}
+// =======================================
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

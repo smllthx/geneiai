@@ -2,6 +2,21 @@
 // deduplica contra el árbol e inserta filas en `sugerencias`.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+
+// === user-AI helper (auto-inyectado) ===
+async function _aiFetch(req: Request, body: any) {
+  const auth = req.headers.get("Authorization");
+  const target = await _pickAiTarget(auth, body?.model);
+  const finalBody = { ...body, model: target.model };
+  return fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify(finalBody),
+  });
+}
+// =======================================
+
 
 function norm(s: string | null | undefined) {
   return (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()

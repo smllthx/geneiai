@@ -1,6 +1,21 @@
 // Devuelve variantes multilingües de nombres/apellidos según el origen.
 // La IA actúa como experta lingüista en es/it/de/en (incluyendo formas antiguas 1700-2025).
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+
+// === user-AI helper (auto-inyectado) ===
+async function _aiFetch(req: Request, body: any) {
+  const auth = req.headers.get("Authorization");
+  const target = await _pickAiTarget(auth, body?.model);
+  const finalBody = { ...body, model: target.model };
+  return fetch(target.url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify(finalBody),
+  });
+}
+// =======================================
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
