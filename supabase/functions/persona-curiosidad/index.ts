@@ -41,8 +41,7 @@ Deno.serve(async (req) => {
     const { data: p } = await supa.from("personas").select("*").eq("id", persona_id).maybeSingle();
     if (!p) throw new Error("Persona no encontrada");
 
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("LOVABLE_API_KEY no configurado");
+    // La key se decide en _aiFetch: tu OpenAI key (si está en Configuración) o Lovable.
 
     const ctx = [
       `Nombre: ${p.nombres ?? ""} ${p.apellidos ?? ""}`,
