@@ -54,15 +54,11 @@ Deno.serve(async (req) => {
     ].filter(Boolean).join("\n");
 
     const res = await _aiFetch(req, {
-      body: undefined, // placeholder, replaced below
-    } as any) as any; void res;
-    const res2 = await _aiFetch(req, {
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "Eres un historiador familiar. Devuelve UNA curiosidad breve (máx. 200 caracteres) de contexto histórico relevante para esta persona — por ejemplo qué pasaba en su país/oficio/religión en su año de nacimiento, o qué generación le tocó vivir. No inventes hechos personales. Responde solo el texto, sin comillas." },
-          { role: "user", content: ctx || "Persona sin datos." },
-        ],
-      }),
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: "Eres un historiador familiar. Devuelve UNA curiosidad breve (máx. 200 caracteres) de contexto histórico relevante para esta persona — por ejemplo qué pasaba en su país/oficio/religión en su año de nacimiento, o qué generación le tocó vivir. No inventes hechos personales. Responde solo el texto, sin comillas." },
+        { role: "user", content: ctx || "Persona sin datos." },
+      ],
     });
     if (!res.ok) throw new Error(`AI ${res.status}`);
     const j = await res.json();
