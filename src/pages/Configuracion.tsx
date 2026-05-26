@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, RefreshCw, Upload, Link as LinkIcon } from "lucide-react";
+import { Trash2, RefreshCw, Upload, Link as LinkIcon, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
+import MenusConfig from "@/components/MenusConfig";
+
 
 const SEED_VARIANTES: [string, string][] = [
   ["Sanguineti","Sanguinetti"],["Sanguineti","Sanguinetto"],
@@ -159,6 +161,9 @@ export default function Configuracion() {
           </p>
         </CardContent>
       </Card>
+
+      <MenusConfig />
+
 
 
 

@@ -18,6 +18,8 @@ import AdaptiveViewport from "@/components/AdaptiveViewport";
 import ProbandPrompt from "@/components/ProbandPrompt";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
+import { filterByHidden } from "@/lib/navConfig";
+
 
 const primaryNavBase = [
   { to: "/inicio", label: "Inicio", icon: Home },
@@ -50,10 +52,16 @@ const utilityNav = [
 type NavItem = { to: string; label: string; icon: any };
 
 function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
-  const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, items));
+  const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, filterByHidden(groupKey, items)));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  useEffect(() => { setOrdered(loadOrder(groupKey, items)); }, [groupKey, items.length]);
+  useEffect(() => {
+    const refresh = () => setOrdered(loadOrder(groupKey, filterByHidden(groupKey, items)));
+    refresh();
+    window.addEventListener("genaia:nav-config", refresh);
+    return () => window.removeEventListener("genaia:nav-config", refresh);
+  }, [groupKey, items.length]);
+
 
   const onDrop = (toIdx: number) => {
     if (dragIdx === null || dragIdx === toIdx) return;

@@ -17,6 +17,9 @@ import DynastyView from "@/components/DynastyView";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
@@ -40,6 +43,11 @@ export default function Arbol() {
   const [docsByPersona, setDocsByPersona] = useState<Map<string, number>>(new Map());
   const [loadingTree, setLoadingTree] = useState(true);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
+
+  const { user: authUser } = useAuth();
+  const rtKey = useRealtimeReload(["personas", "relaciones", "eventos"], authUser?.id ?? null);
+  useEffect(() => { if (rtKey > 0) setReloadKey((k) => k + 1); }, [rtKey]);
+
 
   useEffect(() => {
     (async () => {

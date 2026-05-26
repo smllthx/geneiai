@@ -28,6 +28,8 @@ import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+
 import { personaCode, matchesCode } from "@/lib/personaCode";
 import { pushRecent } from "@/lib/recent";
 import TimelineVisual from "@/components/TimelineVisual";
@@ -78,6 +80,8 @@ export default function PersonaDetail() {
   const [lugares, setLugares] = useLugares();
   const lugaresById = useMemo(() => new Map((lugares ?? []).map((l: any) => [l.id, l])), [lugares]);
 
+  const rtReloadKey = useRealtimeReload(["personas", "relaciones", "eventos", "documentos", "fotos"], user?.id ?? null);
+
   useEffect(() => {
     if (!idValid) { setFetching(false); return; }
     (async () => {
@@ -108,7 +112,11 @@ export default function PersonaDetail() {
         setFetchError(e?.message ?? "Error al cargar la persona");
       } finally { setFetching(false); }
     })();
-  }, [id, isNew, idValid]);
+  }, [id, isNew, idValid, rtReloadKey]);
+
+
+
+
 
   const save = async () => {
     setLoading(true);
