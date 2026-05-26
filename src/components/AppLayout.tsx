@@ -18,6 +18,8 @@ import AdaptiveViewport from "@/components/AdaptiveViewport";
 import ProbandPrompt from "@/components/ProbandPrompt";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
+import { filterByHidden } from "@/lib/navConfig";
+
 
 const primaryNavBase = [
   { to: "/inicio", label: "Inicio", icon: Home },
