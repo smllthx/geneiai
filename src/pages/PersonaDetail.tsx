@@ -80,6 +80,8 @@ export default function PersonaDetail() {
   const [lugares, setLugares] = useLugares();
   const lugaresById = useMemo(() => new Map((lugares ?? []).map((l: any) => [l.id, l])), [lugares]);
 
+  const rtReloadKey = useRealtimeReload(["personas", "relaciones", "eventos", "documentos", "fotos"], user?.id ?? null);
+
   useEffect(() => {
     if (!idValid) { setFetching(false); return; }
     (async () => {
