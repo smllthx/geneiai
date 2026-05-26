@@ -17,6 +17,9 @@ import DynastyView from "@/components/DynastyView";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
