@@ -114,8 +114,8 @@ export default function PersonaDetail() {
     })();
   }, [id, isNew, idValid, rtReloadKey]);
 
-  // Realtime: refresca la ficha cuando cambian relaciones/eventos/personas del usuario
-  const rtReloadKey = useRealtimeReload(["personas", "relaciones", "eventos", "documentos", "fotos"], user?.id ?? null);
+
+
 
 
   const save = async () => {
