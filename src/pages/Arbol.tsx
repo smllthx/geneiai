@@ -44,6 +44,11 @@ export default function Arbol() {
   const [loadingTree, setLoadingTree] = useState(true);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
+  const { user: authUser } = useAuth();
+  const rtKey = useRealtimeReload(["personas", "relaciones", "eventos"], authUser?.id ?? null);
+  useEffect(() => { if (rtKey > 0) setReloadKey((k) => k + 1); }, [rtKey]);
+
+
   useEffect(() => {
     (async () => {
       setLoadingTree(true);
