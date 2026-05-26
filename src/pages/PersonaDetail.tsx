@@ -28,6 +28,8 @@ import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+
 import { personaCode, matchesCode } from "@/lib/personaCode";
 import { pushRecent } from "@/lib/recent";
 import TimelineVisual from "@/components/TimelineVisual";
