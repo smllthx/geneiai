@@ -162,6 +162,9 @@ export default function Configuracion() {
         </CardContent>
       </Card>
 
+      <MenusConfig />
+
+
 
 
       <Card className="archivo-card mb-6">
