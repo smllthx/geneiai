@@ -110,7 +110,11 @@ export default function PersonaDetail() {
         setFetchError(e?.message ?? "Error al cargar la persona");
       } finally { setFetching(false); }
     })();
-  }, [id, isNew, idValid]);
+  }, [id, isNew, idValid, rtReloadKey]);
+
+  // Realtime: refresca la ficha cuando cambian relaciones/eventos/personas del usuario
+  const rtReloadKey = useRealtimeReload(["personas", "relaciones", "eventos", "documentos", "fotos"], user?.id ?? null);
+
 
   const save = async () => {
     setLoading(true);
