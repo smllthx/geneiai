@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     };
 
     const aiRes = await _aiFetch(req, {
-      model: "google/gemini-2.5-pro",
+      model: "openai/gpt-4o",
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },

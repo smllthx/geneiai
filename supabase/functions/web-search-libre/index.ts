@@ -84,7 +84,7 @@ async function fetchText(url: string, maxChars = 4000): Promise<string> {
 async function openAISummary(req: Request, prompt: string): Promise<string> {
   try {
     const r = await _aiFetch(req, {
-        model: "google/gemini-2.5-flash-lite",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: "Eres asistente genealógico. Responde en JSON conciso." },
           { role: "user", content: prompt },

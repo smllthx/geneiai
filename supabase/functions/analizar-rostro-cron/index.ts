@@ -35,7 +35,7 @@ const SCHEMA = {
 
 async function analizar(req: Request, foto_url: string) {
   const res = await _aiFetch(req, {
-      model: "google/gemini-2.5-flash",
+      model: "openai/gpt-4o-mini",
       messages: [
         { role: "system", content: "Eres analista de rasgos faciales para genealogía. Usa 'desconocido' si no puedes determinar algo." },
         { role: "user", content: [
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       for (const persona_id of f.personas_ids) {
         await supabase.from("rasgos_faciales").insert({
           user_id: f.user_id, persona_id, foto_id: f.id, foto_url: f.url,
-          rasgos, resumen: rasgos.resumen ?? null, modelo: "google/gemini-2.5-flash",
+          rasgos, resumen: rasgos.resumen ?? null, modelo: "openai/gpt-4o-mini",
         });
       }
       ok++;

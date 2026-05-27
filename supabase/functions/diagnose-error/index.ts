@@ -43,7 +43,7 @@ ${(stack || "").slice(0, 2000)}
 Contexto: ${JSON.stringify(contexto || {}).slice(0, 1000)}`;
 
     const r = await _aiFetch(req, {
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },

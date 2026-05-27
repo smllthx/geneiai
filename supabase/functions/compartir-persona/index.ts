@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     let bio = ''
     try {
         const r = await _aiFetch(req, {
-            model: 'google/gemini-3-flash-preview',
+            model: 'openai/gpt-4o-mini',
             messages: [
               { role: 'system', content: 'Eres genealogista. Escribe una mini biografía cálida en español (3-4 frases) basada ESTRICTAMENTE en los datos provistos, sin inventar.' },
               { role: 'user', content: JSON.stringify(ficha) },

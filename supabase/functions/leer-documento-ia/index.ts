@@ -168,7 +168,7 @@ async function splitPdfBase64(b64: string, chunkPages = CHUNK_PAGES): Promise<st
 }
 
 async function callAI(authHeader: string | null, userContent: any[]): Promise<any | null> {
-  const target = await _pickAiTarget(authHeader, "google/gemini-2.5-pro");
+  const target = await _pickAiTarget(authHeader, "openai/gpt-4o");
 
   const aiRes = await fetch(target.url, {
     method: "POST",

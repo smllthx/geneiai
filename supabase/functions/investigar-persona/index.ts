@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const userPrompt = `Persona objetivo:\n${JSON.stringify(personaCtx, null, 2)}\n\nFamiliares conocidos:\n${JSON.stringify(familia, null, 2)}`;
 
     const aiRes = await _aiFetch(req, {
-        model: "google/gemini-3-flash-preview",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userPrompt },

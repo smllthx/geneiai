@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     }
 
     const aiRes = await _aiFetch(req, {
-        model: 'google/gemini-2.5-flash',
+        model: 'openai/gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Extrae regiones étnicas y porcentajes de tests de ADN (MyHeritage, AncestryDNA, 23andMe, FTDNA, LivingDNA). Responde SOLO JSON.' },
           { role: 'user', content: `Texto del reporte:\n\n${String(texto).slice(0, 12000)}\n\nDevuelve JSON: { "items": [{ "region": string, "porcentaje": number }] }. Normaliza nombres (ej. "Iberian" → "Ibérico (España/Portugal)"). Excluye totales y porcentajes 0.` },

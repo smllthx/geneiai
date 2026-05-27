@@ -705,9 +705,13 @@ export default function PersonaDetail() {
                       personas_ids: [id],
                     });
                     if (insErr) throw insErr;
+                    if (!p.foto_url) {
+                      await supabase.from("personas").update({ foto_url: publicUrl }).eq("id", id);
+                      setP({ ...p, foto_url: publicUrl });
+                    }
                     const { data: ft } = await supabase.from("fotos").select("*").contains("personas_ids", [id]).order("created_at", { ascending: false });
                     setFotos(ft ?? []);
-                    toast.dismiss(t); toast.success("Foto agregada");
+                    toast.dismiss(t); toast.success(p.foto_url ? "Foto agregada" : "Foto agregada como retrato principal");
                   } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error al subir"); }
                   e.target.value = "";
                 }}
@@ -742,6 +746,16 @@ export default function PersonaDetail() {
                   <div className="space-y-1 p-2">
                     {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
                     {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
+                    <Button size="sm" variant={p.foto_url === f.url ? "secondary" : "outline"} className="h-7 w-full text-[11px]" onClick={async () => {
+                      const { error } = await supabase.from("personas").update({ foto_url: f.url }).eq("id", id!);
+                      if (error) toast.error(error.message);
+                      else {
+                        setP({ ...p, foto_url: f.url });
+                        toast.success("Retrato actualizado. Se verá en el árbol.");
+                      }
+                    }}>
+                      <ImageIcon className="mr-1 h-3 w-3" /> {p.foto_url === f.url ? "Retrato actual" : "Usar como retrato"}
+                    </Button>
                     <Button size="sm" variant="ghost" className="h-7 w-full text-[11px]" onClick={async () => {
                       const { error } = await supabase.functions.invoke("analizar-rostro", { body: { persona_id: id, foto_url: f.url, foto_id: f.id } });
                       if (error) toast.error(error.message); else toast.success("Rasgos extraídos");

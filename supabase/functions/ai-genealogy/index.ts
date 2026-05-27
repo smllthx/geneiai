@@ -20,21 +20,22 @@ async function _aiFetch(req: Request, body: any) {
 // =======================================
 
 
-const DEFAULT_MODEL = "google/gemini-3-flash-preview";
-const FALLBACK_MODEL = "google/gemini-2.5-flash";
+const DEFAULT_MODEL = "openai/gpt-4o-mini";
+const FALLBACK_MODEL = "openai/gpt-4o-mini";
 
 const SYSTEM = `Sos GENAIA, asistente experto en genealogía del Archivo Familiar del usuario.
-Hablás español rioplatense, claro, breve y accionable.
+Hablás español hispano neutro, claro, breve y accionable.
 
 Capacidades:
 - Buscar personas (search_personas, get_persona, list_recent).
-- CREAR personas y relaciones DIRECTAMENTE (create_persona, create_relation) cuando el usuario lo pide explícitamente.
+- CREAR personas, retratos y relaciones DIRECTAMENTE (create_persona, create_relation) cuando el usuario lo pide explícitamente.
 - ACTUALIZAR datos (update_persona) cuando hay certeza.
-- LANZAR investigaciones automáticas: mega_search (5 agentes en paralelo), web_search (web libre), agent_investigar (IA).
+- LANZAR investigaciones automáticas con ChatGPT/OpenAI: mega_search (6 agentes en paralelo), web_search (web libre), agent_investigar (IA).
 - DEFINIR la persona principal (set_proband).
 - VERIFICAR coherencia (check_coherence).
 - SUGERIR cambios sin aplicar (propose_change) cuando hay duda.
 - NAVEGAR: devolver intent navigate_to para guiar al usuario a una pantalla.
+- Si el usuario quiere subir retratos o fotos, navega a la ficha de persona o a Fotos; el navegador maneja el archivo.
 
 Reglas:
 - Si el usuario dice "creá", "agregá", "conectá", "lanzá", "buscá" → ejecutá la herramienta directa.
@@ -123,7 +124,11 @@ const tools: ToolDef[] = [
         properties: {
           source_id: { type: "string", description: "uuid persona origen" },
           target_id: { type: "string", description: "uuid persona destino" },
-          tipo: { type: "string", enum: ["padre", "madre", "hijo", "conyuge", "hermano"], description: "rol de target respecto de source" },
+          tipo: {
+            type: "string",
+            enum: ["padre", "madre", "hijo", "conyuge", "hermano", "union_civil", "conviviente", "cohabitante", "padrino", "madrina", "ahijado", "primo", "prima", "socio_negocio", "testigo", "otro"],
+            description: "rol de target respecto de source",
+          },
         },
         required: ["source_id", "target_id", "tipo"],
       },
@@ -280,6 +285,33 @@ async function executeTool(
       const tipo = String(args.tipo);
       if (sourceId === targetId) return { ok: false, error: "ids iguales" };
       const { data: src } = await ctx.sb.from("personas").select("sexo").eq("id", sourceId).maybeSingle();
+      const extendedLabels: Record<string, string> = {
+        union_civil: "unión civil",
+        conviviente: "conviviente",
+        cohabitante: "cohabitante",
+        padrino: "padrino",
+        madrina: "madrina",
+        ahijado: "ahijado/a",
+        primo: "primo",
+        prima: "prima",
+        socio_negocio: "socio/a de negocio",
+        testigo: "testigo",
+        otro: "otra relación",
+      };
+      const dbTipo = ["padre", "madre", "hijo", "conyuge", "hermano"].includes(tipo) ? tipo : "otro";
+      const inverseExtended: Record<string, string> = {
+        union_civil: "unión civil",
+        conviviente: "conviviente",
+        cohabitante: "cohabitante",
+        padrino: "ahijado/a",
+        madrina: "ahijado/a",
+        ahijado: "padrino/madrina",
+        primo: "primo",
+        prima: "prima",
+        socio_negocio: "socio/a de negocio",
+        testigo: "testigo",
+        otro: "otra relación",
+      };
       let pairs: any[] = [];
       if (tipo === "padre" || tipo === "madre") {
         pairs = [
@@ -297,9 +329,14 @@ async function executeTool(
           { persona_id: sourceId, pariente_id: targetId, tipo },
           { persona_id: targetId, pariente_id: sourceId, tipo },
         ];
+      } else {
+        pairs = [
+          { persona_id: sourceId, pariente_id: targetId, tipo: dbTipo, notas: `relación genealógica: ${extendedLabels[tipo] ?? tipo}` },
+          { persona_id: targetId, pariente_id: sourceId, tipo: "otro", notas: `relación genealógica: ${inverseExtended[tipo] ?? extendedLabels[tipo] ?? tipo}` },
+        ];
       }
       const rows = pairs.map((p) => ({ ...p, user_id: ctx.userId, naturaleza: "biologica", certeza: "probable" }));
-      const { error } = await ctx.sb.from("relaciones").insert(rows);
+      const { error } = await ctx.sb.from("relaciones").upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
       if (error) return { ok: false, error: error.message };
       return { ok: true, creadas: rows.length };
     }

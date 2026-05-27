@@ -84,7 +84,7 @@ async function fetchPageText(url: string, maxChars = 8000): Promise<{ text: stri
   } catch { return { text: "" }; }
 }
 
-async function ai(req: Request, messages: any[], tool?: any, model = "google/gemini-2.5-flash") {
+async function ai(req: Request, messages: any[], tool?: any, model = "openai/gpt-4o-mini") {
   const body: any = { model, messages };
   if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
   const r = await _aiFetch(req, body);

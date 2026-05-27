@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (!persona_id || !foto_url) throw new Error("Faltan persona_id o foto_url");
 
     const res = await _aiFetch(req, {
-        model: "google/gemini-2.5-pro",
+        model: "openai/gpt-4o",
         messages: [
           { role: "system", content: "Eres un analista de rasgos faciales para genealogía. Observa la foto y describe rasgos visibles usando exactamente el esquema. Si no puedes determinar algo, usa 'desconocido'. No inventes." },
           { role: "user", content: [

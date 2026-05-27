@@ -37,7 +37,7 @@ Reglas:
 - Devuelve siempre las 4 variantes (es, it, de, en).`;
 
     const res = await _aiFetch(req, {
-        model: 'google/gemini-3-flash-preview',
+        model: 'openai/gpt-4o-mini',
         messages: [
           { role: 'system', content: sys },
           { role: 'user', content: `Nombres: ${nombres}\nApellidos: ${apellidos}\nOrigen: ${ctxOrigen}` },

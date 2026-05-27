@@ -5,7 +5,7 @@ import { Wand2, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-type Provider = "gemini" | "openai" | "anthropic";
+type Provider = "openai";
 
 interface Config {
   user_id: string;
@@ -38,9 +38,9 @@ export default function ConfigurarApp() {
     acento: "azul",
     idioma: "es",
     region_busqueda: null,
-    proveedor_default: "gemini",
-    modelo_default: "google/gemini-3-flash-preview",
-    proveedores_activos: ["gemini"],
+    proveedor_default: "openai",
+    modelo_default: "openai/gpt-4o-mini",
+    proveedores_activos: ["openai"],
     asistente_voz: false,
     investigacion_auto: true,
     configurado: false,
@@ -63,26 +63,20 @@ export default function ConfigurarApp() {
       setCfg((c) => ({
         ...c,
         user_id: u.user!.id,
-        ...(existing ? { ...(existing as any), proveedores_activos: (existing as any).proveedores_activos ?? ["gemini"] } : {}),
+        ...(existing ? { ...(existing as any), proveedor_default: "openai", modelo_default: "openai/gpt-4o-mini", proveedores_activos: ["openai"] } : {}),
       }));
       setLoading(false);
     })();
   }, []);
-
-  const toggleProveedor = (p: Provider) => {
-    setCfg((c) => ({
-      ...c,
-      proveedores_activos: c.proveedores_activos.includes(p)
-        ? c.proveedores_activos.filter((x) => x !== p)
-        : [...c.proveedores_activos, p],
-    }));
-  };
 
   const guardar = async () => {
     setSaving(true);
     try {
       const { error } = await supabase.from("app_config").upsert({
         ...cfg,
+        proveedor_default: "openai",
+        modelo_default: "openai/gpt-4o-mini",
+        proveedores_activos: ["openai"],
         configurado: true,
       }, { onConflict: "user_id" });
       if (error) throw error;
@@ -182,16 +176,14 @@ export default function ConfigurarApp() {
 
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="font-display text-xl font-semibold">Proveedores de IA activos</h2>
+            <h2 className="font-display text-xl font-semibold">IA de la app</h2>
             <p className="text-sm text-muted-foreground">
-              Activá los que quieras correr en paralelo desde "Agentes en paralelo".
+              Todas las secciones inteligentes usan ChatGPT con tu configuración de OpenAI.
             </p>
             {([
-              { id: "gemini", label: "OpenAI rápido", req: "Usa tu API key de OpenAI" },
-              { id: "openai", label: "OpenAI avanzado", req: "Usa tu API key de OpenAI" },
-              { id: "anthropic", label: "Anthropic (Claude)", req: "Requiere ANTHROPIC_API_KEY" },
+              { id: "openai", label: "ChatGPT para genealogía", req: "Asistente virtual, búsquedas, análisis, lectores y agentes en segundo plano" },
             ] as const).map((p) => (
-              <label key={p.id} className="glass flex cursor-pointer items-center justify-between gap-3 rounded-2xl p-3">
+              <label key={p.id} className="glass flex cursor-default items-center justify-between gap-3 rounded-2xl p-3">
                 <div>
                   <p className="font-medium">{p.label}</p>
                   <p className="text-xs text-muted-foreground">{p.req}</p>
@@ -199,8 +191,8 @@ export default function ConfigurarApp() {
                 <input
                   type="checkbox"
                   className="h-5 w-5 accent-primary"
-                  checked={cfg.proveedores_activos.includes(p.id)}
-                  onChange={() => toggleProveedor(p.id)}
+                  checked={true}
+                  readOnly
                 />
               </label>
             ))}

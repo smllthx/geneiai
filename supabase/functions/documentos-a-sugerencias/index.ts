@@ -113,7 +113,7 @@ function parseGedcom(text: string): GedPerson[] {
 async function extraerPersonasIA(req: Request, texto: string, contextoDoc: string): Promise<GedPerson[]> {
   const cap = texto.length > 40000 ? texto.slice(0, 40000) : texto
   const res = await _aiFetch(req, {
-      model: 'google/gemini-3-flash-preview',
+      model: 'openai/gpt-4o-mini',
       messages: [
         { role: 'system', content: 'Eres genealogista paleógrafo experto en documentos europeos y americanos del siglo XVIII al XXI (1700-2025). Dominas español (incl. colonial), italiano (toscano, latín eclesiástico), alemán (Kurrent, Sütterlin, Fraktur) e inglés moderno temprano. Extrae TODAS las personas mencionadas con su información biográfica disponible. Registra el nombre tal como aparece en el documento y, si aplica, la equivalencia vernácula en "notas" (p. ej. "Joannes → Juan / Giovanni / Johann"). No inventes datos.' },
         { role: 'user', content: `Documento: ${contextoDoc}\n\nTexto:\n${cap}` },

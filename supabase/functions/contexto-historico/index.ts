@@ -46,7 +46,7 @@ Entrega 6 a 10 puntos cortos en formato JSON: { "puntos": [{ "anio": número o r
 Prioriza hechos locales/regionales por sobre globales. En español. Sin emojis.`
 
     const aiRes = await _aiFetch(req, {
-        model: 'google/gemini-2.5-flash',
+        model: 'openai/gpt-4o-mini',
         messages: [
           { role: 'system', content: 'Eres historiador genealogista. Responde SOLO con JSON válido.' },
           { role: 'user', content: prompt },

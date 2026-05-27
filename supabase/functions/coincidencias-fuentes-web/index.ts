@@ -43,7 +43,7 @@ Considera variantes ortográficas históricas (italiano antiguo, alemán Fraktur
 No inventes URLs cerradas: usa URLs raíz de búsqueda si no conoces el registro exacto.`;
 
     const r = await _aiFetch(req, {
-        model: 'google/gemini-3-flash-preview',
+        model: 'openai/gpt-4o-mini',
         messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
         tools: [{
           type: 'function',

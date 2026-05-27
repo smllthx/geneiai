@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     if (candidatos.length && candidatos.length <= 25) {
       try {
         const aiRes = await _aiFetch(req, {
-            model: 'google/gemini-2.5-flash',
+            model: 'openai/gpt-4o-mini',
             messages: [
               { role: 'system', content: 'Eres genealogista. Decide si dos fichas son la MISMA persona. Responde JSON.' },
               { role: 'user', content: `Analiza estos pares (a y b son fichas distintas) y devuelve JSON { "pares": [{ "a_id": "...", "b_id": "...", "probabilidad": 0-100, "razon": "breve" }] }. Incluye SOLO pares con probabilidad ≥ 60.

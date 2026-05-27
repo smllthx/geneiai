@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if (!foto_id || !foto_url) throw new Error("Faltan foto_id o foto_url");
 
     const res = await _aiFetch(req, {
-        model: "google/gemini-2.5-pro",
+        model: "openai/gpt-4o",
         messages: [
           { role: "system", content: "Eres un historiador y archivista experto en fotografía familiar de los siglos XVIII a XXI. Observa la imagen y deduce contexto histórico (año, lugar, clase social, nacionalidad probable, edades, relaciones) usando indicios de vestimenta, mobiliario, tipo de papel, pose y composición. Si no puedes determinar algo, omítelo. Nunca inventes nombres." },
           { role: "user", content: [
