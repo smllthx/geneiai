@@ -874,12 +874,31 @@ function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: str
   );
 }
 
-function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode; lugaresMap?: Map<string, any> }) {
+function FamiliaSeccion({
+  titulo, personas, empty, quickAdd, lugaresMap,
+  personaId, personaSexo, tipoRelacion,
+}: {
+  titulo: string;
+  personas: any[];
+  empty: string;
+  quickAdd?: React.ReactNode;
+  lugaresMap?: Map<string, any>;
+  /** Para acciones por fila (editar/eliminar). Si no se pasa, no se muestran. */
+  personaId?: string;
+  personaSexo?: string | null;
+  tipoRelacion?: "padre" | "madre" | "hijo" | "conyuge" | "hermano";
+}) {
   const lugarNombre = (id?: string | null) => {
     if (!id || !lugaresMap) return null;
     const l = lugaresMap.get(id);
     if (!l) return null;
     return [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ");
+  };
+  const tipoPara = (x: any): "padre" | "madre" | "hijo" | "conyuge" | "hermano" | undefined => {
+    if (!tipoRelacion) return undefined;
+    if (tipoRelacion !== "padre" && tipoRelacion !== "madre") return tipoRelacion;
+    // En la sección "Padres" detectamos si la fila es padre o madre por su sexo.
+    return x.sexo === "femenino" ? "madre" : "padre";
   };
   return (
     <section className="rounded-2xl bg-card/30 px-1 py-2">
@@ -903,11 +922,12 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { tit
             const matLinea = matFecha || matLugar
               ? `${matFecha ?? "Fecha desconocida"}${matLugar ? ` · ${matLugar}` : ""}`
               : null;
+            const t = tipoPara(x);
             return (
-              <li key={x.id}>
+              <li key={x.id} className="flex items-stretch gap-1">
                 <Link
                   to={`/personas/${x.id}`}
-                  className="flex items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
+                  className="flex flex-1 items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
                 >
                   {x.foto_url ? (
                     <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
@@ -932,6 +952,17 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { tit
                     )}
                   </div>
                 </Link>
+                {personaId && t && (
+                  <div className="flex items-center pr-1">
+                    <RelativeRowActions
+                      personaId={personaId}
+                      personaSexo={personaSexo}
+                      parienteId={x.id}
+                      parienteSexo={x.sexo}
+                      currentTipo={t}
+                    />
+                  </div>
+                )}
               </li>
             );
           })}
