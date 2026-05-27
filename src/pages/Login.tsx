@@ -8,6 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
+import { ShieldCheck } from "lucide-react";
+import {
+  authenticateDevicePasskey,
+  hasDevicePasskey,
+  isDevicePasskeySupported,
+  isDeviceUnlocked,
+  markDeviceUnlocked,
+} from "@/lib/devicePasskey";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,10 +23,15 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [devicePasskeyReady, setDevicePasskeyReady] = useState(false);
+  const [deviceUnlocking, setDeviceUnlocking] = useState(false);
 
   useEffect(() => {
+    setDevicePasskeyReady(isDevicePasskeySupported() && hasDevicePasskey());
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/inicio", { replace: true });
+      if (!data.session) return;
+      if (hasDevicePasskey() && !isDeviceUnlocked()) return;
+      navigate("/inicio", { replace: true });
     });
   }, [navigate]);
 
@@ -28,7 +41,22 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast.error(error.message);
+    markDeviceUnlocked();
     navigate("/inicio", { replace: true });
+  };
+
+  const handleDeviceUnlock = async () => {
+    setDeviceUnlocking(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) throw new Error("Primero ingresa con correo y contraseña en este dispositivo.");
+      await authenticateDevicePasskey();
+      navigate("/inicio", { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo desbloquear con Face ID / Touch ID.");
+    } finally {
+      setDeviceUnlocking(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -57,6 +85,18 @@ export default function Login() {
             <CardDescription>Tus datos genealógicos son privados.</CardDescription>
           </CardHeader>
           <CardContent>
+            {devicePasskeyReady && (
+              <Button
+                type="button"
+                variant="outline"
+                className="mb-4 w-full gap-2"
+                onClick={handleDeviceUnlock}
+                disabled={deviceUnlocking}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {deviceUnlocking ? "Desbloqueando..." : "Desbloquear con Face ID / Touch ID"}
+              </Button>
+            )}
               <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Ingresar</TabsTrigger>

@@ -6,10 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, RefreshCw, Upload, Link as LinkIcon, LayoutDashboard } from "lucide-react";
+import { Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
+import {
+  clearDevicePasskey,
+  hasDevicePasskey,
+  isDevicePasskeySupported,
+  registerDevicePasskey,
+} from "@/lib/devicePasskey";
 
 
 const SEED_VARIANTES: [string, string][] = [
@@ -24,6 +30,8 @@ export default function Configuracion() {
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [aiCfg, setAiCfg] = useState<{ openai_api_key: string; hasKey: boolean }>({ openai_api_key: "", hasKey: false });
+  const [devicePasskeySupported, setDevicePasskeySupported] = useState(false);
+  const [devicePasskeyEnabled, setDevicePasskeyEnabled] = useState(false);
 
   const load = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -42,7 +50,11 @@ export default function Configuracion() {
       });
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    setDevicePasskeySupported(isDevicePasskeySupported());
+    setDevicePasskeyEnabled(hasDevicePasskey());
+  }, []);
 
   const saveOpenAIKey = async (rawKey: string) => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -63,6 +75,24 @@ export default function Configuracion() {
     if (error) return toast.error(error.message);
     toast.success("API key de OpenAI eliminada.");
     load();
+  };
+
+  const enableDevicePasskey = async () => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return toast.error("Sesión requerida");
+      await registerDevicePasskey(user.email || "GENAIA");
+      setDevicePasskeyEnabled(true);
+      toast.success("Face ID / Touch ID activado en este dispositivo.");
+    } catch (error: any) {
+      toast.error(error.message || "No se pudo activar Face ID / Touch ID.");
+    }
+  };
+
+  const disableDevicePasskey = () => {
+    clearDevicePasskey();
+    setDevicePasskeyEnabled(false);
+    toast.success("Face ID / Touch ID desactivado en este dispositivo.");
   };
 
 
@@ -157,6 +187,28 @@ export default function Configuracion() {
       <MenusConfig />
 
 
+      <Card className="archivo-card mb-6">
+        <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><ShieldCheck className="h-5 w-5" /> Face ID / Touch ID</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Activa una passkey local para desbloquear GENAIA en este dispositivo. En iPhone usará Face ID; en Mac compatible usará Touch ID.
+          </p>
+          {!devicePasskeySupported ? (
+            <p className="text-sm text-muted-foreground">Este navegador no soporta passkeys para esta app.</p>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {devicePasskeyEnabled ? (
+                <Button variant="outline" onClick={disableDevicePasskey}>Desactivar en este dispositivo</Button>
+              ) : (
+                <Button onClick={enableDevicePasskey}>Activar Face ID / Touch ID</Button>
+              )}
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            La primera vez en cada dispositivo debes entrar con correo y contraseña. Después puedes desbloquear esta sesión con biometría.
+          </p>
+        </CardContent>
+      </Card>
 
 
       <Card className="archivo-card mb-6">
