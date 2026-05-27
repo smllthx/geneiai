@@ -5,31 +5,50 @@
 export type NavPreset = "basico" | "avanzado" | "pro" | "personalizado";
 
 const PRESET_KEY = "genaia:nav-preset";
+const NAV_VERSION_KEY = "genaia:nav-version";
 const HIDDEN_KEY = (group: string) => `genaia:nav-hidden:${group}`;
 const MOBILE_KEY = "genaia:nav-mobile"; // array de paths para la barra inferior
 
-export const DEFAULT_MOBILE: string[] = ["/inicio", "/arbol", "/personas", "/fotos", "/investigacion"];
+export const DEFAULT_MOBILE: string[] = ["/inicio", "/arbol", "/personas", "/sugerencias", "/asistente"];
 
 // Qué se oculta en cada preset (paths). El preset "pro" no oculta nada.
 const PRESET_HIDDEN: Record<NavPreset, Record<string, string[]>> = {
   basico: {
     primary: ["/calendario", "/familias"],
-    investigation: ["/insights", "/coincidencias", "/adn", "/parecidos", "/fuentes", "/busqueda-ia"],
+    investigation: ["/coincidencias", "/adn", "/parecidos", "/fuentes", "/busqueda-ia", "/insights"],
     utility: ["/credenciales", "/fusionar", "/investigacion?tab=paralelo"],
     mobile: [],
   },
   avanzado: {
     primary: [],
-    investigation: ["/parecidos"],
-    utility: ["/fusionar"],
+    investigation: ["/busqueda-ia", "/insights"],
+    utility: ["/investigacion?tab=paralelo"],
     mobile: [],
   },
-  pro: { primary: [], investigation: [], utility: [], mobile: [] },
+  pro: {
+    primary: [],
+    investigation: ["/busqueda-ia", "/insights"],
+    utility: ["/investigacion?tab=paralelo"],
+    mobile: [],
+  },
   personalizado: { primary: [], investigation: [], utility: [], mobile: [] },
 };
 
+function migrateNavDefaults() {
+  try {
+    if (localStorage.getItem(NAV_VERSION_KEY) === "familysearch-2026-05-27") return;
+    localStorage.setItem(PRESET_KEY, "avanzado");
+    Object.entries(PRESET_HIDDEN.avanzado).forEach(([group, hidden]) => {
+      localStorage.setItem(HIDDEN_KEY(group), JSON.stringify(hidden));
+    });
+    localStorage.setItem(MOBILE_KEY, JSON.stringify(DEFAULT_MOBILE));
+    localStorage.setItem(NAV_VERSION_KEY, "familysearch-2026-05-27");
+  } catch {}
+}
+
 export function getPreset(): NavPreset {
-  try { return (localStorage.getItem(PRESET_KEY) as NavPreset) || "pro"; } catch { return "pro"; }
+  migrateNavDefaults();
+  try { return (localStorage.getItem(PRESET_KEY) as NavPreset) || "avanzado"; } catch { return "avanzado"; }
 }
 
 export function setPreset(p: NavPreset) {
@@ -46,6 +65,7 @@ export function setPreset(p: NavPreset) {
 }
 
 export function getHidden(group: string): string[] {
+  migrateNavDefaults();
   try {
     const raw = localStorage.getItem(HIDDEN_KEY(group));
     if (raw) return JSON.parse(raw);
@@ -73,6 +93,7 @@ export function filterByHidden<T extends { to: string }>(group: string, items: T
 }
 
 export function getMobileItems(): string[] {
+  migrateNavDefaults();
   try {
     const raw = localStorage.getItem(MOBILE_KEY);
     if (raw) return JSON.parse(raw);

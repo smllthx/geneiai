@@ -78,7 +78,7 @@ export default function Asistente() {
       if (error || data?.error) {
         if (!isCreditOrAiError(error ?? data?.error)) throw (error ?? new Error(data.error));
         data = await localAssistantReply(text);
-        toast.info("Configura OpenAI para respuestas completas de ChatGPT. Usé una respuesta local.");
+        toast.info("🔑 Activa ChatGPT en Configuración → IA. Guardá la API key y la app se reinicia sola.");
       }
       const events: ToolEvent[] = data?.tool_events ?? [];
       setMessages((m) => [...m, { role: "assistant", content: data?.content || "(sin respuesta)", tools: events }]);
@@ -98,7 +98,7 @@ export default function Asistente() {
     } catch (e: any) {
       const data = await localAssistantReply(text);
       setMessages((m) => [...m, { role: "assistant", content: data.content, tools: data.tool_events }]);
-      toast.info("Respuesta local activada. Configura OpenAI para usar ChatGPT.");
+      toast.info("🤖 Respuesta local activada. Para ChatGPT: Configuración → IA → Guardar y reiniciar.");
     } finally {
       setLoading(false);
     }

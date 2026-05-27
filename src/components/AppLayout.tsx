@@ -20,34 +20,32 @@ import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import GlobalDataSync from "@/components/GlobalDataSync";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
+import { toast } from "sonner";
 
 
 const primaryNavBase = [
-  { to: "/inicio", label: "Inicio", icon: Home },
-  { to: "/sugerencias", label: "Sugerencias", icon: LightbulbIcon },
-  { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
-  { to: "/personas", label: "Personas", icon: Users },
-  { to: "/familias", label: "Familias", icon: Heart },
-  { to: "/documentos", label: "Documentos", icon: FileText },
-  { to: "/fotos", label: "Fotos", icon: ImageIcon },
-  { to: "/calendario", label: "Calendario", icon: Calendar },
+  { to: "/inicio", label: "🏠 Inicio", icon: Home },
+  { to: "/arbol", label: "🌳 Árbol familiar", icon: GitBranch },
+  { to: "/personas", label: "👤 Personas", icon: Users },
+  { to: "/familias", label: "❤️ Familias", icon: Heart },
+  { to: "/sugerencias", label: "✅ Tareas y pistas", icon: LightbulbIcon },
+  { to: "/fotos", label: "🖼️ Recuerdos", icon: ImageIcon },
+  { to: "/documentos", label: "📄 Documentos", icon: FileText },
+  { to: "/calendario", label: "📅 Calendario", icon: Calendar },
 ];
 const investigationNav = [
-  { to: "/asistente", label: "Asistente IA", icon: Bot },
-  { to: "/busqueda-ia", label: "Búsqueda IA", icon: Sparkles },
-  { to: "/insights", label: "Insights IA", icon: Lightbulb },
-  { to: "/investigacion", label: "Investigación", icon: Sparkles },
-  { to: "/coincidencias", label: "Coincidencias", icon: Compass },
-  { to: "/adn", label: "ADN / Origen", icon: Dna },
-  { to: "/parecidos", label: "Rasgos & parecidos", icon: Scan },
-  { to: "/fuentes", label: "Fuentes", icon: BookOpen },
+  { to: "/asistente", label: "🤖 Asistente ChatGPT", icon: Bot },
+  { to: "/investigacion", label: "✨ Centro de investigación", icon: Sparkles },
+  { to: "/adn", label: "🧬 ADN y orígenes", icon: Dna },
+  { to: "/fuentes", label: "📚 Fuentes", icon: BookOpen },
+  { to: "/coincidencias", label: "🔎 Coincidencias", icon: Compass },
+  { to: "/parecidos", label: "🖼️ Rasgos y parecidos", icon: Scan },
 ];
 const utilityNav = [
-  { to: "/importar", label: "Importar / Exportar", icon: Upload },
-  { to: "/investigacion?tab=paralelo", label: "Agentes en paralelo", icon: Bot },
-  { to: "/credenciales", label: "Credenciales", icon: KeyRound },
-  { to: "/configuracion", label: "Configuración", icon: Settings },
-  { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
+  { to: "/importar", label: "⬆️ Importar / Exportar", icon: Upload },
+  { to: "/fusionar", label: "🧩 Fusionar duplicados", icon: Merge },
+  { to: "/credenciales", label: "🔐 Credenciales", icon: KeyRound },
+  { to: "/configuracion", label: "⚙️ Configuración", icon: Settings },
 ];
 
 type NavItem = { to: string; label: string; icon: any };
@@ -145,6 +143,19 @@ export default function AppLayout() {
     localStorage.setItem(k, "1");
     supabase.functions.invoke("notificar-aniversarios").catch(() => {});
   }, [user?.id]);
+
+  useEffect(() => {
+    const onEdgeError = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.message) return;
+      toast.error(detail.message, {
+        description: detail.functionName ? `Función: ${detail.functionName}` : undefined,
+        duration: 7000,
+      });
+    };
+    window.addEventListener("genaia:edge-error", onEdgeError);
+    return () => window.removeEventListener("genaia:edge-error", onEdgeError);
+  }, []);
 
 
   return (

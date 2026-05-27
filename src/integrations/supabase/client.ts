@@ -15,3 +15,53 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+const originalInvoke = supabase.functions.invoke.bind(supabase.functions);
+
+supabase.functions.invoke = (async (functionName: string, options?: any) => {
+  const result = await originalInvoke(functionName as any, options);
+  if (!result.error) return result;
+
+  let detail = "";
+  const context = (result.error as any).context;
+  try {
+    if (context?.clone) {
+      const raw = await context.clone().text();
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          detail = parsed.error || parsed.message || raw;
+        } catch {
+          detail = raw;
+        }
+      }
+    }
+  } catch {
+    detail = "";
+  }
+
+  const rawMessage = detail || result.error.message || "Error de función Edge";
+  const normalized = rawMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  let friendly = rawMessage;
+
+  if (normalized.includes("openai no configurado") || normalized.includes("api key")) {
+    friendly = "🔑 Falta activar ChatGPT: abre Configuración → IA, guarda tu API key de OpenAI y la app se reiniciará para aplicar el cambio.";
+  } else if (normalized.includes("invalid_api_key") || normalized.includes("incorrect api key") || normalized.includes("401")) {
+    friendly = "🔑 La API key de OpenAI no fue aceptada. Revisa que empiece con sk- y vuelve a guardarla en Configuración → IA.";
+  } else if (normalized.includes("insufficient_quota") || normalized.includes("quota") || normalized.includes("429")) {
+    friendly = "⏳ OpenAI respondió que tu cuenta no tiene cuota disponible o está limitada temporalmente.";
+  } else if (normalized.includes("non-2xx") || normalized.includes("edge function")) {
+    friendly = `⚙️ La función IA “${functionName}” respondió con error. Revisa que la API key esté guardada y que las funciones Edge estén desplegadas en Supabase.`;
+  }
+
+  (result.error as any).message = friendly;
+  (result.error as any).details = rawMessage;
+
+  try {
+    window.dispatchEvent(new CustomEvent("genaia:edge-error", {
+      detail: { functionName, message: friendly, raw: rawMessage },
+    }));
+  } catch {}
+
+  return result;
+}) as typeof supabase.functions.invoke;

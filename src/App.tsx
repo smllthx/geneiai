@@ -35,12 +35,9 @@ const Inferencias = lazy(() => import("./pages/Inferencias"));
 const Lugares = lazy(() => import("./pages/Lugares"));
 const LineaDeTiempo = lazy(() => import("./pages/LineaDeTiempo"));
 const Configuracion = lazy(() => import("./pages/Configuracion"));
-const AgentesParalelo = lazy(() => import("./pages/AgentesParalelo"));
 const ConfigurarApp = lazy(() => import("./pages/ConfigurarApp"));
 const Fuentes = lazy(() => import("./pages/Fuentes"));
 const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
-const Insights = lazy(() => import("./pages/Insights"));
-const BusquedaIA = lazy(() => import("./pages/BusquedaIA"));
 const Fusionar = lazy(() => import("./pages/Fusionar"));
 const Sugerencias = lazy(() => import("./pages/Sugerencias"));
 const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
@@ -103,12 +100,12 @@ const App = () => (
                   <Route path="/asistente" element={<Asistente />} />
                   <Route path="/credenciales" element={<Credenciales />} />
                   <Route path="/parecidos" element={<Parecidos />} />
-                  <Route path="/agentes-paralelo" element={<AgentesParalelo />} />
+                  <Route path="/agentes-paralelo" element={<Navigate to="/investigacion?tab=paralelo" replace />} />
                   <Route path="/pistas" element={<Pistas />} />
                   <Route path="/hipotesis" element={<Hipotesis />} />
                   <Route path="/inferencias" element={<Inferencias />} />
-                  <Route path="/insights" element={<Insights />} />
-                  <Route path="/busqueda-ia" element={<BusquedaIA />} />
+                  <Route path="/insights" element={<Navigate to="/investigacion?tab=insights" replace />} />
+                  <Route path="/busqueda-ia" element={<Navigate to="/investigacion?tab=busqueda" replace />} />
                   <Route path="/fusionar" element={<Fusionar />} />
                   <Route path="/sugerencias" element={<Sugerencias />} />
                   <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />

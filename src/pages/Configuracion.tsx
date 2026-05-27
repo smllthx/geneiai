@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck } from "lucide-react";
+import { Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
@@ -22,6 +22,23 @@ const SEED_VARIANTES: [string, string][] = [
   ["Sanguineti","Sanguinetti"],["Sanguineti","Sanguinetto"],
   ["Aeschlimann","Aeschliman"],["Aeschlimann","Eschlimann"],
   ["Queirolo","Queyrolo"],["Queirolo","Quirolo"],["Queirolo","Cairolo"],
+];
+
+const AI_FEATURES = [
+  "🤖 Asistente virtual GENAIA",
+  "✨ Búsqueda IA por persona",
+  "🧠 Insights e hipótesis avanzadas",
+  "📜 Biografía automática",
+  "🌎 Contexto histórico",
+  "🧬 ADN y origen",
+  "📄 Lectura de documentos y PDFs",
+  "🖼️ Análisis de fotos y retratos",
+  "👥 Detección de duplicados",
+  "🔎 Coincidencias en internet",
+  "🧾 Sugerencias desde documentos",
+  "🧩 Agentes en paralelo",
+  "🛠️ Diagnóstico de errores",
+  "🎨 Cuadros genealógicos",
 ];
 
 export default function Configuracion() {
@@ -59,13 +76,25 @@ export default function Configuracion() {
   const saveOpenAIKey = async (rawKey: string) => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
+    if (!rawKey || rawKey.includes("•")) {
+      toast.info("🔄 La API key guardada se mantiene igual. Reiniciando para aplicar la configuración IA…");
+      await supabase.auth.refreshSession();
+      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 700);
+      return;
+    }
+    const clean = rawKey.trim();
+    if (!clean.startsWith("sk-")) return toast.error("🔑 Esa API key no parece de OpenAI. Debe empezar con sk-.");
     const value: any = { user_id: user.id, ai_preferred_provider: "openai" };
-    // No sobrescribir si el campo muestra los puntos enmascarados
-    if (rawKey && !rawKey.includes("•")) value.openai_api_key = rawKey.trim();
+    value.openai_api_key = clean;
     const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
-    toast.success("Configuración de IA guardada. La app usará ChatGPT/OpenAI con tu cuenta.");
-    load();
+    toast.success("✅ ChatGPT quedó guardado. Reiniciando la app para aplicar IA en todas las secciones…");
+    try {
+      localStorage.setItem("genaia:ai-config-updated", String(Date.now()));
+      await supabase.auth.refreshSession();
+    } finally {
+      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 900);
+    }
   };
 
   const clearOpenAIKey = async () => {
@@ -159,10 +188,10 @@ export default function Configuracion() {
 
   return (
     <div>
-      <PageHeader title="Configuración" subtitle="IA, conexiones, variantes de apellido y datos de ejemplo." />
+      <PageHeader title="Configuración" subtitle="IA, conexiones, menús, variantes de apellido y datos de ejemplo." />
 
       <Card className="archivo-card mb-6">
-        <CardHeader><CardTitle className="font-serif text-xl">IA — Tu cuenta de OpenAI</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-serif text-xl">🤖 IA — ChatGPT con tu cuenta de OpenAI</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Pegá tu <strong>API key</strong> de OpenAI (creala en <a className="underline text-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>). Todas las funciones de IA de la app usarán <strong>tu cuenta de OpenAI/ChatGPT</strong>.
@@ -174,11 +203,31 @@ export default function Configuracion() {
               value={aiCfg.openai_api_key}
               onChange={(e) => setAiCfg({ ...aiCfg, openai_api_key: e.target.value })}
             />
-            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar</Button>
+            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar y reiniciar</Button>
             {aiCfg.hasKey && <Button variant="outline" onClick={clearOpenAIKey}>Borrar key</Button>}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {aiCfg.hasKey ? "Tu API key está guardada y se usa en biografías, asistente, búsqueda IA, contexto histórico, fotos, documentos y agentes." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+            {aiCfg.hasKey ? "✅ Tu API key está guardada. Si acabas de cambiarla, usa Guardar y reiniciar para refrescar la sesión." : "⚠️ Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="archivo-card mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-serif text-xl">
+            <Sparkles className="h-5 w-5" /> Opciones IA detectadas ({AI_FEATURES.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {AI_FEATURES.map((item) => (
+              <div key={item} className="rounded-xl border border-border/70 bg-card/45 px-3 py-2 text-sm">
+                {item}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Todas estas opciones pasan por ChatGPT/OpenAI. Si aparece un error Edge, ahora la app mostrará qué función falló y qué revisar.
           </p>
         </CardContent>
       </Card>
