@@ -6,7 +6,7 @@ const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 
 export const isCreditOrAiError = (e: any) => {
   const msg = norm(`${e?.message ?? e?.error?.message ?? e?.details ?? e ?? ""}`);
-  return msg.includes("credit") || msg.includes("402") || msg.includes("429") || msg.includes("gateway") || msg.includes("non-2xx");
+  return msg.includes("openai no configurado") || msg.includes("api key") || msg.includes("402") || msg.includes("429") || msg.includes("non-2xx");
 };
 
 export function localPersonaInsight(persona: any) {
@@ -41,11 +41,11 @@ export async function localAssistantReply(text: string) {
   const tool_events: any[] = [];
   if (q.includes("arbol")) {
     tool_events.push({ name: "navigate_to", result: { ok: true, navigate_to: "/arbol" } });
-    return { content: "Abro el árbol familiar. No usé créditos: esta acción se resolvió localmente.", tool_events };
+    return { content: "Abro el árbol familiar. Esta acción se resolvió localmente.", tool_events };
   }
   if (q.includes("persona")) {
     tool_events.push({ name: "navigate_to", result: { ok: true, navigate_to: "/personas" } });
-    return { content: "Te llevo a Personas para revisar o editar fichas. Modo local sin créditos activo.", tool_events };
+    return { content: "Te llevo a Personas para revisar o editar fichas.", tool_events };
   }
   if (q.includes("coherencia") || q.includes("verifica")) {
     const [{ data: personas }, { data: rels }] = await Promise.all([
@@ -56,7 +56,7 @@ export async function localAssistantReply(text: string) {
     return { content: `Revisión local terminada: ${issues.length} aviso(s) encontrados. ${issues.length ? "Abrí Insights o el árbol para revisarlos." : "El árbol se ve coherente."}`, tool_events };
   }
   if (q.includes("buscar") || q.includes("investigar")) {
-    return { content: "Puedo preparar búsquedas sin gastar créditos: revisá nombres, fechas, lugares, FamilySearch, cementerios y prensa local. Para análisis generativo real se necesitarían créditos, por eso ahora uso modo local.", tool_events };
+    return { content: "Puedo preparar búsquedas locales con nombres, fechas, lugares, FamilySearch, cementerios y prensa local. Para análisis generativo con ChatGPT, configura tu API key de OpenAI en Configuración → IA.", tool_events };
   }
-  return { content: "Estoy en modo local sin créditos. Puedo navegar, revisar coherencia, ordenar datos y sugerir próximos pasos sin llamar a IA de pago.", tool_events };
+  return { content: "Puedo navegar, revisar coherencia, ordenar datos y sugerir próximos pasos localmente. Para respuestas generativas con ChatGPT, configura tu API key de OpenAI en Configuración → IA.", tool_events };
 }

@@ -63,9 +63,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
-
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -110,11 +107,7 @@ Deno.serve(async (req) => {
 
     const userPrompt = `Persona objetivo:\n${JSON.stringify(personaCtx, null, 2)}\n\nFamiliares conocidos:\n${JSON.stringify(familia, null, 2)}`;
 
-    // Call Lovable AI with tool-calling for structured output
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiRes = await _aiFetch(req, {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM },
@@ -170,15 +163,13 @@ Deno.serve(async (req) => {
           },
         }],
         tool_choice: { type: "function", function: { name: "plan_investigacion" } },
-      }),
     });
 
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite de requests alcanzado, intentá en un minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de Lovable AI. Recargá en Settings → Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (!aiRes.ok) {
       const t = await aiRes.text();
-      console.error("AI gateway error", aiRes.status, t);
-      throw new Error(`AI gateway ${aiRes.status}`);
+      console.error("OpenAI error", aiRes.status, t);
+      throw new Error(`OpenAI ${aiRes.status}`);
     }
 
     const aiJson = await aiRes.json();

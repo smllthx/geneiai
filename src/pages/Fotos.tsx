@@ -66,11 +66,11 @@ export default function Fotos() {
       setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setOpen(false);
       load();
 
-      // Análisis contextual local en segundo plano: no consume créditos y no bloquea la subida.
+      // Análisis contextual local en segundo plano; no bloquea la subida.
       if (inserted?.id) {
         const a = localPhotoAnalysis({ titulo, descripcion: desc, fechaAprox });
         await supabase.from("fotos").update({ descripcion: a.descripcion, fecha_aprox: a.ano_estimado ? String(a.ano_estimado) : (a.decada_estimada ?? fechaAprox) }).eq("id", inserted.id);
-        toast.success("Análisis local agregado sin usar créditos");
+        toast.success("Análisis local agregado");
         load();
       }
     } catch (e: any) { toast.error(e.message); }

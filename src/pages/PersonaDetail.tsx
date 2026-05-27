@@ -248,7 +248,7 @@ export default function PersonaDetail() {
         <meta property="og:description" content={metaDesc} />
         <meta property="og:type" content="profile" />
         {p.foto_url && <meta property="og:image" content={p.foto_url} />}
-        <link rel="canonical" href={`https://archivo-familiar-vivo.lovable.app/personas/${id}`} />
+        <link rel="canonical" href={`${window.location.origin}/personas/${id}`} />
       </Helmet>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1447,4 +1447,3 @@ function PersonaQuickMenu({
     </>
   );
 }
-

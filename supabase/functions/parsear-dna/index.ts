@@ -31,18 +31,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Texto vacío' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const aiKey = Deno.env.get('LOVABLE_API_KEY')!
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const aiRes = await _aiFetch(req, {
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'Extrae regiones étnicas y porcentajes de tests de ADN (MyHeritage, AncestryDNA, 23andMe, FTDNA, LivingDNA). Responde SOLO JSON.' },
           { role: 'user', content: `Texto del reporte:\n\n${String(texto).slice(0, 12000)}\n\nDevuelve JSON: { "items": [{ "region": string, "porcentaje": number }] }. Normaliza nombres (ej. "Iberian" → "Ibérico (España/Portugal)"). Excluye totales y porcentajes 0.` },
         ],
         response_format: { type: 'json_object' },
-      }),
     })
     if (!aiRes.ok) {
       const t = await aiRes.text()

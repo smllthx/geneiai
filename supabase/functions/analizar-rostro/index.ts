@@ -1,4 +1,4 @@
-// Analiza una foto y extrae rasgos faciales estructurados con Lovable AI (Gemini vision).
+// Analiza una foto y extrae rasgos faciales estructurados con OpenAI/ChatGPT.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
 
@@ -56,13 +56,7 @@ Deno.serve(async (req) => {
     const { persona_id, foto_url, foto_id } = await req.json();
     if (!persona_id || !foto_url) throw new Error("Faltan persona_id o foto_url");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurado");
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
+    const res = await _aiFetch(req, {
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: "Eres un analista de rasgos faciales para genealogía. Observa la foto y describe rasgos visibles usando exactamente el esquema. Si no puedes determinar algo, usa 'desconocido'. No inventes." },
@@ -73,12 +67,10 @@ Deno.serve(async (req) => {
         ],
         tools: [{ type: "function", function: { name: "guardar_rasgos", description: "Guarda los rasgos faciales", parameters: SCHEMA } }],
         tool_choice: { type: "function", function: { name: "guardar_rasgos" } },
-      }),
     });
 
     if (res.status === 429) throw new Error("Límite de uso alcanzado (429). Intenta más tarde.");
-    if (res.status === 402) throw new Error("Créditos agotados. Añade créditos en Lovable.");
-    if (!res.ok) throw new Error(`AI gateway error ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new Error(`OpenAI error ${res.status}: ${await res.text()}`);
 
     const json = await res.json();
     const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
@@ -86,7 +78,7 @@ Deno.serve(async (req) => {
 
     const { data: saved, error } = await supabase.from("rasgos_faciales").insert({
       user_id: user.id, persona_id, foto_id: foto_id ?? null, foto_url,
-      rasgos, resumen: rasgos.resumen ?? null, modelo: "google/gemini-2.5-pro",
+      rasgos, resumen: rasgos.resumen ?? null, modelo: "openai",
     }).select().single();
     if (error) throw error;
 

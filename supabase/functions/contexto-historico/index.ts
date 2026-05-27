@@ -45,18 +45,13 @@ ${p.nacionalidad ? `Nacionalidad: ${p.nacionalidad}.` : ''}
 Entrega 6 a 10 puntos cortos en formato JSON: { "puntos": [{ "anio": número o rango, "titulo": string, "detalle": string, "categoria": "politica"|"economia"|"guerra"|"migracion"|"cultura"|"tecnologia"|"epidemia"|"local" }] }.
 Prioriza hechos locales/regionales por sobre globales. En español. Sin emojis.`
 
-    const aiKey = Deno.env.get('LOVABLE_API_KEY')!
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const aiRes = await _aiFetch(req, {
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'Eres historiador genealogista. Responde SOLO con JSON válido.' },
           { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-      }),
     })
     if (!aiRes.ok) {
       const t = await aiRes.text()

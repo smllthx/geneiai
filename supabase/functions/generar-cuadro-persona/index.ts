@@ -22,9 +22,6 @@ Deno.serve(async (req) => {
     const { persona, estilo } = await req.json();
     if (!persona) throw new Error('Falta persona');
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY no configurado');
-
     const nombre = `${persona.nombres ?? ''} ${persona.apellidos ?? ''}`.trim();
     const nac = persona.nac_fecha ?? persona.nac_fecha_aprox ?? '';
     const def = persona.defuncion_fecha ?? '';
@@ -41,22 +38,15 @@ tipografía serif elegante con el nombre completo grande arriba,
 debajo: fechas (${nac} - ${def}), ocupación: ${ocup}, origen: ${lugar} ${nacionalidad}.
 Apariencia de cuadro listo para imprimir y colgar. Sin marcas de agua. Idioma español.`;
 
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const resp = await _aiFetch(req, {
         model: 'google/gemini-2.5-flash-image',
         messages: [{ role: 'user', content: prompt }],
         modalities: ['image', 'text'],
-      }),
     });
 
     if (!resp.ok) {
       const t = await resp.text();
-      throw new Error(`Gateway ${resp.status}: ${t}`);
+      throw new Error(`OpenAI ${resp.status}: ${t}`);
     }
     const data = await resp.json();
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;

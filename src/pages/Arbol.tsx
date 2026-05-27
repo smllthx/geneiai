@@ -393,7 +393,7 @@ export default function Arbol() {
         user_id: user.id,
         person_id: pid,
         tipo: "otro" as const,
-        descripcion: `Agente local sin créditos: ${job.titulo} — ${job.descripcion}`,
+        descripcion: `Agente local: ${job.titulo} — ${job.descripcion}`,
       })));
       const results = await Promise.allSettled(agentJobs.map(async () => {
         setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1), ok: p.ok + 1 }));

@@ -77,24 +77,17 @@ Deno.serve(async (req) => {
     // Mini biografía con IA (mejor esfuerzo)
     let bio = ''
     try {
-      const aiKey = Deno.env.get('LOVABLE_API_KEY')
-      if (aiKey) {
-        const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const r = await _aiFetch(req, {
             model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: 'Eres genealogista. Escribe una mini biografía cálida en español (3-4 frases) basada ESTRICTAMENTE en los datos provistos, sin inventar.' },
               { role: 'user', content: JSON.stringify(ficha) },
             ],
-          }),
         })
         if (r.ok) {
           const j = await r.json()
           bio = j.choices?.[0]?.message?.content ?? ''
         }
-      }
     } catch (_) {}
 
     return new Response(JSON.stringify({ ficha, bio }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

@@ -27,13 +27,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY no configurada" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const system = `Eres un ingeniero de soporte de una PWA React. Analiza el error y devuelve JSON con:
 - diagnosis: 1-2 frases técnicas claras en español
 - severity: "low" | "medium" | "high"
@@ -49,20 +42,13 @@ Stack:
 ${(stack || "").slice(0, 2000)}
 Contexto: ${JSON.stringify(contexto || {}).slice(0, 1000)}`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
-      },
-      body: JSON.stringify({
+    const r = await _aiFetch(req, {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
         ],
         response_format: { type: "json_object" },
-      }),
     });
 
     if (!r.ok) {

@@ -78,7 +78,7 @@ export default function Asistente() {
       if (error || data?.error) {
         if (!isCreditOrAiError(error ?? data?.error)) throw (error ?? new Error(data.error));
         data = await localAssistantReply(text);
-        toast.info("GENAIA respondió en modo local sin gastar créditos.");
+        toast.info("Configura OpenAI para respuestas completas de ChatGPT. Usé una respuesta local.");
       }
       const events: ToolEvent[] = data?.tool_events ?? [];
       setMessages((m) => [...m, { role: "assistant", content: data?.content || "(sin respuesta)", tools: events }]);
@@ -98,7 +98,7 @@ export default function Asistente() {
     } catch (e: any) {
       const data = await localAssistantReply(text);
       setMessages((m) => [...m, { role: "assistant", content: data.content, tools: data.tool_events }]);
-      toast.info("Modo local activado: sin créditos ni bloqueo.");
+      toast.info("Respuesta local activada. Configura OpenAI para usar ChatGPT.");
     } finally {
       setLoading(false);
     }

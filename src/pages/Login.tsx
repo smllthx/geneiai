@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,10 +46,12 @@ export default function Login() {
 
   const handleOAuth = async (provider: "google" | "apple") => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/inicio` },
+    });
     setLoading(false);
-    if (result.error) return toast.error(result.error.message);
-    if (!result.redirected) navigate("/inicio", { replace: true });
+    if (error) toast.error(error.message);
   };
 
   return (

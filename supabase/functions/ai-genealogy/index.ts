@@ -1,5 +1,5 @@
 // AI genealogy assistant — agente multi-herramienta que opera sobre el árbol del usuario.
-// Lovable AI Gateway con tool-calling. Algunas herramientas crean sugerencias, otras ejecutan
+// OpenAI/ChatGPT con tool-calling. Algunas herramientas crean sugerencias, otras ejecutan
 // acciones directas (crear persona, relación, lanzar mega-buscador, etc).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -20,7 +20,6 @@ async function _aiFetch(req: Request, body: any) {
 // =======================================
 
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
@@ -366,23 +365,14 @@ async function executeTool(
   }
 }
 
-async function callModel(model: string, messages: any[], _key: string, req: Request) {
-  // pickAiTarget prioriza: tu OpenAI key en Configuración > OPENAI_API_KEY secret > Lovable Gateway.
+async function callModel(model: string, messages: any[], req: Request) {
   const target = await _pickAiTarget(req.headers.get("Authorization"), model);
-  const envOpenAI = Deno.env.get("OPENAI_API_KEY");
-  const finalKey = target.provider === "openai-user" ? target.key : (envOpenAI || target.key);
-  const finalUrl = target.provider === "openai-user" || envOpenAI
-    ? "https://api.openai.com/v1/chat/completions"
-    : target.url;
-  const finalModel = (target.provider === "openai-user" || envOpenAI)
-    ? (target.model.startsWith("gpt-") ? target.model : "gpt-4o-mini")
-    : target.model;
-  const r = await fetch(finalUrl, {
+  const r = await fetch(target.url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${finalKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: finalModel, messages, tools, tool_choice: "auto" }),
+    headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: target.model, messages, tools, tool_choice: "auto" }),
   });
-  if (!r.ok) throw new Error(`gateway ${r.status}: ${await r.text()}`);
+  if (!r.ok) throw new Error(`OpenAI ${r.status}: ${await r.text()}`);
   return await r.json();
 }
 
@@ -403,10 +393,6 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const body = await req.json();
     const incoming: any[] = Array.isArray(body.messages) ? body.messages : [];
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY no configurada" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
     // Pull proband context to inject
     const { data: prof } = await sb.from("profiles").select("proband_id").eq("id", userId).maybeSingle();
     let probandCtx = "";
@@ -423,16 +409,14 @@ Deno.serve(async (req) => {
     for (let step = 0; step < 8; step++) {
       let resp: any;
       try {
-        resp = await callModel(model, messages, key, req);
+        resp = await callModel(model, messages, req);
       } catch (e) {
         const msg = String((e as Error).message);
         if (!usedFallback && (msg.includes("404") || msg.includes("400"))) {
           model = FALLBACK_MODEL; usedFallback = true;
-          resp = await callModel(model, messages, key, req);
+          resp = await callModel(model, messages, req);
         } else if (msg.includes("429")) {
           return new Response(JSON.stringify({ error: "Límite de uso alcanzado. Esperá un minuto." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        } else if (msg.includes("402")) {
-          return new Response(JSON.stringify({ error: "Sin créditos en Lovable AI. Agregá créditos en Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         } else { throw e; }
       }
 

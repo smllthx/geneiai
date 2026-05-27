@@ -24,8 +24,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
 const SYSTEM = `Eres un biógrafo genealógico. Escribe una biografía en español, en tercera persona,
 clara, cálida y respetuosa, basada SOLO en los datos provistos. No inventes hechos.
 Cuando un dato sea inferido o probable, dilo con expresiones como "probablemente", "según el contexto histórico".
@@ -39,7 +37,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    // La key (tu OpenAI o Lovable) la elige _aiFetch.
+    // La key de OpenAI la elige _aiFetch.
 
     const auth = req.headers.get("Authorization") ?? "";
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: auth } } });
@@ -85,7 +83,6 @@ Deno.serve(async (req) => {
       ],
     });
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite alcanzado" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de IA" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (!aiRes.ok) throw new Error(`AI ${aiRes.status}`);
     const j = await aiRes.json();
     const bio: string = j.choices?.[0]?.message?.content?.trim() ?? "";

@@ -110,14 +110,9 @@ function parseGedcom(text: string): GedPerson[] {
 }
 
 // ---------- IA: extracción de personas de texto libre ----------
-async function extraerPersonasIA(texto: string, contextoDoc: string): Promise<GedPerson[]> {
-  const aiKey = Deno.env.get('LOVABLE_API_KEY')
-  if (!aiKey) return []
+async function extraerPersonasIA(req: Request, texto: string, contextoDoc: string): Promise<GedPerson[]> {
   const cap = texto.length > 40000 ? texto.slice(0, 40000) : texto
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const res = await _aiFetch(req, {
       model: 'google/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: 'Eres genealogista paleógrafo experto en documentos europeos y americanos del siglo XVIII al XXI (1700-2025). Dominas español (incl. colonial), italiano (toscano, latín eclesiástico), alemán (Kurrent, Sütterlin, Fraktur) e inglés moderno temprano. Extrae TODAS las personas mencionadas con su información biográfica disponible. Registra el nombre tal como aparece en el documento y, si aplica, la equivalencia vernácula en "notas" (p. ej. "Joannes → Juan / Giovanni / Johann"). No inventes datos.' },
@@ -155,7 +150,6 @@ async function extraerPersonasIA(texto: string, contextoDoc: string): Promise<Ge
         },
       }],
       tool_choice: { type: 'function', function: { name: 'extraer_personas' } },
-    }),
   })
   if (!res.ok) return []
   const j = await res.json()
@@ -248,7 +242,7 @@ Deno.serve(async (req) => {
 
       // 2) Si no es GEDCOM y hay texto, pedir extracción a IA
       if (detalle.length === 0 && texto.trim().length > 40) {
-        const ai = await extraerPersonasIA(texto, `${d.titulo} (${d.tipo})`)
+        const ai = await extraerPersonasIA(req, texto, `${d.titulo} (${d.tipo})`)
         detalle.push(...ai)
       }
 

@@ -31,7 +31,7 @@ interface Run {
 }
 
 const MODELS: Record<Provider, string[]> = {
-  gemini: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash", "google/gemini-2.5-pro"],
+  gemini: ["openai/gpt-4o-mini", "openai/gpt-4o"],
 };
 
 const newTask = (): Task => ({
@@ -140,7 +140,7 @@ export default function AgentesParalelo() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Agentes en paralelo</h1>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Lanzá varios agentes de <span className="text-gradient font-semibold">Lovable AI</span> al mismo tiempo, cada uno con una tarea distinta. Los resultados, avisos y tareas enlazadas aparecen acá en vivo.
+          Lanzá varios agentes de <span className="text-gradient font-semibold">ChatGPT/OpenAI</span> al mismo tiempo, cada uno con una tarea distinta. Los resultados, avisos y tareas enlazadas aparecen acá en vivo.
         </p>
       </div>
 

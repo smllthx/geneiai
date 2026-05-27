@@ -58,13 +58,7 @@ Deno.serve(async (req) => {
     const { foto_id, foto_url } = await req.json();
     if (!foto_id || !foto_url) throw new Error("Faltan foto_id o foto_url");
 
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("LOVABLE_API_KEY no configurado");
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${KEY}` },
-      body: JSON.stringify({
+    const res = await _aiFetch(req, {
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: "Eres un historiador y archivista experto en fotografía familiar de los siglos XVIII a XXI. Observa la imagen y deduce contexto histórico (año, lugar, clase social, nacionalidad probable, edades, relaciones) usando indicios de vestimenta, mobiliario, tipo de papel, pose y composición. Si no puedes determinar algo, omítelo. Nunca inventes nombres." },
@@ -75,7 +69,6 @@ Deno.serve(async (req) => {
         ],
         tools: [{ type: "function", function: { name: "guardar_contexto", description: "Guarda el análisis contextual", parameters: SCHEMA } }],
         tool_choice: { type: "function", function: { name: "guardar_contexto" } },
-      }),
     });
     if (!res.ok) {
       const t = await res.text();

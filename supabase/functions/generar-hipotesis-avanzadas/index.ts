@@ -1,5 +1,5 @@
 // Genera hipótesis genealógicas avanzadas escaneando todo el árbol del usuario.
-// Usa Lovable AI con tool calling para producir hipótesis con probabilidad,
+// Usa OpenAI/ChatGPT con tool calling para producir hipótesis con probabilidad,
 // argumentos a favor / en contra y próxima acción sugerida. Las guarda en `hipotesis`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
@@ -23,8 +23,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
 const SYSTEM = `Eres un investigador genealógico experto.
 Analiza el árbol completo del usuario y genera entre 5 y 12 hipótesis genealógicas avanzadas y útiles.
 Cada hipótesis debe ser concreta, basada en los datos provistos (no inventes nombres). Ejemplos:
@@ -42,9 +40,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
-
     const auth = req.headers.get("Authorization") ?? "";
     const sb = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
@@ -74,10 +69,7 @@ Deno.serve(async (req) => {
       eventos: (eventos ?? []).map((e) => ({ p: e.persona_id, t: e.tipo, f: e.fecha ?? e.fecha_aprox, l: e.lugar_original })),
     };
 
-    const aiRes = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiRes = await _aiFetch(req, {
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: SYSTEM },
@@ -113,10 +105,8 @@ Deno.serve(async (req) => {
           },
         }],
         tool_choice: { type: "function", function: { name: "guardar_hipotesis" } },
-      }),
     });
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite alcanzado" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de IA" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (!aiRes.ok) throw new Error(`AI ${aiRes.status}: ${await aiRes.text()}`);
     const j = await aiRes.json();
     const args = j.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;

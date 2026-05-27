@@ -59,11 +59,7 @@ Deno.serve(async (req) => {
     let resultado = candidatos
     if (candidatos.length && candidatos.length <= 25) {
       try {
-        const aiKey = Deno.env.get('LOVABLE_API_KEY')!
-        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const aiRes = await _aiFetch(req, {
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: 'Eres genealogista. Decide si dos fichas son la MISMA persona. Responde JSON.' },
@@ -73,7 +69,6 @@ PARES:
 ${JSON.stringify(candidatos.map(c => ({ a: c.a, b: c.b })), null, 2)}` },
             ],
             response_format: { type: 'json_object' },
-          }),
         })
         if (aiRes.ok) {
           const ai = await aiRes.json()

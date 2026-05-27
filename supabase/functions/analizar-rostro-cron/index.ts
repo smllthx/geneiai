@@ -33,11 +33,8 @@ const SCHEMA = {
   required: ["forma_cara", "color_ojos", "color_pelo", "resumen"],
 };
 
-async function analizar(foto_url: string, key: string) {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-    body: JSON.stringify({
+async function analizar(req: Request, foto_url: string) {
+  const res = await _aiFetch(req, {
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: "Eres analista de rasgos faciales para genealogía. Usa 'desconocido' si no puedes determinar algo." },
@@ -48,7 +45,6 @@ async function analizar(foto_url: string, key: string) {
       ],
       tools: [{ type: "function", function: { name: "guardar_rasgos", parameters: SCHEMA } }],
       tool_choice: { type: "function", function: { name: "guardar_rasgos" } },
-    }),
   });
   if (!res.ok) return null;
   const json = await res.json();
@@ -60,7 +56,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const key = Deno.env.get("LOVABLE_API_KEY")!;
 
     // Selecciona fotos sin rasgos vinculados aún, con personas etiquetadas, máx 40/noche
     const { data: fotos } = await supabase
@@ -79,7 +74,7 @@ Deno.serve(async (req) => {
     const pendientes = fotos.filter(f => !yaProcesadas.has(f.id) && (f.personas_ids?.length ?? 0) > 0).slice(0, 40);
     let ok = 0;
     for (const f of pendientes) {
-      const rasgos = await analizar(f.url, key);
+      const rasgos = await analizar(req, f.url);
       if (!rasgos) continue;
       for (const persona_id of f.personas_ids) {
         await supabase.from("rasgos_faciales").insert({

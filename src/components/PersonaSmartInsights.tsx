@@ -61,7 +61,7 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
     insights.push({ icon: "🏛️", texto: `Vivió en el siglo ${siglo}.` });
   }
 
-  // Curiosidad extra local: no llama a IA externa, así no gasta créditos ni rompe si no hay saldo.
+  // Curiosidad extra local: no llama a IA externa.
   useEffect(() => {
     if (!persona?.id) return;
     setExtra([{ icon: "✨", texto: localPersonaInsight(persona) }]);

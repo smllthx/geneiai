@@ -9,13 +9,10 @@ const corsHeaders = {
 type Provider = "gemini" | "openai" | "anthropic";
 
 async function callGemini(model: string, prompt: string, system?: string, authHeader?: string | null): Promise<{ text: string }> {
-  // Usa la key de OpenAI del usuario si está configurada; si no, Lovable AI Gateway.
   const target = await pickAiTarget(authHeader ?? null, model);
-  const key = target.key;
-  if (!key) throw new Error("LOVABLE_API_KEY no configurada");
   const r = await fetch(target.url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: target.model,
       messages: [
@@ -26,9 +23,7 @@ async function callGemini(model: string, prompt: string, system?: string, authHe
   });
   if (!r.ok) {
     const t = await r.text();
-    if (r.status === 429) throw new Error("Límite de uso alcanzado en Lovable AI. Esperá un minuto.");
-    if (r.status === 402) throw new Error("Sin créditos en Lovable AI. Agregá créditos en Workspace → Usage.");
-    throw new Error(`Gemini error ${r.status}: ${t}`);
+    throw new Error(`OpenAI error ${r.status}: ${t}`);
   }
   const data = await r.json();
   return { text: data.choices?.[0]?.message?.content ?? "" };
@@ -37,14 +32,11 @@ async function callGemini(model: string, prompt: string, system?: string, authHe
 async function callOpenAI(model: string, prompt: string, system?: string, authHeader?: string | null) {
   // Prioriza la API key personal del usuario (app_config.openai_api_key)
   const target = await pickAiTarget(authHeader ?? null, model.startsWith("openai/") ? model : `openai/${model}`);
-  const key = target.provider === "openai-user" ? target.key : Deno.env.get("OPENAI_API_KEY");
-  if (!key) throw new Error("OPENAI_API_KEY no configurada. Agrégala en Configuración → IA o como secret.");
-  model = target.provider === "openai-user" ? target.model : model;
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(target.url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: target.model,
       messages: [
         ...(system ? [{ role: "system", content: system }] : []),
         { role: "user", content: prompt },

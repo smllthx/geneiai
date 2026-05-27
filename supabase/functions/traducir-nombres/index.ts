@@ -24,9 +24,6 @@ Deno.serve(async (req) => {
     if (!String(nombres).trim() && !String(apellidos).trim()) {
       return new Response(JSON.stringify({ variantes: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
-    const aiKey = Deno.env.get('LOVABLE_API_KEY')
-    if (!aiKey) return new Response(JSON.stringify({ error: 'no key' }), { status: 500, headers: corsHeaders })
-
     const ctxOrigen = [origen, nacionalidad].filter(Boolean).join(' / ') || 'desconocido'
 
     const sys = `Eres lingüista experta en onomástica histórica europea (1700-2025) en español, italiano, alemán e inglés.
@@ -39,10 +36,7 @@ Reglas:
 - No inventes apellidos sin equivalente: si no hay forma idiomática, mantén el original.
 - Devuelve siempre las 4 variantes (es, it, de, en).`;
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const res = await _aiFetch(req, {
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: sys },
@@ -75,11 +69,10 @@ Reglas:
           },
         }],
         tool_choice: { type: 'function', function: { name: 'variantes_nombre' } },
-      }),
     })
     if (!res.ok) {
       const t = await res.text()
-      return new Response(JSON.stringify({ error: 'gateway', detail: t }), { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'openai', detail: t }), { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const j = await res.json()
     const args = j.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments

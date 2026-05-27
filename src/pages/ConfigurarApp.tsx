@@ -187,8 +187,8 @@ export default function ConfigurarApp() {
               Activá los que quieras correr en paralelo desde "Agentes en paralelo".
             </p>
             {([
-              { id: "gemini", label: "Gemini (incluido en Lovable AI)", req: "Sin configuración extra" },
-              { id: "openai", label: "OpenAI (GPT-5)", req: "Requiere OPENAI_API_KEY" },
+              { id: "gemini", label: "OpenAI rápido", req: "Usa tu API key de OpenAI" },
+              { id: "openai", label: "OpenAI avanzado", req: "Usa tu API key de OpenAI" },
               { id: "anthropic", label: "Anthropic (Claude)", req: "Requiere ANTHROPIC_API_KEY" },
             ] as const).map((p) => (
               <label key={p.id} className="glass flex cursor-pointer items-center justify-between gap-3 rounded-2xl p-3">

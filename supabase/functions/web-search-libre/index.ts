@@ -1,4 +1,4 @@
-// Búsqueda web LIBRE (sin API keys) usando DuckDuckGo HTML + Wikipedia + Lovable AI para resumir.
+// Búsqueda web LIBRE usando DuckDuckGo HTML + Wikipedia + OpenAI/ChatGPT para resumir.
 // Genera sugerencias_externas con citas reales para una persona del árbol.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
@@ -24,7 +24,7 @@ const corsHeaders = {
 
 type Hit = { titulo: string; url: string; snippet: string; fuente: string };
 
-const UA = "Mozilla/5.0 (compatible; GenaiaBot/1.0; +https://geneiai.lovable.app)";
+const UA = "Mozilla/5.0 (compatible; GenaiaBot/1.0)";
 
 async function ddg(q: string, limit = 8): Promise<Hit[]> {
   try {
@@ -81,20 +81,14 @@ async function fetchText(url: string, maxChars = 4000): Promise<string> {
   } catch { return ""; }
 }
 
-async function lovableSummary(prompt: string): Promise<string> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) return "";
+async function openAISummary(req: Request, prompt: string): Promise<string> {
   try {
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const r = await _aiFetch(req, {
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: "Eres asistente genealógico. Responde en JSON conciso." },
           { role: "user", content: prompt },
         ],
-      }),
     });
     const j = await r.json();
     return j.choices?.[0]?.message?.content ?? "";
@@ -153,7 +147,7 @@ Deno.serve(async (req) => {
         `Extrae datos genealógicos verificables (fechas, lugares, padres, cónyuges, hijos, ocupación) de estos extractos web. ` +
         `Responde JSON: {"hallazgos":[{"dato":"...","cita":"url"}],"resumen":"..."}.\n\n` +
         blobs.map((b) => `[${b.url}]\n${b.text}`).join("\n\n---\n\n");
-      insight = await lovableSummary(prompt);
+      insight = await openAISummary(req, prompt);
     }
 
     // Persist as sugerencias (tipo: web_libre)

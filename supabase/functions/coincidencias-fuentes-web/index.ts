@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
     const { data: p } = await supa.from('personas').select('*').eq('id', persona_id).eq('user_id', user.id).maybeSingle()
     if (!p) return new Response(JSON.stringify({ error: 'persona no encontrada' }), { status: 404, headers: corsHeaders })
 
-    const aiKey = Deno.env.get('LOVABLE_API_KEY')!
     const ctx = `Nombre: ${p.nombres} ${p.apellidos}\nNac: ${p.nac_fecha ?? p.nac_fecha_aprox ?? '?'}\nDef: ${p.defuncion_fecha ?? '?'}\nNacionalidad/origen: ${p.nacionalidad ?? '?'}\nVariantes nombre: ${(p.variantes_nombre ?? []).join(', ')}`
 
     const sys = `Eres detective genealógico experto en bases de datos online (FamilySearch, MyHeritage, Geneanet, Ancestry, archivos parroquiales y civiles europeos y americanos, hemerotecas digitales).
@@ -43,10 +42,7 @@ Dado el perfil de una persona, propones entre 3 y 8 coincidencias plausibles ind
 Considera variantes ortográficas históricas (italiano antiguo, alemán Fraktur, español colonial 1700-1900).
 No inventes URLs cerradas: usa URLs raíz de búsqueda si no conoces el registro exacto.`;
 
-    const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${aiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const r = await _aiFetch(req, {
         model: 'google/gemini-3-flash-preview',
         messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
         tools: [{
@@ -77,9 +73,8 @@ No inventes URLs cerradas: usa URLs raíz de búsqueda si no conoces el registro
           },
         }],
         tool_choice: { type: 'function', function: { name: 'coincidencias_web' } },
-      }),
     })
-    if (!r.ok) return new Response(JSON.stringify({ error: 'gateway' }), { status: 500, headers: corsHeaders })
+    if (!r.ok) return new Response(JSON.stringify({ error: 'openai' }), { status: 500, headers: corsHeaders })
     const j = await r.json()
     let parsed: any = { coincidencias: [] }
     try { parsed = JSON.parse(j.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments ?? '{}') } catch (_) {}

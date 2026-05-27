@@ -27,7 +27,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const CHUNK_PAGES = 15;
 const MAX_CONCURRENT = 3;
 
@@ -168,20 +167,14 @@ async function splitPdfBase64(b64: string, chunkPages = CHUNK_PAGES): Promise<st
   return chunks;
 }
 
-async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any | null> {
-  // Si el usuario configuró OPENAI_API_KEY, usamos su cuenta de OpenAI.
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const useOpenAI = !!openaiKey;
-  const url = useOpenAI ? "https://api.openai.com/v1/chat/completions" : GATEWAY_URL;
-  const apiKey = useOpenAI ? openaiKey! : LOVABLE_API_KEY;
-  // gpt-4o soporta visión + tool calling; gemini-2.5-pro vía gateway.
-  const model = useOpenAI ? "gpt-4o" : "google/gemini-2.5-pro";
+async function callAI(authHeader: string | null, userContent: any[]): Promise<any | null> {
+  const target = await _pickAiTarget(authHeader, "google/gemini-2.5-pro");
 
-  const aiRes = await fetch(url, {
+  const aiRes = await fetch(target.url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: target.model,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: userContent },
@@ -191,7 +184,6 @@ async function callAI(userContent: any[], LOVABLE_API_KEY: string): Promise<any 
     }),
   });
   if (aiRes.status === 429) throw new Error("RATE_LIMIT");
-  if (aiRes.status === 402) throw new Error("NO_CREDITS");
   if (!aiRes.ok) {
     const t = await aiRes.text();
     console.error("ai err", aiRes.status, t.slice(0, 300));
@@ -276,10 +268,10 @@ function mergeExtractions(parts: any[], filename?: string): any {
 }
 
 async function processDocument(params: {
-  sb: any; userId: string; LOVABLE_API_KEY: string;
+  sb: any; userId: string; authHeader: string;
   file_base64?: string; mime_type?: string; filename?: string; text_content?: string; documento_id?: string;
 }) {
-  const { sb, userId, LOVABLE_API_KEY, file_base64, mime_type, filename, text_content, documento_id } = params;
+  const { sb, userId, authHeader, file_base64, mime_type, filename, text_content, documento_id } = params;
 
   const chunkPayloads: Array<{ b64?: string; mime?: string; text?: string; label: string }> = [];
   if (file_base64 && mime_type === "application/pdf") {
@@ -321,9 +313,9 @@ async function processDocument(params: {
     if (c.b64 && c.mime && (c.mime.startsWith("image/") || c.mime === "application/pdf")) {
       userContent.push({ type: "image_url", image_url: { url: `data:${c.mime};base64,${c.b64}` } });
     }
-    try { return await callAI(userContent, LOVABLE_API_KEY); }
+    try { return await callAI(authHeader, userContent); }
     catch (e: any) {
-      if (e?.message === "RATE_LIMIT" || e?.message === "NO_CREDITS") throw e;
+      if (e?.message === "RATE_LIMIT") throw e;
       console.error("chunk fail", c.label, e);
       return null;
     }
@@ -459,9 +451,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
-
     const auth = req.headers.get("Authorization") ?? "";
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
@@ -476,7 +465,7 @@ Deno.serve(async (req) => {
       // @ts-ignore EdgeRuntime existe en Supabase Edge
       const ert: any = (globalThis as any).EdgeRuntime;
       const task = (async () => {
-        try { await processDocument({ sb, userId: user.id, LOVABLE_API_KEY, ...params }); }
+        try { await processDocument({ sb, userId: user.id, authHeader: auth, ...params }); }
         catch (e: any) {
           console.error("bg fail", e);
           await sb.from("actividad").insert({
@@ -493,15 +482,13 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const result = await processDocument({ sb, userId: user.id, LOVABLE_API_KEY, ...params });
+    const result = await processDocument({ sb, userId: user.id, authHeader: auth, ...params });
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("leer-documento-ia", e);
-    const msg = e?.message === "RATE_LIMIT" ? "Límite de IA alcanzado, esperá un minuto."
-      : e?.message === "NO_CREDITS" ? "Sin créditos de IA."
+    const msg = e?.message === "RATE_LIMIT" ? "Límite de OpenAI alcanzado, esperá un minuto."
       : (e instanceof Error ? e.message : "Error");
-    const status = e?.message === "RATE_LIMIT" ? 429 : e?.message === "NO_CREDITS" ? 402 : 500;
+    const status = e?.message === "RATE_LIMIT" ? 429 : 500;
     return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
-

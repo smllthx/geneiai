@@ -2,7 +2,7 @@
 // - Genera consultas inteligentes con variantes ortográficas, lugares, épocas
 // - Busca en DuckDuckGo + Wikipedia (sin API keys)
 // - Lee páginas con Firecrawl si está disponible, si no con fetch + limpieza HTML
-// - Analiza con Lovable AI para extraer nombres/fechas/lugares/relaciones + confianza
+// - Analiza con OpenAI/ChatGPT para extraer nombres/fechas/lugares/relaciones + confianza
 // - Guarda como `sugerencias` (tipo "hallazgo_ia") asociadas a la persona si aplica
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
@@ -25,7 +25,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const UA = "Mozilla/5.0 (compatible; GeneAIAgent/1.0)";
 
 type Hit = { titulo: string; url: string; snippet: string; fuente: string };
@@ -85,14 +84,11 @@ async function fetchPageText(url: string, maxChars = 8000): Promise<{ text: stri
   } catch { return { text: "" }; }
 }
 
-async function ai(messages: any[], tool?: any, model = "google/gemini-2.5-flash") {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY no configurada");
+async function ai(req: Request, messages: any[], tool?: any, model = "google/gemini-2.5-flash") {
   const body: any = { model, messages };
   if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
   const r = await _aiFetch(req, body);
   if (r.status === 429) throw new Error("rate_limited");
-  if (r.status === 402) throw new Error("no_credits");
   if (!r.ok) throw new Error(`AI ${r.status}: ${await r.text()}`);
   const j = await r.json();
   if (tool) {
@@ -144,7 +140,7 @@ function variantesApellido(a: string): string[] {
   return Array.from(v).filter(Boolean);
 }
 
-async function modoPersona(sb: any, userId: string, personaId: string) {
+async function modoPersona(req: Request, sb: any, userId: string, personaId: string) {
   const { data: p } = await sb.from("personas").select("*").eq("user_id", userId).eq("id", personaId).maybeSingle();
   if (!p) throw new Error("Persona no encontrada");
   const [{ data: rels }, { data: evs }] = await Promise.all([
@@ -174,14 +170,14 @@ async function modoPersona(sb: any, userId: string, personaId: string) {
   const dedup = Array.from(new Map(todos.map((h) => [h.url, h])).values()).slice(0, 18);
 
   const ctx = { persona: { nombre: `${p.nombres} ${p.apellidos}`, nac: p.nac_fecha, def: p.defuncion_fecha, nacionalidad: p.nacionalidad }, familiares: (rels ?? []).map((r: any) => `${r.tipo}: ${r.personas?.nombres ?? ""} ${r.personas?.apellidos ?? ""}`), eventos: evs ?? [] };
-  const out = await ai([
+  const out = await ai(req, [
     { role: "system", content: "Eres asistente genealógico. Analiza los resultados web y devuelve hallazgos relevantes con confianza (alta/media/baja). Sé conservador: si no menciona la persona, baja. Explica el motivo." },
     { role: "user", content: `Contexto persona:\n${JSON.stringify(ctx)}\n\nResultados web:\n${JSON.stringify(dedup)}` },
   ], HALLAZGO_TOOL());
   return { hallazgos: out?.hallazgos ?? [], persona: p };
 }
 
-async function modoManual(_sb: any, _userId: string, params: any) {
+async function modoManual(req: Request, _sb: any, _userId: string, params: any) {
   const { nombres = "", apellidos = "", lugar = "", anos = "", palabras = "" } = params ?? {};
   const q = [nombres, apellidos, lugar, anos, palabras].filter(Boolean).join(" ");
   if (!q) throw new Error("Parámetros vacíos");
@@ -189,19 +185,19 @@ async function modoManual(_sb: any, _userId: string, params: any) {
   const todos: Hit[] = [];
   for (const x of queries.slice(0, 4)) { const [a, b] = await Promise.all([ddg(x, 4), wikipedia(x, 2)]); todos.push(...a, ...b); }
   const dedup = Array.from(new Map(todos.map((h) => [h.url, h])).values()).slice(0, 16);
-  const out = await ai([
+  const out = await ai(req, [
     { role: "system", content: "Eres asistente genealógico. A partir de resultados web y unos parámetros de búsqueda manual, devuelve hallazgos ordenados por relevancia con confianza alta/media/baja." },
     { role: "user", content: `Parámetros:\n${JSON.stringify(params)}\n\nResultados:\n${JSON.stringify(dedup)}` },
   ], HALLAZGO_TOOL());
   return { hallazgos: out?.hallazgos ?? [] };
 }
 
-async function modoUrl(sb: any, userId: string, url: string) {
+async function modoUrl(req: Request, sb: any, userId: string, url: string) {
   if (!/^https?:\/\//i.test(url)) throw new Error("URL inválida");
   const { text, title } = await fetchPageText(url, 9000);
   if (!text) throw new Error("No se pudo leer la página");
   const { data: personas } = await sb.from("personas").select("id, nombres, apellidos, nac_fecha, defuncion_fecha").eq("user_id", userId).limit(2000);
-  const out = await ai([
+  const out = await ai(req, [
     { role: "system", content: "Eres asistente genealógico. Analiza la página, extrae nombres, fechas, lugares y relaciones; comparándolas con el árbol del usuario propone coincidencias. Devuelve hallazgos con confianza." },
     { role: "user", content: `URL: ${url}\nTítulo: ${title ?? ""}\n\nCONTENIDO:\n${text}\n\nÁRBOL (id|nombre|nac|def):\n${(personas ?? []).slice(0, 800).map((p: any) => `${p.id}|${p.nombres} ${p.apellidos}|${p.nac_fecha ?? ""}|${p.defuncion_fecha ?? ""}`).join("\n")}` },
   ], HALLAZGO_TOOL());
@@ -223,9 +219,9 @@ Deno.serve(async (req) => {
     const modo: "persona" | "manual" | "url" = body.modo;
     let result: any;
     let personaId: string | null = body.persona_id ?? null;
-    if (modo === "persona") result = await modoPersona(sb, user.id, body.persona_id);
-    else if (modo === "manual") result = await modoManual(sb, user.id, body);
-    else if (modo === "url") result = await modoUrl(sb, user.id, body.url);
+    if (modo === "persona") result = await modoPersona(req, sb, user.id, body.persona_id);
+    else if (modo === "manual") result = await modoManual(req, sb, user.id, body);
+    else if (modo === "url") result = await modoUrl(req, sb, user.id, body.url);
     else throw new Error("modo inválido (persona|manual|url)");
 
     const hallazgos: any[] = result.hallazgos ?? [];
@@ -255,7 +251,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("busqueda-ia", e);
     const msg = e instanceof Error ? e.message : "Error";
-    const status = msg === "no_credits" ? 402 : msg === "rate_limited" ? 429 : 400;
+    const status = msg === "rate_limited" ? 429 : 400;
     return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -24,8 +24,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
 const SYSTEM = `Eres un investigador genealógico experto. Analizas a una persona y su entorno familiar y produces:
 1) HIPÓTESIS plausibles (con probabilidad 0-100) sobre datos faltantes, posibles familiares, lugares de origen, migraciones, oficios típicos por época/zona, etc.
 2) SUGERENCIAS de cambios concretos al árbol: agregar persona, completar campo, crear relación, crear evento. Cada sugerencia debe incluir el payload exacto listo para aplicar.
@@ -88,9 +86,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
-
     const auth = req.headers.get("Authorization") ?? "";
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { Authorization: auth } } });
     const { data: u } = await sb.auth.getUser();
@@ -126,10 +121,7 @@ Deno.serve(async (req) => {
       eventos: eventos ?? [],
     };
 
-    const aiRes = await fetch(GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const aiRes = await _aiFetch(req, {
         model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: SYSTEM },
@@ -137,10 +129,8 @@ Deno.serve(async (req) => {
         ],
         tools: [tool],
         tool_choice: { type: "function", function: { name: "plan_investigacion_auto" } },
-      }),
     });
     if (aiRes.status === 429) return new Response(JSON.stringify({ error: "Límite alcanzado." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (aiRes.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de Lovable AI." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (!aiRes.ok) throw new Error(`AI ${aiRes.status}`);
 
     const j = await aiRes.json();

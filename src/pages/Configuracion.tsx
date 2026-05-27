@@ -23,14 +23,14 @@ export default function Configuracion() {
   const [d, setD] = useState({ apellido_base: "", variante: "" });
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const [aiCfg, setAiCfg] = useState<{ openai_api_key: string; ai_preferred_provider: string; hasKey: boolean }>({ openai_api_key: "", ai_preferred_provider: "auto", hasKey: false });
+  const [aiCfg, setAiCfg] = useState<{ openai_api_key: string; hasKey: boolean }>({ openai_api_key: "", hasKey: false });
 
   const load = async () => {
     const user = (await supabase.auth.getUser()).data.user;
     const [{ data: v }, { data: a }, { data: cfg }] = await Promise.all([
       supabase.from("variantes_apellido").select("*").order("apellido_base"),
       supabase.from("external_accounts").select("*").eq("provider", "familysearch").maybeSingle(),
-      user ? supabase.from("app_config").select("openai_api_key,ai_preferred_provider").maybeSingle() : Promise.resolve({ data: null } as any),
+      user ? supabase.from("app_config").select("openai_api_key").maybeSingle() : Promise.resolve({ data: null } as any),
     ]);
     setVariantes(v ?? []);
     setFsAccount(a);
@@ -38,29 +38,28 @@ export default function Configuracion() {
       const k = (cfg as any).openai_api_key as string | null;
       setAiCfg({
         openai_api_key: k ? `••••••••${k.slice(-4)}` : "",
-        ai_preferred_provider: (cfg as any).ai_preferred_provider ?? "auto",
         hasKey: !!k,
       });
     }
   };
   useEffect(() => { load(); }, []);
 
-  const saveOpenAIKey = async (rawKey: string, provider: string) => {
+  const saveOpenAIKey = async (rawKey: string) => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
-    const value: any = { user_id: user.id, ai_preferred_provider: provider };
+    const value: any = { user_id: user.id, ai_preferred_provider: "openai" };
     // No sobrescribir si el campo muestra los puntos enmascarados
     if (rawKey && !rawKey.includes("•")) value.openai_api_key = rawKey.trim();
     const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
-    toast.success("Configuración de IA guardada. Tus llamadas de IA usarán tu cuenta de OpenAI.");
+    toast.success("Configuración de IA guardada. La app usará ChatGPT/OpenAI con tu cuenta.");
     load();
   };
 
   const clearOpenAIKey = async () => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
-    const { error } = await supabase.from("app_config").upsert({ user_id: user.id, openai_api_key: null, ai_preferred_provider: "auto" } as any, { onConflict: "user_id" });
+    const { error } = await supabase.from("app_config").upsert({ user_id: user.id, openai_api_key: null, ai_preferred_provider: "openai" } as any, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
     toast.success("API key de OpenAI eliminada.");
     load();
@@ -136,7 +135,7 @@ export default function Configuracion() {
         <CardHeader><CardTitle className="font-serif text-xl">IA — Tu cuenta de OpenAI</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Pegá tu <strong>API key</strong> de OpenAI (creala en <a className="underline text-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>). Mientras esté presente, todas las funciones de IA de la app usan <strong>tu cuenta</strong> en vez de los créditos de Lovable. Tu suscripción de ChatGPT Plus/Pro no incluye API — la API se paga aparte por uso (centavos por consulta).
+            Pegá tu <strong>API key</strong> de OpenAI (creala en <a className="underline text-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>). Todas las funciones de IA de la app usarán <strong>tu cuenta de OpenAI/ChatGPT</strong>.
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
@@ -145,20 +144,11 @@ export default function Configuracion() {
               value={aiCfg.openai_api_key}
               onChange={(e) => setAiCfg({ ...aiCfg, openai_api_key: e.target.value })}
             />
-            <select
-              className="rounded-md border border-border bg-background px-3 text-sm"
-              value={aiCfg.ai_preferred_provider}
-              onChange={(e) => setAiCfg({ ...aiCfg, ai_preferred_provider: e.target.value })}
-            >
-              <option value="auto">Auto (usa tu key si existe)</option>
-              <option value="openai">Solo OpenAI (mi cuenta)</option>
-              <option value="lovable">Solo Lovable (créditos)</option>
-            </select>
-            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key, aiCfg.ai_preferred_provider)}>Guardar</Button>
+            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar</Button>
             {aiCfg.hasKey && <Button variant="outline" onClick={clearOpenAIKey}>Borrar key</Button>}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {aiCfg.hasKey ? "✅ Tu API key está guardada y se usa en las funciones de IA migradas (curiosidades, biografía, asistente, búsqueda IA, contexto histórico, foto y agentes paralelos)." : "Sin API key guardada — la IA usa créditos de Lovable o modo local."}
+            {aiCfg.hasKey ? "Tu API key está guardada y se usa en biografías, asistente, búsqueda IA, contexto histórico, fotos, documentos y agentes." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
           </p>
         </CardContent>
       </Card>
@@ -178,7 +168,7 @@ export default function Configuracion() {
               Registra tu app en <a href="https://www.familysearch.org/developers/" target="_blank" rel="noopener noreferrer" className="underline text-link">familysearch.org/developers</a> (tipo Browser/Public — no requiere Client Secret). Redirect URI a usar: <code className="text-xs">{window.location.origin}/familysearch/callback</code>
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Para guardar tu <strong>Client ID</strong> (y opcionalmente el <strong>Secret</strong>) pídeselo al asistente de Lovable diciendo «actualiza mis credenciales de FamilySearch». Se almacenan cifradas en el servidor y nunca quedan expuestas al navegador.
+              Para guardar tu <strong>Client ID</strong> y el <strong>Secret</strong>, usa la sección Credenciales. Se almacenan cifradas en el servidor y nunca quedan expuestas al navegador.
             </p>
           </div>
 
