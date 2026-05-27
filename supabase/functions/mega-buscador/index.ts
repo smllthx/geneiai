@@ -26,6 +26,13 @@ Deno.serve(async (req) => {
     const { persona_id } = await req.json().catch(() => ({}));
     if (!persona_id) throw new Error("Falta persona_id");
 
+    await sb.from("actividad").insert({
+      user_id: u.user.id,
+      tipo: "mega_buscador_inicio",
+      descripcion: "Agentes smart buscando información del árbol en segundo plano",
+      metadata: { persona_id, estado: "procesando" },
+    });
+
     const callFn = async (name: string, body: Record<string, unknown>) => {
       const t0 = Date.now();
       try {
@@ -64,10 +71,32 @@ Deno.serve(async (req) => {
       url: `/personas/${persona_id}`,
     });
 
+    await sb.from("actividad").insert({
+      user_id: u.user.id,
+      tipo: "mega_buscador_completado",
+      descripcion: `Insights smart completados: ${sugerencias} sugerencias · ${hipotesis} hipótesis`,
+      metadata: { persona_id, estado: "completado", sugerencias, hipotesis, ok_count },
+    });
+
     return new Response(JSON.stringify({ ok: true, agents: flat, sugerencias, hipotesis }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    try {
+      const auth = req.headers.get("Authorization");
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+      const ANON = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
+      const sb = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: auth ?? "" } } });
+      const { data: u } = await sb.auth.getUser();
+      if (u.user) {
+        await sb.from("actividad").insert({
+          user_id: u.user.id,
+          tipo: "mega_buscador_error",
+          descripcion: "Los agentes smart no pudieron completar la búsqueda",
+          metadata: { estado: "error", error: e instanceof Error ? e.message : "Error" },
+        });
+      }
+    } catch {}
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Error" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

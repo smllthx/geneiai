@@ -1,7 +1,7 @@
 // Service Worker para Archivo Familiar — instalable + push + notificaciones.
 // Mínimo y seguro: NO cachea HTML (evita pantallas viejas).
 const CACHE = "archivo-v1";
-const ASSETS = ["/app-icon-512.png", "/favicon.svg", "/manifest.webmanifest"];
+const ASSETS = ["/", "/index.html", "/app-icon-512.png", "/favicon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS).catch(() => {})));
@@ -24,7 +24,10 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (req.mode === "navigate") return; // dejar al navegador (siempre red)
+  if (req.mode === "navigate") {
+    event.respondWith(fetch(req).catch(() => caches.match("/") || caches.match("/index.html")));
+    return;
+  }
   if (ASSETS.some((a) => url.pathname.endsWith(a))) {
     event.respondWith(
       fetch(req).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return r; })

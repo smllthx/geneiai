@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar, RefreshCw, Star, Route, Copy, Info, Network, ListChecks } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { calcularParentesco } from "@/lib/parentesco";
@@ -78,6 +78,7 @@ export default function PersonaDetail() {
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(isNew);
+  const autoSaveSignature = useRef("");
   const [lugares, setLugares] = useLugares();
   const lugaresById = useMemo(() => new Map((lugares ?? []).map((l: any) => [l.id, l])), [lugares]);
 
@@ -95,6 +96,9 @@ export default function PersonaDetail() {
         if (error) throw error;
         if (!data) { setNotFound(true); setFetching(false); return; }
         setP(data);
+        const initial = { ...(data as any) };
+        delete initial.id;
+        autoSaveSignature.current = JSON.stringify(initial);
         pushRecent(data.id);
         const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
           supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
@@ -137,6 +141,25 @@ export default function PersonaDetail() {
       toast.success("Cambios guardados");
     }
   };
+
+  useEffect(() => {
+    if (isNew || !editMode || !id || fetching || notFound) return;
+    const payload = { ...p };
+    delete payload.id;
+    const signature = JSON.stringify(payload);
+    if (!signature || signature === autoSaveSignature.current) return;
+    const timer = window.setTimeout(async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+      const clean = { ...payload, user_id: user.id };
+      const { error } = await supabase.from("personas").update(clean).eq("id", id);
+      if (!error) {
+        autoSaveSignature.current = signature;
+        toast.success("Ficha autoguardada", { duration: 1200 });
+      }
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, [p, editMode, id, isNew, fetching, notFound]);
 
   const eliminar = async () => {
     if (!confirm("¿Eliminar esta persona y sus relaciones?")) return;
@@ -1328,7 +1351,41 @@ function PersonaQuickMenu({
   const navigate = useNavigate();
   const [parentescoOpen, setParentescoOpen] = useState(false);
   const [parentescoTxt, setParentescoTxt] = useState<string>("");
+  const [parentescoPath, setParentescoPath] = useState<any[]>([]);
   const [loadingPar, setLoadingPar] = useState(false);
+
+  const construirLineaAncestral = (yoId: string, destinoId: string, rels: any[]) => {
+    const parents = new Map<string, string[]>();
+    for (const r of rels) {
+      if ((r.tipo === "padre" || r.tipo === "madre") && r.persona_id && r.pariente_id) {
+        parents.set(r.persona_id, [...(parents.get(r.persona_id) ?? []), r.pariente_id]);
+      }
+      if (r.tipo === "hijo" && r.persona_id && r.pariente_id) {
+        parents.set(r.pariente_id, [...(parents.get(r.pariente_id) ?? []), r.persona_id]);
+      }
+    }
+    const prev = new Map<string, string | null>();
+    const q = [yoId];
+    prev.set(yoId, null);
+    while (q.length) {
+      const cur = q.shift()!;
+      if (cur === destinoId) break;
+      for (const parent of parents.get(cur) ?? []) {
+        if (prev.has(parent)) continue;
+        prev.set(parent, cur);
+        q.push(parent);
+      }
+    }
+    if (!prev.has(destinoId)) return [];
+    const chain: string[] = [];
+    let cur: string | null = destinoId;
+    while (cur) {
+      chain.push(cur);
+      cur = prev.get(cur) ?? null;
+    }
+    const byId = new Map(allPersonas.map((x) => [x.id, x]));
+    return chain.map((pid) => byId.get(pid)).filter(Boolean);
+  };
 
   const verParentesco = async () => {
     setLoadingPar(true);
@@ -1344,6 +1401,7 @@ function PersonaQuickMenu({
       if (probandId === personaId) { setParentescoTxt("Eres tú mismo."); return; }
       const { data: relsAll } = await supabase.from("relaciones").select("persona_id,pariente_id,tipo");
       const r = calcularParentesco(probandId, personaId, (relsAll ?? []) as any, allPersonas);
+      setParentescoPath(construirLineaAncestral(probandId, personaId, relsAll ?? []));
       setParentescoTxt(r?.texto ? `${persona.nombres} ${persona.apellidos} es ${r.texto}.` : "No encontré un camino de parentesco registrado entre ustedes.");
     } catch (e: any) {
       setParentescoTxt(`No se pudo calcular: ${e.message ?? e}`);
@@ -1361,14 +1419,30 @@ function PersonaQuickMenu({
   };
 
   const buscarIA = async () => {
-    const t = toast.loading("Buscando en internet con IA…");
+    const t = toast.loading("Lanzando agentes smart en segundo plano…");
     try {
-      const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: personaId } });
+      const { data, error } = await supabase.functions.invoke("mega-buscador", { body: { persona_id: personaId } });
       toast.dismiss(t);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`+${data.hallazgos?.length ?? 0} hallazgos — revisá Búsqueda IA`);
+      toast.success(`${data.sugerencias ?? 0} sugerencias · ${data.hipotesis ?? 0} hipótesis`);
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const actualizarPersona = async () => {
+    await buscarIA();
+  };
+
+  const seguir = () => {
+    const key = "genaia:personas-seguidas";
+    const current = JSON.parse(localStorage.getItem(key) ?? "[]");
+    localStorage.setItem(key, JSON.stringify(Array.from(new Set([...current, personaId]))));
+    toast.success("Persona seguida. Sus novedades aparecerán en actividad.");
+  };
+
+  const descargarRecuerdos = () => {
+    navigate(`/personas/${personaId}`);
+    toast.info("Abre la pestaña Recuerdos para revisar y descargar fotografías vinculadas.");
   };
 
   const [cuadroOpen, setCuadroOpen] = useState(false);
@@ -1409,24 +1483,47 @@ function PersonaQuickMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuLabel>Acciones rápidas</DropdownMenuLabel>
+          <DropdownMenuLabel>{persona.nombres} {persona.apellidos}</DropdownMenuLabel>
           <DropdownMenuItem onClick={verParentesco}>
-            <Users className="h-4 w-4" /> Mi parentesco con esta persona
+            <Route className="h-4 w-4" /> Ver mi parentesco
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={buscarIA}>
+            <Search className="h-4 w-4" /> Buscar registros
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/fusionar?persona=${personaId}`)}>
+            <Users className="h-4 w-4" /> Posibles duplicados
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/arbol?centro=${personaId}`)}>
+            <Network className="h-4 w-4" /> Descendientes con tareas
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate(`/arbol?centro=${personaId}`)}>
             <GitBranch className="h-4 w-4" /> Ver árbol de esta persona
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={generarCuadro}>
-            <ImageIcon className="h-4 w-4" /> Generar cuadro con IA
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={compartir}>
+            <Share2 className="h-4 w-4" /> Compartir persona
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={actualizarPersona}>
+            <RefreshCw className="h-4 w-4" /> Actualizar la persona
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={seguir}>
+            <Star className="h-4 w-4" /> Seguir
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={descargarRecuerdos}>
+            <Download className="h-4 w-4" /> Descargar recuerdos
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => toast.info("Los cambios recientes están en la pestaña Línea de tiempo.")}>
+            <RefreshCw className="h-4 w-4" /> Cambios recientes
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={generarCuadro}>
+            <ImageIcon className="h-4 w-4" /> Cuadros
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate(`/calendario`)}>
             <Calendar className="h-4 w-4" /> Ver en calendario
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={compartir}>
-            <Share2 className="h-4 w-4" /> Compartir persona (link público)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={buscarIA}>
-            <Search className="h-4 w-4" /> Buscar con IA en internet
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(personaCode(personaId)).then(() => toast.success("Código copiado"))}>
+            <Copy className="h-4 w-4" /> Copiar código genealógico
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
@@ -1436,11 +1533,37 @@ function PersonaQuickMenu({
       </DropdownMenu>
 
       <Dialog open={parentescoOpen} onOpenChange={setParentescoOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Mi parentesco</DialogTitle></DialogHeader>
-          <p className="text-[15px] leading-relaxed">
-            {loadingPar ? "Calculando camino genealógico…" : parentescoTxt}
-          </p>
+        <DialogContent className="max-w-2xl bg-black text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between text-xl">
+              Relación o parentesco
+              <Info className="h-5 w-5 text-cyan-400" />
+            </DialogTitle>
+          </DialogHeader>
+          <div className="-mx-6 bg-zinc-900 px-6 py-4 text-center">
+            <div className="text-2xl font-extrabold">{persona.nombres} {persona.apellidos}</div>
+            <div className="mt-1 text-sm font-bold uppercase tracking-wide text-white/50">{loadingPar ? "Calculando camino genealógico" : parentescoTxt}</div>
+          </div>
+          {parentescoPath.length > 0 ? (
+            <div className="mx-auto flex max-w-sm flex-col items-center py-4">
+              {parentescoPath.map((node, idx) => (
+                <div key={node.id} className="flex flex-col items-center">
+                  {idx > 0 && <div className="h-10 w-px bg-white/25" />}
+                  <Link to={`/personas/${node.id}`} className="flex flex-col items-center text-center">
+                    {node.foto_url ? (
+                      <img src={node.foto_url} alt={node.nombres} className="h-12 w-12 rounded-full object-cover ring-2 ring-white/20" />
+                    ) : (
+                      <div className="grid h-12 w-12 place-items-center rounded-full bg-cyan-500/25 text-cyan-100 ring-2 ring-white/20">{node.nombres?.[0] ?? "?"}</div>
+                    )}
+                    <div className="mt-1 max-w-[180px] truncate text-xs font-bold">{node.nombres} {node.apellidos}</div>
+                    <div className="text-[10px] text-white/50">{yearOf(node.nac_fecha) ?? "?"} - {yearOf(node.defuncion_fecha) ?? (node.viva === "si" ? "vive" : "?")} · {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[15px] leading-relaxed text-white/75">{loadingPar ? "Calculando camino genealógico…" : parentescoTxt}</p>
+          )}
         </DialogContent>
       </Dialog>
 

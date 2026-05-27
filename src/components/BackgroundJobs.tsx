@@ -26,7 +26,7 @@ export default function BackgroundJobs() {
       .select("id, tipo, descripcion, metadata, created_at")
       .eq("user_id", user.id)
       .gte("created_at", since)
-      .or("tipo.like.%inicio%,tipo.like.%lectura_documento%,tipo.like.%mega%,tipo.like.%error%")
+      .or("tipo.like.%inicio%,tipo.like.%lectura_documento%,tipo.like.%mega%,tipo.like.%smart%,tipo.like.%error%")
       .order("created_at", { ascending: false })
       .limit(10);
     setJobs((data ?? []) as Job[]);
@@ -46,10 +46,15 @@ export default function BackgroundJobs() {
   // Filtrar: si hay un "completado" o "error" para un filename, ocultar el "inicio" correspondiente
   const visible = jobs.filter((j) => {
     if (hidden.has(j.id)) return false;
-    if (!j.tipo.includes("inicio")) return false;
+    if (!j.tipo.includes("inicio") && j.metadata?.estado !== "procesando") return false;
     const fn = j.metadata?.filename;
-    if (!fn) return true;
-    const done = jobs.some((o) => o.metadata?.filename === fn && (o.metadata?.estado === "completado" || o.metadata?.estado === "error") && new Date(o.created_at) > new Date(j.created_at));
+    const pid = j.metadata?.persona_id;
+    if (!fn && !pid) return true;
+    const done = jobs.some((o) => {
+      const sameFile = fn && o.metadata?.filename === fn;
+      const samePersona = pid && o.metadata?.persona_id === pid;
+      return (sameFile || samePersona) && (o.metadata?.estado === "completado" || o.metadata?.estado === "error") && new Date(o.created_at) > new Date(j.created_at);
+    });
     return !done;
   }).slice(0, 3);
 
