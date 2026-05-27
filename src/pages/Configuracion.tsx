@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Trash2, RefreshCw, Upload, Link as LinkIcon, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
+import AppCenterConfig from "@/components/AppCenterConfig";
 
 
 const SEED_VARIANTES: [string, string][] = [
@@ -162,6 +163,7 @@ export default function Configuracion() {
         </CardContent>
       </Card>
 
+      <AppCenterConfig />
       <MenusConfig />
 
 
