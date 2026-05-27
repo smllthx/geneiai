@@ -71,7 +71,11 @@ export async function applyHeal(action: HealAction) {
       clearStorage(true);
     }
     if (action === "relogin") {
-      try { localStorage.removeItem("sb-vkzofofafjvbazvrhhyj-auth-token"); } catch {}
+      try {
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+          .forEach((key) => localStorage.removeItem(key));
+      } catch {}
     }
     if (action === "deep-repair") {
       // Reparación total: SW + caches + storage + IndexedDB. Mantiene sesión.
@@ -90,4 +94,3 @@ export async function applyHeal(action: HealAction) {
     }, 300);
   }
 }
-

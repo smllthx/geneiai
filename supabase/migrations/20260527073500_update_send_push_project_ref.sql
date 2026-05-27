@@ -1,10 +1,3 @@
-
--- Unique endpoint para upsert
-DO $$ BEGIN
-  ALTER TABLE public.push_subscriptions ADD CONSTRAINT push_subscriptions_endpoint_key UNIQUE (endpoint);
-EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL; END $$;
-
--- Función que llama al edge function send-push vía pg_net
 CREATE OR REPLACE FUNCTION public.trigger_send_push()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -28,8 +21,3 @@ BEGIN
   );
   RETURN NEW;
 END; $$;
-
-DROP TRIGGER IF EXISTS notificaciones_send_push ON public.notificaciones;
-CREATE TRIGGER notificaciones_send_push
-AFTER INSERT ON public.notificaciones
-FOR EACH ROW EXECUTE FUNCTION public.trigger_send_push();
