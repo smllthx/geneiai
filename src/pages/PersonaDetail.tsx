@@ -545,6 +545,7 @@ export default function PersonaDetail() {
             personas={fam.conyuges}
             lugaresMap={lugaresById}
             empty="Sin cónyuges registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="conyuge"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="conyuge" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
@@ -556,6 +557,7 @@ export default function PersonaDetail() {
             personas={fam.hijos}
             lugaresMap={lugaresById}
             empty="Sin hijos registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="hijo"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hijo" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
@@ -584,6 +586,7 @@ export default function PersonaDetail() {
             personas={fam.padres}
             lugaresMap={lugaresById}
             empty="Sin padres registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="padre"
             quickAdd={<div className="flex gap-2">
               <QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="padre" onAdded={async () => {
                 const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
@@ -601,6 +604,7 @@ export default function PersonaDetail() {
             personas={fam.hermanos}
             lugaresMap={lugaresById}
             empty="Sin hermanos registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="hermano"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hermano" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
