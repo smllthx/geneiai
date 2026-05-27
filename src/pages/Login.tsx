@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
-import { Chrome, Loader2, Apple } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -44,16 +43,6 @@ export default function Login() {
     toast.success("Cuenta creada. Revisa tu correo si se solicita confirmación.");
   };
 
-  const handleOAuth = async (provider: "google" | "apple") => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/inicio` },
-    });
-    setLoading(false);
-    if (error) toast.error(error.message);
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
@@ -68,16 +57,6 @@ export default function Login() {
             <CardDescription>Tus datos genealógicos son privados.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" disabled={loading} onClick={() => handleOAuth("google")}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
-                  Google
-                </Button>
-                <Button type="button" variant="outline" disabled={loading} onClick={() => handleOAuth("apple")}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Apple className="h-4 w-4" />}
-                  Apple
-                </Button>
-              </div>
               <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Ingresar</TabsTrigger>
