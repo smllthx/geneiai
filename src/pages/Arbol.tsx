@@ -35,7 +35,9 @@ export default function Arbol() {
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
-  const [vista, setVista] = useState<Vista>("ascendientes");
+  const [vista, setVista] = useState<Vista>(() => {
+    try { return (localStorage.getItem("genaia:default-tree-view") as Vista) || "ascendientes"; } catch { return "ascendientes"; }
+  });
   const [dropTarget, setDropTarget] = useState<{ source: string; target: string } | null>(null);
   const [lastUndo, setLastUndo] = useState<{ ids: string[]; label: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
