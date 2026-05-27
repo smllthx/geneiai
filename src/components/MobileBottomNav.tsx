@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan } from "lucide-react";
+import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMobileItems } from "@/lib/navConfig";
 
@@ -8,6 +8,7 @@ const ALL = {
   "/inicio": { label: "Inicio", icon: Home },
   "/arbol": { label: "Árbol", icon: GitBranch },
   "/personas": { label: "Personas", icon: Users },
+  "/apellidos": { label: "Apellidos", icon: ListOrdered },
   "/familias": { label: "Familia", icon: Heart },
   "/sugerencias": { label: "Tareas", icon: Lightbulb },
   "/fotos": { label: "Recuerdos", icon: ImageIcon },

@@ -13,6 +13,7 @@ import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
 
 // Lazy-load all non-critical pages for faster initial paint
 const PersonasList = lazy(() => import("./pages/PersonasList"));
+const Apellidos = lazy(() => import("./pages/Apellidos"));
 const PersonaDetail = lazy(() => import("./pages/PersonaDetail"));
 const NuevaPersona = lazy(() => import("./pages/NuevaPersona"));
 const Arbol = lazy(() => import("./pages/Arbol"));
@@ -82,6 +83,7 @@ const App = () => (
                   <Route path="/dashboard" element={<Navigate to="/inicio" replace />} />
                   <Route path="/arbol" element={<Arbol />} />
                   <Route path="/personas" element={<PersonasList />} />
+                  <Route path="/apellidos" element={<Apellidos />} />
                   <Route path="/personas/nueva" element={<NuevaPersona />} />
                   <Route path="/personas/:id" element={<PersonaDetail />} />
                   <Route path="/familias" element={<Familias />} />

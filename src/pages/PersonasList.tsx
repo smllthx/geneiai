@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, EyeOff, Sparkles, GitMerge } from "lucide-react";
+import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered } from "lucide-react";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 
@@ -40,6 +40,13 @@ export default function PersonasList() {
         subtitle="Toda persona del archivo. Cada una con su código único de identificación."
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/apellidos")}
+              title="Ver personas agrupadas por apellido"
+            >
+              <ListOrdered className="h-4 w-4" /> Apellidos
+            </Button>
             <Button
               variant="outline"
               onClick={() => navigate("/fusionar")}

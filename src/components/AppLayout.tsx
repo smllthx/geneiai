@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -24,28 +24,29 @@ import { toast } from "sonner";
 
 
 const primaryNavBase = [
-  { to: "/inicio", label: "🏠 Inicio", icon: Home },
-  { to: "/arbol", label: "🌳 Árbol familiar", icon: GitBranch },
-  { to: "/personas", label: "👤 Personas", icon: Users },
-  { to: "/familias", label: "❤️ Familias", icon: Heart },
-  { to: "/sugerencias", label: "✅ Tareas y pistas", icon: LightbulbIcon },
-  { to: "/fotos", label: "🖼️ Recuerdos", icon: ImageIcon },
-  { to: "/documentos", label: "📄 Documentos", icon: FileText },
-  { to: "/calendario", label: "📅 Calendario", icon: Calendar },
+  { to: "/inicio", label: "Inicio", icon: Home },
+  { to: "/arbol", label: "Árbol familiar", icon: GitBranch },
+  { to: "/personas", label: "Personas", icon: Users },
+  { to: "/apellidos", label: "Apellidos", icon: ListOrdered },
+  { to: "/familias", label: "Familias", icon: Heart },
+  { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },
+  { to: "/fotos", label: "Recuerdos", icon: ImageIcon },
+  { to: "/documentos", label: "Documentos", icon: FileText },
+  { to: "/calendario", label: "Calendario", icon: Calendar },
 ];
 const investigationNav = [
-  { to: "/asistente", label: "🤖 Asistente ChatGPT", icon: Bot },
-  { to: "/investigacion", label: "✨ Centro de investigación", icon: Sparkles },
-  { to: "/adn", label: "🧬 ADN y orígenes", icon: Dna },
-  { to: "/fuentes", label: "📚 Fuentes", icon: BookOpen },
-  { to: "/coincidencias", label: "🔎 Coincidencias", icon: Compass },
-  { to: "/parecidos", label: "🖼️ Rasgos y parecidos", icon: Scan },
+  { to: "/asistente", label: "Asistente ChatGPT", icon: Bot },
+  { to: "/investigacion", label: "Centro de investigación", icon: Sparkles },
+  { to: "/adn", label: "ADN y orígenes", icon: Dna },
+  { to: "/fuentes", label: "Fuentes", icon: BookOpen },
+  { to: "/coincidencias", label: "Coincidencias", icon: Compass },
+  { to: "/parecidos", label: "Rasgos y parecidos", icon: Scan },
 ];
 const utilityNav = [
-  { to: "/importar", label: "⬆️ Importar / Exportar", icon: Upload },
-  { to: "/fusionar", label: "🧩 Fusionar duplicados", icon: Merge },
-  { to: "/credenciales", label: "🔐 Credenciales", icon: KeyRound },
-  { to: "/configuracion", label: "⚙️ Configuración", icon: Settings },
+  { to: "/importar", label: "Importar / Exportar", icon: Upload },
+  { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
+  { to: "/credenciales", label: "Credenciales", icon: KeyRound },
+  { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
 type NavItem = { to: string; label: string; icon: any };
