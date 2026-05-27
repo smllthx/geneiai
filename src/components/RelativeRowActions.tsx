@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Trash2, ArrowLeftRight } from "lucide-react";
+import { Pencil, Trash2, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 
 type Tipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
@@ -109,10 +109,10 @@ export default function RelativeRowActions({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
-          className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-          aria-label="Acciones de relación"
+          className="shrink-0 rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white"
+          aria-label="Editar relación"
         >
-          <MoreVertical className="h-4 w-4" />
+          <Pencil className="h-5 w-5" />
         </button>
       </PopoverTrigger>
       <PopoverContent

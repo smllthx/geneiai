@@ -4,8 +4,11 @@ const CACHE = "archivo-v1";
 const ASSETS = ["/app-icon-512.png", "/favicon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
-  self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS).catch(() => {})));
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {

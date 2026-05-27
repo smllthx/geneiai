@@ -11,6 +11,29 @@ export function registerSW() {
   }
 
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js").then((registration) => {
+      registration.addEventListener("updatefound", () => {
+        const next = registration.installing;
+        if (!next) return;
+        next.addEventListener("statechange", () => {
+          if (next.state === "installed" && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new CustomEvent("genaia:update-ready", { detail: registration }));
+          }
+        });
+      });
+    }).catch(() => {});
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+}
+
+export function applyAppUpdate() {
+  navigator.serviceWorker.getRegistration().then((registration) => {
+    registration?.waiting?.postMessage({ type: "SKIP_WAITING" });
   });
 }

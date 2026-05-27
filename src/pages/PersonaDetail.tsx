@@ -165,6 +165,26 @@ export default function PersonaDetail() {
 
   const set = (k: string, v: any) => setP({ ...p, [k]: v });
 
+  const lanzarInsightsSegundoPlano = () => {
+    if (!id || isNew) return;
+    toast.success("Insights smart lanzados en segundo plano. Puedes seguir usando la app.");
+    notify("Insights smart en segundo plano", { body: `${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `smart-start-${id}` });
+    setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("mega-buscador", { body: { persona_id: id } });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        notify("Insights smart completados", {
+          body: `${data?.sugerencias ?? 0} sugerencias · ${data?.hipotesis ?? 0} hipótesis`,
+          url: `/personas/${id}`,
+          tag: `smart-done-${id}`,
+        });
+      } catch (e: any) {
+        notify("Insights smart con aviso", { body: e.message ?? "No se pudo completar la búsqueda", url: `/personas/${id}`, tag: `smart-error-${id}` });
+      }
+    }, 50);
+  };
+
   // Use the unified kinship helpers so this panel matches the tree, fan chart and dynasty view
   const fam = useMemo(() => {
     if (!id) return { padres: [], conyuges: [], hijos: [], hermanos: [], otros: [] };
@@ -251,15 +271,15 @@ export default function PersonaDetail() {
         <link rel="canonical" href={`${window.location.origin}/personas/${id}`} />
       </Helmet>
 
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="-mx-3 mb-0 flex items-center gap-2 border-b border-border bg-black px-3 py-3 text-white md:mx-0 md:mb-3 md:rounded-2xl md:border">
         <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
-        <Button variant="ghost" size="sm" onClick={() => navigate("/arbol")}><GitBranch className="h-4 w-4" /> Volver al árbol familiar</Button>
+        <div className="min-w-0 flex-1 text-center font-display text-lg font-bold truncate">{fullName}</div>
         {!isNew && (
           <>
             <Button
               size="sm"
-              variant="outline"
-              className="ml-auto rounded-full"
+              variant="ghost"
+              className="rounded-full"
               onClick={async () => {
                 const url = `${window.location.origin}/p/${id}`;
                 try {
@@ -320,6 +340,9 @@ export default function PersonaDetail() {
             notify("Búsqueda IA finalizada", { body: `${data.hallazgos?.length ?? 0} hallazgos para ${p.nombres} ${p.apellidos}`, url: "/busqueda-ia", tag: `bia-${id}` });
           } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
         }}><Sparkles className="h-4 w-4" /> Buscar más con IA</Button>}
+        {!isNew && <Button size="sm" variant="default" onClick={lanzarInsightsSegundoPlano}>
+          <Sparkles className="h-4 w-4" /> Insights smart en segundo plano
+        </Button>}
         {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
           const t = toast.loading("Investigando con IA…");
           try {
@@ -400,7 +423,7 @@ export default function PersonaDetail() {
       )}
 
       <Tabs defaultValue="detalles">
-        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 bg-transparent p-0 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="-mx-3 flex h-auto w-auto justify-start gap-0 overflow-x-auto rounded-none border-b border-cyan-400/60 bg-zinc-950 p-0 text-white md:mx-0 [&::-webkit-scrollbar]:hidden">
           {[
             ["detalles", "Detalles"],
             ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
@@ -415,7 +438,7 @@ export default function PersonaDetail() {
             <TabsTrigger
               key={v}
               value={v}
-              className="relative shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-3 py-2 text-sm font-medium text-muted-foreground shadow-none transition data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              className="relative shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-bold text-white/70 shadow-none transition data-[state=active]:border-cyan-400 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
             >
               {l}
             </TabsTrigger>
@@ -424,9 +447,9 @@ export default function PersonaDetail() {
 
         <TabsContent value="detalles">
           {!isNew && (
-            <Card className="archivo-card mb-3">
-              <CardHeader className="pb-2"><CardTitle className="font-serif text-lg">Información vital</CardTitle></CardHeader>
-              <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+            <Card className="mb-3 overflow-hidden rounded-none border-x-0 border-border bg-zinc-950 text-white md:rounded-2xl md:border-x">
+              <CardHeader className="border-b border-border/70 bg-zinc-900 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-white/70">Información esencial</CardTitle></CardHeader>
+              <CardContent className="grid gap-0 p-0 text-sm">
                 <Field label="Nombres" value={p.nombres} />
                 <Field label="Apellidos" value={p.apellidos} />
                 <Field label="Sexo" value={p.sexo} />
@@ -864,12 +887,12 @@ function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: str
   const lugarTxt = l ? [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ") : null;
   if (!fechaTxt && !lugarTxt) return null;
   return (
-    <div className="mb-3 rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/[0.08] via-transparent to-pink-500/[0.05] px-4 py-3">
+    <div className="-mx-3 mb-0 border-y border-border bg-black px-6 py-4 text-white md:mx-0 md:mb-3 md:rounded-2xl md:border">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-base">💍</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-base">💍</div>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-sm font-semibold tracking-tight">{titulo}</div>
-          <div className="mt-0.5 text-[13px] text-muted-foreground break-words">
+          <div className="text-sm font-semibold tracking-tight text-white/55">{titulo}</div>
+          <div className="mt-0.5 break-words text-xl font-bold leading-snug">
             {fechaTxt ?? "Fecha desconocida"}{lugarTxt ? ` · ${lugarTxt}` : ""}
           </div>
         </div>
@@ -905,18 +928,18 @@ function FamiliaSeccion({
     return x.sexo === "femenino" ? "madre" : "padre";
   };
   return (
-    <section className="rounded-2xl bg-card/30 px-1 py-2">
-      <header className="flex items-center justify-between px-3 py-2">
-        <h3 className="font-serif text-base">
+    <section className="-mx-3 border-y border-border bg-black text-white md:mx-0 md:rounded-2xl md:border">
+      <header className="flex items-center justify-between border-b border-border/70 bg-zinc-900 px-6 py-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-white/60">
           {titulo}
           <span className="ml-2 text-xs font-normal text-muted-foreground">({personas.length})</span>
         </h3>
         {quickAdd}
       </header>
       {personas.length === 0 ? (
-        <p className="px-3 pb-3 text-sm text-muted-foreground">{empty}</p>
+        <p className="px-6 py-4 text-sm text-white/55">{empty}</p>
       ) : (
-        <ul className="divide-y divide-border/40">
+        <ul className="divide-y divide-white/10">
           {personas.map((x: any) => {
             const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
             const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
@@ -931,25 +954,25 @@ function FamiliaSeccion({
               <li key={x.id} className="flex items-stretch gap-1">
                 <Link
                   to={`/personas/${x.id}`}
-                  className="flex flex-1 items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
+                  className="flex flex-1 items-start gap-3 px-6 py-3 transition hover:bg-white/5"
                 >
                   {x.foto_url ? (
                     <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
                   ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-medium text-cyan-200">
                       {(x.nombres?.[0] ?? "?").toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium leading-snug break-words">
+                    <div className="break-words text-xl font-extrabold leading-snug">
                       {x.nombres} {x.apellidos}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-white/50">
                       <span>{sub}</span>
                       <span className="font-mono tracking-wider opacity-70">{personaCode(x.id)}</span>
                     </div>
                     {matLinea && (
-                      <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-rose-500/10 px-1.5 py-0.5 text-[11px] text-rose-700 dark:text-rose-300">
+                      <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-white/65">
                         <span aria-hidden>💍</span>
                         <span className="break-words">{matLinea}</span>
                       </div>
@@ -957,7 +980,7 @@ function FamiliaSeccion({
                   </div>
                 </Link>
                 {personaId && t && (
-                  <div className="flex items-center pr-1">
+                  <div className="flex items-center pr-3">
                     <RelativeRowActions
                       personaId={personaId}
                       personaSexo={personaSexo}
@@ -1260,9 +1283,9 @@ function TimelinePanel({ eventos, persona }: any) {
 function Field({ label, value }: { label: string; value: any }) {
   const empty = value === null || value === undefined || value === "";
   return (
-    <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-0.5">{empty ? ND : value}</div>
+    <div className="border-b border-white/10 px-6 py-4">
+      <div className="text-sm font-semibold text-white/45">{label}</div>
+      <div className="mt-1 text-xl font-bold leading-snug text-white">{empty ? <span className="text-white/35">Dato no registrado</span> : value}</div>
     </div>
   );
 }

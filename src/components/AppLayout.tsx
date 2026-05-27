@@ -16,6 +16,7 @@ import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
+import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
 
@@ -256,6 +257,7 @@ export default function AppLayout() {
       <BackgroundJobs />
       <MobileBottomNav />
       <AdaptiveViewport />
+      <AppUpdateNotifier />
       <KeyboardAwareScroller />
     </div>
   );

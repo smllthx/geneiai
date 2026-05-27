@@ -42,27 +42,19 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
   };
 
   return (
-    <div className="glass-strong relative mb-5 overflow-hidden rounded-3xl p-5 md:p-8">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(at 0% 0%, hsl(var(--mesh-1)/0.25) 0, transparent 50%), radial-gradient(at 100% 100%, hsl(var(--mesh-2)/0.25) 0, transparent 50%)",
-        }}
-      />
-      <div className="relative flex flex-col items-center gap-5 text-center">
+    <div className="-mx-3 mb-0 overflow-hidden border-y border-border bg-zinc-900 text-white md:mx-0 md:mb-4 md:rounded-2xl md:border">
+      <div className="flex items-center gap-4 px-4 py-5 md:px-6">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
           title={p?.foto_url ? "Cambiar retrato" : "Subir retrato"}
-          className={`group relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full bg-foreground/5 ring-4 ${ring} md:h-36 md:w-36`}
+          className={`group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-800 ring-2 ${ring} md:h-28 md:w-28`}
         >
           {p?.foto_url ? (
             <img src={p.foto_url} alt={`${p.nombres ?? ""} ${p.apellidos ?? ""}`} className="h-full w-full object-cover" />
           ) : (
-            <User className="h-14 w-14 text-foreground/40" />
+            <User className="h-12 w-12 text-white/45" />
           )}
           <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-1 text-[10px] font-semibold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
             {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
@@ -76,15 +68,15 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPortrait(f); }}
           />
         </button>
-        <div className="min-w-0 flex-1">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="min-w-0 flex-1 text-left">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
             <span className="gen-country">{p?.nacionalidad || "Ficha genealógica"}</span>
           </p>
-          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
+          <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
             <span className="gen-name">{p?.nombres}</span> <span className="gen-surname">{p?.apellidos}</span>
-            {sexoIcon && <span className="ml-2 text-2xl font-semibold text-muted-foreground">{sexoIcon}</span>}
+            {sexoIcon && <span className="ml-2 text-xl font-semibold text-white/55">{sexoIcon}</span>}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[15px] font-medium text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[15px] font-medium text-white/65">
             {lifespan && <span className="font-semibold">{lifespan}</span>}
             {edad && <><span>·</span><span>{edad}</span></>}
             {p?.ocupacion && <><span>·</span><span className="font-semibold">{p.ocupacion}</span></>}
@@ -94,7 +86,7 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
                 <button
                   type="button"
                   onClick={() => { navigator.clipboard.writeText(personaCode(p.id)); toast.success("Código copiado"); }}
-                  className="rounded-md border border-border/60 bg-foreground/5 px-1.5 py-0.5 font-mono text-[11px] tracking-wider hover:bg-foreground/10"
+                  className="rounded-md border border-white/15 bg-white/10 px-1.5 py-0.5 font-mono text-[11px] tracking-wider text-white/70 hover:bg-white/15"
                   title="Código único — toca para copiar"
                 >
                   {personaCode(p.id)}
@@ -102,10 +94,10 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
               </>
             )}
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {p?.certeza && <CertezaBadge value={p.certeza} />}
-            {p?.viva === "si" && <span className="glass-pill">Persona viva — privada</span>}
-            {p?.religion && <span className="glass-pill">{p.religion}</span>}
+            {p?.viva === "si" && <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-white/75">Persona viva — privada</span>}
+            {p?.religion && <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-white/75">{p.religion}</span>}
           </div>
         </div>
       </div>
