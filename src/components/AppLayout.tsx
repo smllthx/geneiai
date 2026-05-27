@@ -15,7 +15,6 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
-import ProbandPrompt from "@/components/ProbandPrompt";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
@@ -257,7 +256,6 @@ export default function AppLayout() {
       <BackgroundJobs />
       <MobileBottomNav />
       <AdaptiveViewport />
-      <ProbandPrompt />
       <KeyboardAwareScroller />
     </div>
   );

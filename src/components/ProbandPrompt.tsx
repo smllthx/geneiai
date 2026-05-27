@@ -29,6 +29,7 @@ export default function ProbandPrompt() {
         .from("personas")
         .select("id,nombres,apellidos,nac_fecha")
         .order("apellidos");
+      if (!p?.length) return;
       setPersonas((p as any) ?? []);
       // Suggest the youngest as default proband
       if (p && p.length) {
@@ -53,8 +54,8 @@ export default function ProbandPrompt() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={() => { /* irreversible: no se puede cerrar sin elegir */ }}>
-      <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Sparkles className="h-5 w-5 text-primary" /> ¿Quién es la persona principal?
@@ -62,10 +63,10 @@ export default function ProbandPrompt() {
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Elegí desde quién se construye tu árbol. Suele ser <strong>tú mismo/a</strong>.
-          Toda la app (árbol, investigaciones, insights) se centrará en esa persona.
+          Toda la app (árbol, investigaciones, insights) puede centrarse en esa persona.
         </p>
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-          ⚠️ Esta elección es <strong>permanente</strong>. Una vez guardada no podrás cambiar la persona principal del árbol.
+        <div className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Puedes cambiar esta persona después desde Configuración.
         </div>
 
         {personas.length === 0 ? (
@@ -88,6 +89,7 @@ export default function ProbandPrompt() {
         )}
 
         <DialogFooter>
+          <Button variant="outline" onClick={() => guardar(true)} disabled={saving}>Ahora no</Button>
           <Button onClick={() => guardar(false)} disabled={!sel || saving}>Guardar definitivamente</Button>
         </DialogFooter>
       </DialogContent>

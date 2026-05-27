@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, RotateCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,8 @@ const VIEW_OPTIONS: { key: DefaultTreeView; label: string; desc: string }[] = [
 export default function AppCenterConfig() {
   const [view, setView] = useState<DefaultTreeView>(() => getDefaultTreeView());
   const [analyzing, setAnalyzing] = useState(false);
+  const [personas, setPersonas] = useState<any[]>([]);
+  const [probandId, setProbandId] = useState("");
 
   useEffect(() => {
     const r = () => setView(getDefaultTreeView());
@@ -39,7 +42,32 @@ export default function AppCenterConfig() {
     return () => window.removeEventListener("genaia:default-tree-view", r);
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+      const [{ data: p }, { data: prof }] = await Promise.all([
+        supabase.from("personas").select("id,nombres,apellidos,nac_fecha").order("apellidos"),
+        supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle(),
+      ]);
+      setPersonas((p as any) ?? []);
+      setProbandId((prof as any)?.proband_id ?? "");
+    })();
+  }, []);
+
   const applyView = (v: DefaultTreeView) => { setDefaultTreeView(v); setView(v); toast.success("Vista por defecto del árbol actualizada"); };
+
+  const saveProband = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) { toast.error("Sesión requerida"); return; }
+    if (!probandId) { toast.error("Elige una persona principal"); return; }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ proband_id: probandId, proband_asked: true })
+      .eq("id", user.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Persona central del árbol guardada");
+  };
 
   const autoConfigure = async () => {
     setAnalyzing(true);
@@ -104,6 +132,30 @@ export default function AppCenterConfig() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <div>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Persona central del árbol</Label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <Select value={probandId} onValueChange={setProbandId}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder={personas.length ? "Elige la persona central" : "Primero crea o importa personas"} />
+              </SelectTrigger>
+              <SelectContent>
+                {personas.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nombres} {p.apellidos}{p.nac_fecha ? ` · ${new Date(p.nac_fecha).getUTCFullYear()}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={saveProband} disabled={!personas.length || !probandId} className="rounded-xl">
+              Guardar persona central
+            </Button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            El árbol se abrirá centrado en esta persona y mostrará sus ascendientes paternos y maternos.
+          </p>
+        </div>
+
         <div>
           <Label className="text-xs uppercase tracking-wide text-muted-foreground">Vista por defecto del árbol</Label>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">

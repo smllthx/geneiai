@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, Search } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeInsights from "@/components/TreeInsights";
 import { toast } from "sonner";
@@ -19,10 +19,12 @@ import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+import { getRecent } from "@/lib/recent";
 
 
 type Vista = "ascendientes" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
+type Panel = "arbol" | "tareas" | "recientes" | "mas";
 
 export default function Arbol() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,7 +33,7 @@ export default function Arbol() {
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
   const [probandLocked, setProbandLocked] = useState(false);
-  const [generaciones, setGeneraciones] = useState(4);
+  const [generaciones, setGeneraciones] = useState(7);
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
@@ -44,6 +46,9 @@ export default function Arbol() {
   const [categoria, setCategoria] = useState<Categoria>("predeterminada");
   const [docsByPersona, setDocsByPersona] = useState<Map<string, number>>(new Map());
   const [loadingTree, setLoadingTree] = useState(true);
+  const [panel, setPanel] = useState<Panel>("arbol");
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
 
   const { user: authUser } = useAuth();
@@ -68,6 +73,9 @@ export default function Arbol() {
         for (const pid of (d as any).personas_mencionadas ?? []) counts.set(pid, (counts.get(pid) ?? 0) + 1);
       }
       setDocsByPersona(counts);
+      const recentIds = getRecent().map((x) => x.id);
+      const peopleById = new Map(((p as any) ?? []).map((person: PersonaLite) => [person.id, person]));
+      setRecentPeople(recentIds.map((id) => peopleById.get(id)).filter(Boolean) as PersonaLite[]);
       const probandId = (profRes as any)?.data?.proband_id;
       const validCentro = centroParam && p?.some((x: any) => x.id === centroParam);
       const validProband = probandId && p?.some((x: any) => x.id === probandId);
@@ -83,6 +91,17 @@ export default function Arbol() {
       setLoadingTree(false);
     })();
   }, [reloadKey, centroParam]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("research_tasks")
+        .select("id,descripcion,estado,tipo,person_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setTasks(data ?? []);
+    })();
+  }, [reloadKey]);
 
   // Hide bottom nav / Siri / sidebar when tree is fullscreen
   useEffect(() => {
@@ -300,10 +319,11 @@ export default function Arbol() {
   const Draggable = TreeCard; // backwards-compat alias used by older sections below
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
-  const Ascendants = ({ pid, gen }: { pid: string; gen: number }) => {
-    if (gen <= 0) return null;
+  const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
+    if (gen <= 0 || trail.includes(pid)) return null;
     const { padre, madre } = padresDe(pid);
     const hasAny = !!(padre || madre);
+    const nextTrail = [...trail, pid];
     return (
       <div className="flex flex-col items-center">
         <div className="relative flex flex-wrap items-end justify-center gap-4 px-3 pb-3">
@@ -312,7 +332,7 @@ export default function Arbol() {
             <div className="pointer-events-none absolute bottom-1 left-1/2 h-px w-[55%] -translate-x-1/2 bg-foreground/30" />
           )}
           <div className="flex flex-col items-center gap-2">
-            {padre ? <Ascendants pid={padre.id} gen={gen - 1} /> : null}
+            {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
             {padre ? (
               <Draggable p={padre}><Hl p={padre}><PersonCard p={padre} compact /></Hl></Draggable>
             ) : (
@@ -321,7 +341,7 @@ export default function Arbol() {
             )}
           </div>
           <div className="flex flex-col items-center gap-2">
-            {madre ? <Ascendants pid={madre.id} gen={gen - 1} /> : null}
+            {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
             {madre ? (
               <Draggable p={madre}><Hl p={madre}><PersonCard p={madre} compact /></Hl></Draggable>
             ) : (
@@ -412,6 +432,13 @@ export default function Arbol() {
     }
   };
 
+  const completarTarea = async (id: string) => {
+    const { error } = await supabase.from("research_tasks").update({ estado: "completada" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Tarea marcada como completada");
+    setTasks((cur) => cur.map((t) => t.id === id ? { ...t, estado: "completada" } : t));
+  };
+
 
   return (
     <div
@@ -459,40 +486,20 @@ export default function Arbol() {
         </button>
       </div>
 
-      {/* Compact selector row */}
+      {/* Compact tree control row */}
       <div className="mb-3 flex items-center gap-2 px-3 md:px-6">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Select
-            value={center}
-            onValueChange={(v) => {
-              if (probandLocked) {
-                toast.info("La persona principal ya está fijada y no se puede cambiar.");
-                return;
-              }
-              setCenter(v);
-            }}
-            disabled={probandLocked}
-          >
-            <SelectTrigger
-              className="h-9 rounded-full pl-9 text-xs disabled:opacity-100 disabled:cursor-default"
-              title={probandLocked ? "Persona principal fijada" : "Persona central"}
-            >
-              <SelectValue placeholder="Persona central" />
-            </SelectTrigger>
-            <SelectContent>
-              {personas.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="min-w-0 flex-1 rounded-full border border-border bg-card/60 px-3 py-2 text-xs">
+          <span className="text-muted-foreground">Centro: </span>
+          <span className="font-medium">{persona ? `${persona.nombres} ${persona.apellidos}` : "configúralo en Configuración"}</span>
+          <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
         </div>
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
-          <SelectTrigger className="h-9 w-[92px] rounded-full text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[118px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             {[2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50].map((n) => (
               <SelectItem key={n} value={String(n)}>{n} gen</SelectItem>
             ))}
+            <SelectItem value="999">Todas</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -616,8 +623,79 @@ export default function Arbol() {
         </SheetContent>
       </Sheet>
 
+      <div className="sticky bottom-3 z-20 mx-auto mb-4 grid max-w-lg grid-cols-4 gap-1 rounded-3xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur md:bottom-4">
+        {([
+          ["arbol", GitBranch, "Árbol"],
+          ["tareas", ListChecks, "Tareas"],
+          ["recientes", Clock3, "Recientes"],
+          ["mas", MoreHorizontal, "Más"],
+        ] as [Panel, any, string][]).map(([key, Icon, label]) => (
+          <button
+            key={key}
+            onClick={() => setPanel(key)}
+            className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition ${
+              panel === key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {loadingTree ? (
+      {panel === "tareas" ? (
+        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-2">
+          {tasks.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground md:col-span-2">
+              No hay tareas pendientes. Puedes generar tareas con Verificar coherencia o Agentes en paralelo.
+            </div>
+          ) : tasks.map((task) => {
+            const p = task.person_id ? byId.get(task.person_id) : null;
+            return (
+              <div key={task.id} className="rounded-2xl border border-border bg-card/70 p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">{task.tipo}</span>
+                  <span className="text-[11px] text-muted-foreground">{task.estado}</span>
+                </div>
+                <p className="text-sm">{task.descripcion}</p>
+                {p && <Link to={`/personas/${p.id}`} className="mt-2 block text-xs text-link underline">{p.nombres} {p.apellidos}</Link>}
+                {task.estado !== "completada" && (
+                  <Button size="sm" variant="outline" className="mt-3" onClick={() => completarTarea(task.id)}>
+                    <CheckCircle2 className="h-4 w-4" /> Completar
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : panel === "recientes" ? (
+        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-3">
+          {recentPeople.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground md:col-span-3">
+              Todavía no hay personas vistas recientemente.
+            </div>
+          ) : recentPeople.map((p) => (
+            <Link key={p.id} to={`/personas/${p.id}`} className="block">
+              <PersonCard p={p} />
+            </Link>
+          ))}
+        </div>
+      ) : panel === "mas" ? (
+        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-2">
+          <Button variant="outline" className="justify-start rounded-2xl p-6" onClick={verificarCoherencia}>
+            <ShieldCheck className="h-4 w-4" /> Verificar coherencia del árbol
+          </Button>
+          <Button variant="outline" className="justify-start rounded-2xl p-6" onClick={agentesEnParalelo} disabled={!persona}>
+            <Rocket className="h-4 w-4" /> Crear tareas con agentes
+          </Button>
+          <Button variant="outline" className="justify-start rounded-2xl p-6" onClick={exportarGedcom}>
+            <FileDown className="h-4 w-4" /> Exportar GEDCOM
+          </Button>
+          <Link to="/configuracion" className="rounded-2xl border border-border bg-card/70 p-6 text-sm font-medium hover:bg-foreground/5">
+            Configurar persona central, vista por defecto y Face ID / Touch ID
+          </Link>
+        </div>
+      ) : loadingTree ? (
         <div className="grid min-h-[45vh] place-items-center rounded-2xl border border-border bg-card/60">
           <div className="text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />Cargando árbol…</div>
         </div>
