@@ -130,25 +130,19 @@ export default function QuickAddRelative({
         setBusy(false); return;
       }
 
-      // Evitar duplicar la relación directa
-      const yaDirecta = tipos.has(tipo) && (existentes ?? []).some((r: any) => r.tipo === tipo);
-      if (!yaDirecta) {
-        const { error: e2 } = await supabase.from("relaciones").insert({
-          user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: tipo as any,
-        });
-        if (e2) throw e2;
-      }
-
+      // Crea/asegura ambos sentidos de la relación con UPSERT para tolerar
+      // re-vinculaciones y evitar que falle silenciosamente si ya existe una
+      // fila idéntica. Sin esto, cuando el hijo ya tenía un padre creado, el
+      // segundo lado podía quedar sin insertar y la persona "no se afiliaba".
       const inv = inverseFor(tipo, personaSexo);
-      const { data: existingInv } = await supabase
-        .from("relaciones").select("id")
-        .eq("persona_id", parienteId).eq("pariente_id", personaId).eq("tipo", inv as any)
-        .limit(1);
-      if (!existingInv || existingInv.length === 0) {
-        await supabase.from("relaciones").insert({
-          user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: inv as any,
-        });
-      }
+      const rows = [
+        { user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: tipo as any, naturaleza: "biologica" as const, certeza: "probable" as const },
+        { user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: inv as any, naturaleza: "biologica" as const, certeza: "probable" as const },
+      ];
+      const { error: eUp } = await supabase
+        .from("relaciones")
+        .upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
+      if (eUp) throw eUp;
 
       // === Propagación automática de padres al agregar hermano/a ===
       if (tipo === "hermano") {

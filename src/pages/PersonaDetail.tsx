@@ -28,6 +28,7 @@ import { Link } from "react-router-dom";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
+import RelativeRowActions from "@/components/RelativeRowActions";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 
 import { personaCode, matchesCode } from "@/lib/personaCode";
@@ -544,6 +545,7 @@ export default function PersonaDetail() {
             personas={fam.conyuges}
             lugaresMap={lugaresById}
             empty="Sin cónyuges registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="conyuge"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="conyuge" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
@@ -555,6 +557,7 @@ export default function PersonaDetail() {
             personas={fam.hijos}
             lugaresMap={lugaresById}
             empty="Sin hijos registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="hijo"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hijo" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
@@ -583,6 +586,7 @@ export default function PersonaDetail() {
             personas={fam.padres}
             lugaresMap={lugaresById}
             empty="Sin padres registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="padre"
             quickAdd={<div className="flex gap-2">
               <QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="padre" onAdded={async () => {
                 const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
@@ -600,6 +604,7 @@ export default function PersonaDetail() {
             personas={fam.hermanos}
             lugaresMap={lugaresById}
             empty="Sin hermanos registrados."
+            personaId={id} personaSexo={p?.sexo} tipoRelacion="hermano"
             quickAdd={<QuickAddRelative personaId={id!} personaSexo={p?.sexo} defaultTipo="hermano" onAdded={async () => {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
@@ -873,12 +878,31 @@ function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: str
   );
 }
 
-function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { titulo: string; personas: any[]; empty: string; quickAdd?: React.ReactNode; lugaresMap?: Map<string, any> }) {
+function FamiliaSeccion({
+  titulo, personas, empty, quickAdd, lugaresMap,
+  personaId, personaSexo, tipoRelacion,
+}: {
+  titulo: string;
+  personas: any[];
+  empty: string;
+  quickAdd?: React.ReactNode;
+  lugaresMap?: Map<string, any>;
+  /** Para acciones por fila (editar/eliminar). Si no se pasa, no se muestran. */
+  personaId?: string;
+  personaSexo?: string | null;
+  tipoRelacion?: "padre" | "madre" | "hijo" | "conyuge" | "hermano";
+}) {
   const lugarNombre = (id?: string | null) => {
     if (!id || !lugaresMap) return null;
     const l = lugaresMap.get(id);
     if (!l) return null;
     return [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ");
+  };
+  const tipoPara = (x: any): "padre" | "madre" | "hijo" | "conyuge" | "hermano" | undefined => {
+    if (!tipoRelacion) return undefined;
+    if (tipoRelacion !== "padre" && tipoRelacion !== "madre") return tipoRelacion;
+    // En la sección "Padres" detectamos si la fila es padre o madre por su sexo.
+    return x.sexo === "femenino" ? "madre" : "padre";
   };
   return (
     <section className="rounded-2xl bg-card/30 px-1 py-2">
@@ -902,11 +926,12 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { tit
             const matLinea = matFecha || matLugar
               ? `${matFecha ?? "Fecha desconocida"}${matLugar ? ` · ${matLugar}` : ""}`
               : null;
+            const t = tipoPara(x);
             return (
-              <li key={x.id}>
+              <li key={x.id} className="flex items-stretch gap-1">
                 <Link
                   to={`/personas/${x.id}`}
-                  className="flex items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
+                  className="flex flex-1 items-start gap-3 rounded-xl px-3 py-3 hover:bg-accent/30 transition"
                 >
                   {x.foto_url ? (
                     <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
@@ -931,6 +956,17 @@ function FamiliaSeccion({ titulo, personas, empty, quickAdd, lugaresMap }: { tit
                     )}
                   </div>
                 </Link>
+                {personaId && t && (
+                  <div className="flex items-center pr-1">
+                    <RelativeRowActions
+                      personaId={personaId}
+                      personaSexo={personaSexo}
+                      parienteId={x.id}
+                      parienteSexo={x.sexo}
+                      currentTipo={t}
+                    />
+                  </div>
+                )}
               </li>
             );
           })}
