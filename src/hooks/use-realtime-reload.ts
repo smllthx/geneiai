@@ -29,8 +29,10 @@ export function useRealtimeReload(tables: string[], userId?: string | null, debo
       );
     });
     ch.subscribe();
+    window.addEventListener("genaia:data-changed", bump);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
+      window.removeEventListener("genaia:data-changed", bump);
       supabase.removeChannel(ch);
     };
   }, [tables.join("|"), userId, debounceMs]);

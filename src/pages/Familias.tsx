@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Heart, Plus } from "lucide-react";
+import { GitBranch, Heart, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 
 export default function Familias() {
+  const { user } = useAuth();
   const [familias, setFamilias] = useState<any[]>([]);
   const [personas, setPersonas] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -23,7 +27,8 @@ export default function Familias() {
     ]);
     setFamilias(f ?? []); setPersonas(p ?? []);
   };
-  useEffect(() => { load(); }, []);
+  const reloadKey = useRealtimeReload(["familias", "personas", "relaciones"], user?.id ?? null);
+  useEffect(() => { load(); }, [reloadKey]);
 
   const crear = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
@@ -77,8 +82,25 @@ export default function Familias() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent"><Heart className="h-5 w-5" /></div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-display text-lg font-semibold">{f.nombre}</h3>
-                    {head && <p className="text-xs text-muted-foreground">Cabeza: {head.nombres} {head.apellidos}</p>}
+                    {head && (
+                      <Link to={`/personas/${head.id}`} className="text-xs text-link underline-offset-2 hover:underline">
+                        Persona referente: {head.nombres} {head.apellidos}
+                      </Link>
+                    )}
                     {f.notas && <p className="mt-2 text-sm">{f.notas}</p>}
+                    {head && (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <Button asChild size="sm" variant="outline">
+                          <Link to={`/arbol?centro=${head.id}`}><GitBranch className="h-4 w-4" /> Árbol familiar</Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to={`/arbol?centro=${head.id}&rama=paterna`}><Users className="h-4 w-4" /> Rama paterna</Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to={`/arbol?centro=${head.id}&rama=materna`}><Users className="h-4 w-4" /> Rama materna</Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </GlassCard>

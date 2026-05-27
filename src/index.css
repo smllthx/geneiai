@@ -102,10 +102,10 @@
     --glass-shadow: 0 0% 0% / 0.5;
     --glass-highlight: 0 0% 100% / 0.08;
 
-    --mesh-1: 211 100% 50%;
-    --mesh-2: 280 90% 55%;
-    --mesh-3: 340 90% 55%;
-    --mesh-4: 180 80% 45%;
+    --mesh-1: 188 100% 46%;
+    --mesh-2: 270 94% 62%;
+    --mesh-3: 338 92% 58%;
+    --mesh-4: 43 96% 56%;
 
     --sidebar-background: 222 30% 7%;
     --sidebar-foreground: 210 30% 96%;
@@ -136,8 +136,9 @@
     user-select: none;
     -webkit-touch-callout: none;
     background-image:
-      radial-gradient(at 50% 0%, hsl(var(--mesh-1) / 0.10) 0px, transparent 60%),
-      radial-gradient(at 100% 100%, hsl(var(--mesh-2) / 0.08) 0px, transparent 60%);
+      radial-gradient(at 18% 0%, hsl(var(--mesh-1) / 0.16) 0px, transparent 46%),
+      radial-gradient(at 90% 8%, hsl(var(--mesh-2) / 0.12) 0px, transparent 44%),
+      radial-gradient(at 80% 100%, hsl(var(--mesh-4) / 0.10) 0px, transparent 42%);
     background-attachment: fixed;
   }
   input, textarea, [contenteditable="true"], p, h1, h2, h3, h4, h5, h6, span, li, td, th, blockquote, pre, code, a {
@@ -300,5 +301,4 @@ body.tree-fullscreen main { padding: 0 !important; }
   max-height: calc(100vh - 6rem) !important;
   overflow: auto;
 }
-
 

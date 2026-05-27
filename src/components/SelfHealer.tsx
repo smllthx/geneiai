@@ -145,6 +145,12 @@ export default function SelfHealer() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!current || diag || loading) return;
+    const timer = window.setTimeout(() => diagnose(current), 250);
+    return () => window.clearTimeout(timer);
+  }, [current, diag, loading, diagnose]);
+
   const apply = async () => {
     if (!diag) return;
     if (diag.id) {

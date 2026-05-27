@@ -17,6 +17,7 @@ import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
+import GlobalDataSync from "@/components/GlobalDataSync";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
 
@@ -258,6 +259,7 @@ export default function AppLayout() {
       <MobileBottomNav />
       <AdaptiveViewport />
       <AppUpdateNotifier />
+      <GlobalDataSync />
       <KeyboardAwareScroller />
     </div>
   );

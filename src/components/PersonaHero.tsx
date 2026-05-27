@@ -6,6 +6,16 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
+const originTheme = (origin?: string | null) => {
+  const o = (origin ?? "").toLowerCase();
+  if (o.includes("ital")) return "from-emerald-500/25 via-white/5 to-red-500/20";
+  if (o.includes("suiz") || o.includes("switz")) return "from-red-500/25 via-white/5 to-red-500/15";
+  if (o.includes("chil")) return "from-blue-500/25 via-white/5 to-red-500/20";
+  if (o.includes("espa")) return "from-amber-500/25 via-red-500/10 to-amber-500/20";
+  if (o.includes("fran")) return "from-blue-500/25 via-white/5 to-red-500/20";
+  if (o.includes("alem") || o.includes("german")) return "from-zinc-700/40 via-red-500/10 to-amber-500/25";
+  return "from-cyan-500/20 via-fuchsia-500/10 to-amber-500/15";
+};
 
 export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (patch: any) => void }) {
   const yN = yearOf(p?.nac_fecha) ?? p?.nac_rango_ini ?? null;
@@ -42,7 +52,7 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
   };
 
   return (
-    <div className="-mx-3 mb-0 overflow-hidden border-y border-border bg-zinc-900 text-white md:mx-0 md:mb-4 md:rounded-2xl md:border">
+    <div className={`-mx-3 mb-0 overflow-hidden border-y border-border bg-gradient-to-br ${originTheme(p?.nacionalidad)} bg-zinc-900 text-white md:mx-0 md:mb-4 md:rounded-2xl md:border`}>
       <div className="flex items-center gap-4 px-4 py-5 md:px-6">
         <button
           type="button"

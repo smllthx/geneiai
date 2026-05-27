@@ -9,11 +9,23 @@ import { toast } from "sonner";
 import { UserPlus, Search } from "lucide-react";
 import { personaCode, matchesCode } from "@/lib/personaCode";
 
-type Tipo = "padre" | "madre" | "conyuge" | "hijo" | "hermano";
+type Tipo =
+  | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
+  | "union_civil" | "conviviente" | "cohabitante"
+  | "padrino" | "madrina" | "ahijado" | "primo" | "prima"
+  | "socio_negocio" | "testigo" | "otro";
 
 const labels: Record<Tipo, string> = {
   padre: "padre", madre: "madre", conyuge: "cónyuge", hijo: "hijo/a", hermano: "hermano/a",
+  union_civil: "unión civil", conviviente: "conviviente", cohabitante: "cohabitante",
+  padrino: "padrino", madrina: "madrina", ahijado: "ahijado/a", primo: "primo", prima: "prima",
+  socio_negocio: "socio/a de negocio", testigo: "testigo", otro: "otra relación",
 };
+
+const dbTipoFor = (t: Tipo) =>
+  (["padre", "madre", "conyuge", "hijo", "hermano"].includes(t) ? t : "otro") as "padre" | "madre" | "conyuge" | "hijo" | "hermano" | "otro";
+
+const relationNoteFor = (t: Tipo) => dbTipoFor(t) === "otro" ? `relación genealógica: ${labels[t]}` : null;
 
 export default function QuickAddRelative({
   personaId, personaSexo, defaultTipo, trigger, onAdded,
@@ -80,7 +92,18 @@ export default function QuickAddRelative({
       case "madre": return "hijo";
       case "hijo":  return currentSex === "femenino" ? "madre" : "padre";
       case "conyuge": return "conyuge";
+      case "union_civil": return "union_civil";
+      case "conviviente": return "conviviente";
+      case "cohabitante": return "cohabitante";
+      case "padrino": return "ahijado";
+      case "madrina": return "ahijado";
+      case "ahijado": return "padrino";
+      case "primo": return "primo";
+      case "prima": return "prima";
+      case "socio_negocio": return "socio_negocio";
+      case "testigo": return "testigo";
       case "hermano": return "hermano";
+      case "otro": return "otro";
     }
   };
 
@@ -121,10 +144,11 @@ export default function QuickAddRelative({
         .from("relaciones").select("tipo")
         .or(`and(persona_id.eq.${personaId},pariente_id.eq.${parienteId}),and(persona_id.eq.${parienteId},pariente_id.eq.${personaId})`);
       const tipos = new Set((existentes ?? []).map((r: any) => r.tipo));
+      const dbTipo = dbTipoFor(tipo);
       const esFamiliar = (t: string) => ["padre", "madre", "hijo"].includes(t);
       const incompatibles =
-        (tipo === "conyuge" && [...tipos].some(esFamiliar)) ||
-        (esFamiliar(tipo) && tipos.has("conyuge"));
+        (dbTipo === "conyuge" && [...tipos].some(esFamiliar)) ||
+        (esFamiliar(dbTipo) && tipos.has("conyuge"));
       if (incompatibles) {
         toast.error("Esta persona ya tiene una relación incompatible (padre/madre/hijo o cónyuge). Edita la relación existente primero.");
         setBusy(false); return;
@@ -135,9 +159,10 @@ export default function QuickAddRelative({
       // fila idéntica. Sin esto, cuando el hijo ya tenía un padre creado, el
       // segundo lado podía quedar sin insertar y la persona "no se afiliaba".
       const inv = inverseFor(tipo, personaSexo);
+      const invDbTipo = dbTipoFor(inv);
       const rows = [
-        { user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: tipo as any, naturaleza: "biologica" as const, certeza: "probable" as const },
-        { user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: inv as any, naturaleza: "biologica" as const, certeza: "probable" as const },
+        { user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: dbTipo as any, notas: relationNoteFor(tipo), naturaleza: "biologica" as const, certeza: "probable" as const },
+        { user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: invDbTipo as any, notas: relationNoteFor(inv), naturaleza: "biologica" as const, certeza: "probable" as const },
       ];
       const { error: eUp } = await supabase
         .from("relaciones")
@@ -145,7 +170,7 @@ export default function QuickAddRelative({
       if (eUp) throw eUp;
 
       // === Propagación automática de padres al agregar hermano/a ===
-      if (tipo === "hermano") {
+      if (dbTipo === "hermano") {
         const [{ data: padresA }, { data: padresB }] = await Promise.all([
           supabase.from("relaciones").select("pariente_id, tipo")
             .eq("user_id", user.id).eq("persona_id", personaId).in("tipo", ["padre", "madre"] as any),
@@ -198,8 +223,19 @@ export default function QuickAddRelative({
                 <SelectItem value="padre">Padre</SelectItem>
                 <SelectItem value="madre">Madre</SelectItem>
                 <SelectItem value="conyuge">Cónyuge</SelectItem>
+                <SelectItem value="union_civil">Unión civil</SelectItem>
+                <SelectItem value="conviviente">Conviviente</SelectItem>
+                <SelectItem value="cohabitante">Cohabitante</SelectItem>
                 <SelectItem value="hijo">Hijo/a</SelectItem>
                 <SelectItem value="hermano">Hermano/a</SelectItem>
+                <SelectItem value="primo">Primo</SelectItem>
+                <SelectItem value="prima">Prima</SelectItem>
+                <SelectItem value="padrino">Padrino</SelectItem>
+                <SelectItem value="madrina">Madrina</SelectItem>
+                <SelectItem value="ahijado">Ahijado/a</SelectItem>
+                <SelectItem value="socio_negocio">Socio/a de negocio</SelectItem>
+                <SelectItem value="testigo">Testigo</SelectItem>
+                <SelectItem value="otro">Otra relación</SelectItem>
               </SelectContent>
             </Select>
           </div>

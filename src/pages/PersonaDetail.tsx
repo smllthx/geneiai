@@ -232,6 +232,15 @@ export default function PersonaDetail() {
     return { padres, conyuges, hijos, hermanos, otros };
   }, [relaciones, id, p, allPersonas]);
 
+  const reloadRelaciones = async () => {
+    if (!id || isNew) return;
+    const { data } = await supabase
+      .from("relaciones")
+      .select("*, pariente:personas!relaciones_pariente_id_fkey(*)")
+      .or(`persona_id.eq.${id},pariente_id.eq.${id}`);
+    setRelaciones(data ?? []);
+  };
+
   if (!idValid) {
     return (
       <div className="mx-auto max-w-xl pt-10 text-center">
@@ -451,6 +460,7 @@ export default function PersonaDetail() {
             ["detalles", "Detalles"],
             ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
             ["padres", `Padres${fam.padres.length + fam.hermanos.length > 0 ? ` (${fam.padres.length + fam.hermanos.length})` : ""}`],
+            ["relaciones", `Red familiar${fam.otros.length > 0 ? ` (${fam.otros.length})` : ""}`],
             ["fuentes", `Fuentes${docs.length > 0 ? ` (${docs.length})` : ""}`],
             ["recuerdos", `Recuerdos${fotos.length > 0 ? ` (${fotos.length})` : ""}`],
             ["notas", "Biografía"],
@@ -655,6 +665,17 @@ export default function PersonaDetail() {
               const { data } = await supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`);
               setRelaciones(data ?? []);
             }} trigger={<Button size="sm" variant="outline">+ Hermano/a</Button>} />}
+          />
+        </TabsContent>
+
+        <TabsContent value="relaciones">
+          <RelacionesPanel
+            personaId={id}
+            personaSexo={p?.sexo}
+            relaciones={relaciones}
+            allPersonas={allPersonas}
+            reload={reloadRelaciones}
+            disabled={isNew}
           />
         </TabsContent>
 
@@ -1042,7 +1063,10 @@ function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, relo
   const add = async () => {
     if (!picked) return;
     const user = (await supabase.auth.getUser()).data.user!;
-    const { error } = await supabase.from("relaciones").insert({ user_id: user.id, persona_id: personaId, pariente_id: picked.id, tipo: tipo as any });
+    const isExtended = !["padre", "madre", "conyuge", "hijo", "hermano"].includes(tipo);
+    const dbTipo = isExtended ? "otro" : tipo;
+    const notas = isExtended ? `relación genealógica: ${tipo.replace(/_/g, " ")}` : null;
+    const { error } = await supabase.from("relaciones").insert({ user_id: user.id, persona_id: personaId, pariente_id: picked.id, tipo: dbTipo as any, notas });
     if (error) return toast.error(error.message);
     const inv = tipo === "padre" || tipo === "madre" ? "hijo"
       : tipo === "hijo" ? (personaSexo === "femenino" ? "madre" : "padre")
@@ -1094,8 +1118,12 @@ function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, relo
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="padre">Padre</SelectItem><SelectItem value="madre">Madre</SelectItem>
-              <SelectItem value="conyuge">Cónyuge</SelectItem><SelectItem value="hijo">Hijo/a</SelectItem>
-              <SelectItem value="hermano">Hermano/a</SelectItem><SelectItem value="otro">Otro</SelectItem>
+              <SelectItem value="conyuge">Cónyuge / matrimonio</SelectItem><SelectItem value="union_civil">Unión civil</SelectItem>
+              <SelectItem value="conviviente">Conviviente</SelectItem><SelectItem value="cohabitante">Cohabitante</SelectItem>
+              <SelectItem value="hijo">Hijo/a</SelectItem><SelectItem value="hermano">Hermano/a</SelectItem>
+              <SelectItem value="primo">Primo</SelectItem><SelectItem value="prima">Prima</SelectItem>
+              <SelectItem value="padrino">Padrino</SelectItem><SelectItem value="madrina">Madrina</SelectItem><SelectItem value="ahijado">Ahijado/a</SelectItem>
+              <SelectItem value="socio_negocio">Socio/a de negocio</SelectItem><SelectItem value="testigo">Testigo</SelectItem><SelectItem value="otro">Otra relación</SelectItem>
             </SelectContent>
           </Select>
           <div className="relative">
@@ -1124,7 +1152,7 @@ function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, relo
       <ul className="divide-y divide-border">{view.map((r) => (
         <li key={r.id + r.other.id} className="flex items-center justify-between py-2 text-sm">
           <span>
-            <strong className="capitalize">{r.tipo}</strong>:{" "}
+            <strong className="capitalize">{r.tipo === "otro" && relaciones.find((x: any) => x.id === r.id)?.notas ? relaciones.find((x: any) => x.id === r.id)?.notas?.replace("relación genealógica: ", "") : r.tipo}</strong>:{" "}
             <Link to={`/personas/${r.other.id}`} className="hover:text-primary">{r.other.nombres} {r.other.apellidos}</Link>
             <span className="ml-2 font-mono text-[10px] text-muted-foreground">{personaCode(r.other.id)}</span>
           </span>
