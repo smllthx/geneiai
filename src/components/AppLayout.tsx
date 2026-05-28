@@ -146,16 +146,16 @@ export default function AppLayout() {
   }, [user?.id]);
 
   useEffect(() => {
-    const onEdgeError = (event: Event) => {
+    const onAiError = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (!detail?.message) return;
       toast.error(detail.message, {
-        description: detail.functionName ? `Función: ${detail.functionName}` : undefined,
+        description: detail.functionName ? `Opción IA: ${detail.functionName}` : undefined,
         duration: 7000,
       });
     };
-    window.addEventListener("genaia:edge-error", onEdgeError);
-    return () => window.removeEventListener("genaia:edge-error", onEdgeError);
+    window.addEventListener("genaia:ia-error", onAiError);
+    return () => window.removeEventListener("genaia:ia-error", onAiError);
   }, []);
 
 

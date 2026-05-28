@@ -23,12 +23,12 @@ const TOOL_LABELS: Record<string, string> = {
   update_persona: "Actualizando datos",
   create_relation: "Conectando relación",
   set_proband: "Definiendo persona principal",
-  mega_search: "🚀 Lanzando 6 agentes",
-  web_search: "🌐 Buscando en la web",
-  agent_investigar: "🧠 Investigación IA",
-  check_coherence: "🛡️ Verificando coherencia",
-  navigate_to: "↗️ Navegando",
-  propose_change: "📝 Sugerencia creada",
+  mega_search: "Lanzando 6 agentes",
+  web_search: "Buscando en la web",
+  agent_investigar: "Investigación IA",
+  check_coherence: "Verificando coherencia",
+  navigate_to: "Navegando",
+  propose_change: "Sugerencia creada",
 };
 
 const QUICK = [
@@ -43,7 +43,7 @@ const QUICK = [
 export default function Asistente() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "👋 Hola, soy **GENAIA**. Puedo hacer **todo** en la app por vos: crear personas, conectar relaciones, lanzar investigaciones, buscar en la web, verificar coherencia, navegar pantallas. **Pedime lo que quieras.**" },
+    { role: "assistant", content: "Soy el **Asistente ChatGPT de GENAIA**. Puedo crear personas, conectar relaciones, lanzar investigaciones, buscar en la web, verificar coherencia y navegar pantallas. Pedime lo que necesites." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ export default function Asistente() {
       if (error || data?.error) {
         if (!isCreditOrAiError(error ?? data?.error)) throw (error ?? new Error(data.error));
         data = await localAssistantReply(text);
-        toast.info("🔑 Activa ChatGPT en Configuración → IA. Guardá la API key y la app se reinicia sola.");
+        toast.info("Activa ChatGPT en Configuración → IA. Guarda la API key y reinicia para aplicar el cambio.");
       }
       const events: ToolEvent[] = data?.tool_events ?? [];
       setMessages((m) => [...m, { role: "assistant", content: data?.content || "(sin respuesta)", tools: events }]);
@@ -98,7 +98,7 @@ export default function Asistente() {
     } catch (e: any) {
       const data = await localAssistantReply(text);
       setMessages((m) => [...m, { role: "assistant", content: data.content, tools: data.tool_events }]);
-      toast.info("🤖 Respuesta local activada. Para ChatGPT: Configuración → IA → Guardar y reiniciar.");
+      toast.info("Respuesta local activada. Para ChatGPT: Configuración → IA → Guardar y reiniciar.");
     } finally {
       setLoading(false);
     }
@@ -143,8 +143,8 @@ export default function Asistente() {
             {loading && <span className="absolute inset-0 animate-ping rounded-full bg-primary/40" />}
           </div>
           <div>
-            <p className="font-display text-sm font-semibold leading-none">GENAIA</p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Hace todo en la app</p>
+            <p className="font-display text-sm font-semibold leading-none">Asistente ChatGPT</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Conectado a tu árbol</p>
           </div>
         </div>
         <Sheet>
@@ -212,7 +212,7 @@ export default function Asistente() {
           <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
             <span className="inline-flex items-center gap-1">
-              GENAIA está pensando<span className="animate-pulse">…</span>
+              ChatGPT está pensando<span className="animate-pulse">…</span>
             </span>
           </div>
         )}

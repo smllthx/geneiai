@@ -13,14 +13,14 @@ const BusquedaIA = lazy(() => import("./BusquedaIA"));
 const Insights = lazy(() => import("./Insights"));
 
 const TABS = [
-  { v: "agente", l: "🤖 Agente IA", C: Agente },
-  { v: "busqueda", l: "✨ Búsqueda IA", C: BusquedaIA },
-  { v: "insights", l: "🧠 Insights", C: Insights },
-  { v: "paralelo", l: "🧩 Paralelo", C: AgentesParalelo },
-  { v: "externas", l: "🌎 Web externa", C: InvestigacionExterna },
-  { v: "pistas", l: "✅ Pistas", C: Pistas },
-  { v: "hipotesis", l: "📌 Hipótesis", C: Hipotesis },
-  { v: "inferencias", l: "🔍 Inferencias", C: Inferencias },
+  { v: "agente", l: "Agente IA", C: Agente },
+  { v: "busqueda", l: "Búsqueda IA", C: BusquedaIA },
+  { v: "insights", l: "Insights", C: Insights },
+  { v: "paralelo", l: "Paralelo", C: AgentesParalelo },
+  { v: "externas", l: "Web externa", C: InvestigacionExterna },
+  { v: "pistas", l: "Pistas", C: Pistas },
+  { v: "hipotesis", l: "Hipótesis", C: Hipotesis },
+  { v: "inferencias", l: "Inferencias", C: Inferencias },
 ];
 
 export default function Investigacion() {

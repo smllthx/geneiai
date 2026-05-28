@@ -65,7 +65,7 @@ export default function Importar() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setIaResult(data);
-      toast.success("📄 Procesando en segundo plano. Podés cambiar de sección — los resultados aparecerán en Inicio.", { duration: 8000 });
+      toast.success("Procesando en segundo plano. Puedes cambiar de sección; los resultados aparecerán en Inicio.", { duration: 8000 });
       notify("Documento en proceso", {
         body: `IA leyendo "${iaFile.name}". Te avisaremos cuando termine.`,
         url: "/inicio",

@@ -6,7 +6,7 @@ const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 
 export const isCreditOrAiError = (e: any) => {
   const msg = norm(`${e?.message ?? e?.error?.message ?? e?.details ?? e ?? ""}`);
-  return msg.includes("openai no configurado") || msg.includes("api key") || msg.includes("chatgpt") || msg.includes("402") || msg.includes("429") || msg.includes("non-2xx") || msg.includes("edge function");
+  return msg.includes("openai no configurado") || msg.includes("api key") || msg.includes("chatgpt") || msg.includes("credito") || msg.includes("creditos") || msg.includes("cuota") || msg.includes("quota") || msg.includes("402") || msg.includes("429") || msg.includes("non-2xx") || msg.includes("edge function");
 };
 
 export function localPersonaInsight(persona: any) {
@@ -56,7 +56,7 @@ export async function localAssistantReply(text: string) {
     return { content: `Revisión local terminada: ${issues.length} aviso(s) encontrados. ${issues.length ? "Abrí Insights o el árbol para revisarlos." : "El árbol se ve coherente."}`, tool_events };
   }
   if (q.includes("buscar") || q.includes("investigar")) {
-    return { content: "Puedo preparar búsquedas locales con nombres, fechas, lugares, FamilySearch, cementerios y prensa local. Para análisis generativo con ChatGPT, guarda tu API key en Configuración → IA y pulsa Guardar y reiniciar.", tool_events };
+    return { content: "Puedo preparar búsquedas locales con nombres, fechas, lugares, FamilySearch, cementerios y prensa local. Para análisis generativo con ChatGPT, guarda tu API key en Configuración → IA y pulsa Guardar y reiniciar. Si no quedan créditos, recarga billing en OpenAI.", tool_events };
   }
-  return { content: "Puedo navegar, revisar coherencia, ordenar datos y sugerir próximos pasos localmente. Para respuestas generativas con ChatGPT, guarda tu API key en Configuración → IA y pulsa Guardar y reiniciar.", tool_events };
+  return { content: "Puedo navegar, revisar coherencia, ordenar datos y sugerir próximos pasos localmente. Para respuestas generativas con ChatGPT, guarda tu API key en Configuración → IA y pulsa Guardar y reiniciar. Si no quedan créditos, recarga billing en OpenAI.", tool_events };
 }

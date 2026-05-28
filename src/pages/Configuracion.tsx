@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   isDevicePasskeySupported,
   registerDevicePasskey,
 } from "@/lib/devicePasskey";
+import { summarizeAiUsage, type AiUsagePeriod } from "@/lib/aiUsage";
 
 
 const SEED_VARIANTES: [string, string][] = [
@@ -25,21 +26,33 @@ const SEED_VARIANTES: [string, string][] = [
 ];
 
 const AI_FEATURES = [
-  "🤖 Asistente virtual GENAIA",
-  "✨ Búsqueda IA por persona",
-  "🧠 Insights e hipótesis avanzadas",
-  "📜 Biografía automática",
-  "🌎 Contexto histórico",
-  "🧬 ADN y origen",
-  "📄 Lectura de documentos y PDFs",
-  "🖼️ Análisis de fotos y retratos",
-  "👥 Detección de duplicados",
-  "🔎 Coincidencias en internet",
-  "🧾 Sugerencias desde documentos",
-  "🧩 Agentes en paralelo",
-  "🛠️ Diagnóstico de errores",
-  "🎨 Cuadros genealógicos",
+  "Asistente virtual ChatGPT",
+  "Búsqueda IA por persona",
+  "Insights e hipótesis avanzadas",
+  "Biografía automática",
+  "Contexto histórico",
+  "ADN y origen",
+  "Lectura de documentos y PDFs",
+  "Análisis de fotos y retratos",
+  "Detección de duplicados",
+  "Coincidencias en internet",
+  "Sugerencias desde documentos",
+  "Agentes en paralelo",
+  "Diagnóstico de errores",
+  "Cuadros genealógicos",
 ];
+
+const UsageBox = ({ label, usage }: { label: string; usage: AiUsagePeriod }) => (
+  <div className="rounded-xl border border-border/70 bg-card/45 p-3">
+    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className="mt-1 text-2xl font-semibold tabular-nums">{usage.credits}</p>
+    <p className="text-xs text-muted-foreground">créditos aprox.</p>
+    <p className="mt-2 text-[11px] text-muted-foreground">
+      {usage.calls} llamadas · {usage.totalTokens.toLocaleString("es-CL")} tokens estimados
+      {usage.failed ? ` · ${usage.failed} con error` : ""}
+    </p>
+  </div>
+);
 
 export default function Configuracion() {
   const [variantes, setVariantes] = useState<any[]>([]);
@@ -49,6 +62,8 @@ export default function Configuracion() {
   const [aiCfg, setAiCfg] = useState<{ openai_api_key: string; hasKey: boolean }>({ openai_api_key: "", hasKey: false });
   const [devicePasskeySupported, setDevicePasskeySupported] = useState(false);
   const [devicePasskeyEnabled, setDevicePasskeyEnabled] = useState(false);
+  const [usageTick, setUsageTick] = useState(0);
+  const aiUsage = useMemo(() => summarizeAiUsage(), [usageTick]);
 
   const load = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -72,23 +87,32 @@ export default function Configuracion() {
     setDevicePasskeySupported(isDevicePasskeySupported());
     setDevicePasskeyEnabled(hasDevicePasskey());
   }, []);
+  useEffect(() => {
+    const refresh = () => setUsageTick((n) => n + 1);
+    window.addEventListener("genaia:ai-usage-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("genaia:ai-usage-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   const saveOpenAIKey = async (rawKey: string) => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
     if (!rawKey || rawKey.includes("•")) {
-      toast.info("🔄 La API key guardada se mantiene igual. Reiniciando para aplicar la configuración IA…");
+      toast.info("La API key guardada se mantiene igual. Reiniciando para aplicar la configuración IA…");
       await supabase.auth.refreshSession();
       window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 700);
       return;
     }
     const clean = rawKey.trim();
-    if (!clean.startsWith("sk-")) return toast.error("🔑 Esa API key no parece de OpenAI. Debe empezar con sk-.");
+    if (!clean.startsWith("sk-")) return toast.error("Esa API key no parece de OpenAI. Debe empezar con sk-.");
     const value: any = { user_id: user.id, ai_preferred_provider: "openai" };
     value.openai_api_key = clean;
     const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
-    toast.success("✅ ChatGPT quedó guardado. Reiniciando la app para aplicar IA en todas las secciones…");
+    toast.success("ChatGPT quedó guardado. Reiniciando la app para aplicar IA en todas las secciones…");
     try {
       localStorage.setItem("genaia:ai-config-updated", String(Date.now()));
       await supabase.auth.refreshSession();
@@ -191,7 +215,7 @@ export default function Configuracion() {
       <PageHeader title="Configuración" subtitle="IA, conexiones, menús, variantes de apellido y datos de ejemplo." />
 
       <Card className="archivo-card mb-6">
-        <CardHeader><CardTitle className="font-serif text-xl">🤖 IA — ChatGPT con tu cuenta de OpenAI</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-serif text-xl">IA — ChatGPT con tu cuenta de OpenAI</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Pegá tu <strong>API key</strong> de OpenAI (creala en <a className="underline text-link" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com/api-keys</a>). Todas las funciones de IA de la app usarán <strong>tu cuenta de OpenAI/ChatGPT</strong>.
@@ -207,7 +231,24 @@ export default function Configuracion() {
             {aiCfg.hasKey && <Button variant="outline" onClick={clearOpenAIKey}>Borrar key</Button>}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {aiCfg.hasKey ? "✅ Tu API key está guardada. Si acabas de cambiarla, usa Guardar y reiniciar para refrescar la sesión." : "⚠️ Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+            {aiCfg.hasKey ? "Tu API key está guardada. Si acabas de cambiarla, usa Guardar y reiniciar para refrescar la sesión." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Si no quedan créditos, recarga billing en OpenAI o crea una API key nueva en tu proyecto manual de OpenAI.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="archivo-card mb-6">
+        <CardHeader><CardTitle className="font-serif text-xl">Uso estimado de IA</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <UsageBox label="Hoy" usage={aiUsage.day} />
+            <UsageBox label="7 días" usage={aiUsage.week} />
+            <UsageBox label="30 días" usage={aiUsage.month} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Estimación local: 1 crédito equivale aprox. a 1.000 tokens procesados por ChatGPT. OpenAI puede cobrar distinto según modelo y cambios de precio.
           </p>
         </CardContent>
       </Card>
@@ -227,7 +268,7 @@ export default function Configuracion() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Todas estas opciones pasan por ChatGPT/OpenAI. Si aparece un error Edge, ahora la app mostrará qué función falló y qué revisar.
+            Todas estas opciones pasan por ChatGPT/OpenAI. Si falta API key o créditos, la app mostrará qué opción IA falló y qué revisar.
           </p>
         </CardContent>
       </Card>

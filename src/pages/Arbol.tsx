@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeInsights from "@/components/TreeInsights";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
 
 
-type Vista = "ascendientes" | "abanico" | "dinastica";
+type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 type Panel = "arbol" | "tareas" | "recientes" | "mas";
 
@@ -119,7 +119,7 @@ export default function Arbol() {
   }, [fullscreen]);
 
   const eliminarTodoElArbol = async () => {
-    if (!confirm("⚠️ Esto eliminará TODAS las personas, relaciones y eventos de tu árbol. ¿Continuar?")) return;
+    if (!confirm("Esto eliminará TODAS las personas, relaciones y eventos de tu árbol. ¿Continuar?")) return;
     if (!confirm("Confirma una vez más: se borrará TODO el árbol genealógico. Esta acción no se puede deshacer.")) return;
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
@@ -356,6 +356,24 @@ export default function Arbol() {
     );
   };
 
+  const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => (
+    <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
+      <div className={`mb-4 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
+        {label}
+      </div>
+      {root ? (
+        <>
+          <Ascendants pid={root.id} gen={Math.max(0, generaciones - 1)} />
+          <div className="h-4 w-px bg-foreground/30" />
+          <Draggable p={root}><Hl p={root}><PersonCard p={root} compact /></Hl></Draggable>
+        </>
+      ) : (
+        <QuickAddRelative personaId={persona!.id} defaultTipo={missingTipo} onAdded={reload}
+          trigger={<button className="block"><EmptySlot label={missingTipo} onClick={() => {}} /></button>} />
+      )}
+    </div>
+  );
+
   const exportarGedcom = async () => {
     const { data, error } = await supabase.functions.invoke("familysearch-export", { body: { format: "gedcom" } });
     if (error || !data) {
@@ -459,6 +477,7 @@ export default function Arbol() {
         <div className="glass inline-flex rounded-full p-1">
           {([
             ["ascendientes", GitBranch, "Clásica"],
+            ["lineas", Columns2, "Líneas"],
             ["abanico", Sparkles, "Abanico"],
             ["dinastica", LayoutGrid, "Dinástica"],
           ] as [Vista, any, string][]).map(([k, Icon, label]) => (
@@ -545,7 +564,7 @@ export default function Arbol() {
 
       {editMode && (
         <p className="mx-3 mb-2 rounded-xl bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-foreground md:mx-6">
-          🖱️ Arrastra una persona <strong>sobre otra</strong> para crear una relación.
+          Arrastra una persona <strong>sobre otra</strong> para crear una relación.
         </p>
       )}
 
@@ -715,6 +734,32 @@ export default function Arbol() {
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
             <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
+          </div>
+        </div>
+      ) : vista === "lineas" ? (
+        <div className="overflow-x-auto pb-24 md:pb-8">
+          <div
+            className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
+            style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}
+          >
+            {(() => {
+              const { padre, madre } = padresDe(persona.id);
+              return (
+                <>
+                  <div className="grid min-w-[720px] grid-cols-2 gap-4">
+                    <LineageColumn label="Línea paterna" tone="bg-sky-500/15 text-sky-300" root={padre} missingTipo="padre" />
+                    <LineageColumn label="Línea materna" tone="bg-rose-500/15 text-rose-300" root={madre} missingTipo="madre" />
+                  </div>
+                  <div className="flex h-8 items-start justify-center">
+                    <div className="h-8 w-px bg-foreground/30" />
+                  </div>
+                  <Draggable p={persona}><Hl p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Hl></Draggable>
+                  <p className="max-w-md text-center text-xs text-muted-foreground">
+                    Vista conjunta de ramas paterna y materna. Usa Editar relaciones para corregir vínculos o agregar familiares faltantes.
+                  </p>
+                </>
+              );
+            })()}
           </div>
         </div>
       ) : (
