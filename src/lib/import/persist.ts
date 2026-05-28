@@ -2,6 +2,7 @@
 // Marks every imported persona's `ids_externos.import_xref` so we can dedupe later.
 import { supabase } from "@/integrations/supabase/client";
 import type { ImportPersona, ImportFamilia } from "./gedcom";
+import { inferLivingStatus, inferSexFromName } from "@/lib/personAutoRules";
 
 export type ImportSummary = {
   personasCreadas: number;
@@ -81,13 +82,13 @@ export async function persistImport(
         user_id: user.id,
         nombres: p.nombres,
         apellidos: p.apellidos,
-        sexo: p.sexo,
+        sexo: p.sexo === "M" ? "masculino" : p.sexo === "F" ? "femenino" : inferSexFromName(p.nombres),
         nac_fecha: p.nac_fecha,
         defuncion_fecha: p.defuncion_fecha,
         bautismo_fecha: p.bautismo_fecha,
         ocupacion: p.ocupacion,
         notas: [`Importado desde ${source} (${p.xref}).`, p.notas].filter(Boolean).join("\n"),
-        viva: p.viva ?? "desconocido",
+        viva: p.defuncion_fecha ? "no" : p.viva ?? inferLivingStatus(p.nac_fecha, null) ?? "desconocido",
         certeza: "probable" as const,
         ids_externos: { import_xref: p.xref, import_source: source },
         enlaces: {},

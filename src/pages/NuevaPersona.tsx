@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { cn } from "@/lib/utils";
+import { inferLivingStatus, inferNationalityFromPlace, inferSexFromName } from "@/lib/personAutoRules";
 
 /**
  * "Agregar persona" — layout inspirado en FamilySearch (limpio, columna única,
@@ -103,6 +104,23 @@ export default function NuevaPersona() {
   const [busy, setBusy] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const set = (k: keyof typeof empty, v: any) => setP((s) => ({ ...s, [k]: v }));
+  const setName = (value: string) => setP((s) => {
+    const inferredSex = s.sexo ? null : inferSexFromName(value);
+    return { ...s, nombres: value, ...(inferredSex ? { sexo: inferredSex } : {}) };
+  });
+  const setBirthDate = (value: string | null) => setP((s) => {
+    const inferredLiving = s.defuncion_fecha ? null : inferLivingStatus(value, s.nac_rango_ini);
+    return { ...s, nac_fecha: value, ...(inferredLiving ? { viva: inferredLiving } : {}) };
+  });
+  const setBirthRangeStart = (value: number | null) => setP((s) => {
+    const inferredLiving = s.defuncion_fecha ? null : inferLivingStatus(s.nac_fecha, value);
+    return { ...s, nac_rango_ini: value, ...(inferredLiving ? { viva: inferredLiving } : {}) };
+  });
+  const setBirthPlace = (id: string | null) => setP((s) => {
+    const place = lugares.find((l) => l.id === id);
+    const inferredNationality = s.nacionalidad ? null : inferNationalityFromPlace(place);
+    return { ...s, nac_lugar_id: id, ...(inferredNationality ? { nacionalidad: inferredNationality } : {}) };
+  });
 
   const canContinue = !!(p.nombres.trim() || p.apellidos.trim());
 
@@ -203,7 +221,7 @@ export default function NuevaPersona() {
         <FieldLine label="Nombres">
           <LineInput
             value={p.nombres}
-            onChange={(e) => set("nombres", e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder="Nombres"
             autoFocus
           />
@@ -243,7 +261,7 @@ export default function NuevaPersona() {
           <LineInput
             type="date"
             value={p.nac_fecha ?? ""}
-            onChange={(e) => set("nac_fecha", e.target.value || null)}
+            onChange={(e) => setBirthDate(e.target.value || null)}
           />
         </FieldLine>
         <FieldLine label="Fecha aproximada" optional>
@@ -257,7 +275,7 @@ export default function NuevaPersona() {
           <div className="-mx-1">
             <LugarSelect
               value={p.nac_lugar_id}
-              onChange={(v) => set("nac_lugar_id", v)}
+              onChange={setBirthPlace}
               lugares={lugares}
               onLugaresChange={setLugares}
             />
@@ -305,7 +323,7 @@ export default function NuevaPersona() {
                   type="number"
                   placeholder="desde"
                   value={p.nac_rango_ini ?? ""}
-                  onChange={(e) => set("nac_rango_ini", e.target.value ? parseInt(e.target.value) : null)}
+                  onChange={(e) => setBirthRangeStart(e.target.value ? parseInt(e.target.value) : null)}
                 />
                 <LineInput
                   type="number"

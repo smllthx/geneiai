@@ -276,6 +276,19 @@ export default function Configuracion() {
       <AppCenterConfig />
       <MenusConfig />
 
+      <Card className="archivo-card mb-6">
+        <CardHeader><CardTitle className="font-serif text-xl">Accesos del dispositivo</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>GENAIA adapta controles para móvil, iPad y escritorio. En Mac quedan activos estos accesos rápidos:</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {["⌘/Ctrl + 1 Inicio", "⌘/Ctrl + 2 Árbol", "⌘/Ctrl + 3 Personas", "⌘/Ctrl + 4 Tareas", "⌘/Ctrl + 5 Asistente", "⌘/Ctrl + N Nueva persona"].map((item) => (
+              <div key={item} className="rounded-xl border border-border/70 bg-card/45 px-3 py-2 text-xs font-medium text-foreground">{item}</div>
+            ))}
+          </div>
+          <p className="text-xs">El Touch Bar no se puede controlar directamente desde una app web moderna; estos accesos funcionan en MacBook con teclado, Safari, Chrome y como PWA.</p>
+        </CardContent>
+      </Card>
+
 
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><ShieldCheck className="h-5 w-5" /> Face ID / Touch ID</CardTitle></CardHeader>

@@ -136,6 +136,28 @@ export default function AppLayout() {
     localStorage.setItem("genaia:sidebar-collapsed", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
 
+  useEffect(() => {
+    const shortcuts: Record<string, string> = {
+      "1": "/inicio",
+      "2": "/arbol",
+      "3": "/personas",
+      "4": "/sugerencias",
+      "5": "/asistente",
+      "n": "/personas/nueva",
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, [contenteditable=true]")) return;
+      if (!event.metaKey && !event.ctrlKey) return;
+      const route = shortcuts[event.key.toLowerCase()];
+      if (!route) return;
+      event.preventDefault();
+      navigate(route);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navigate]);
+
   // Notificaciones de aniversarios/cumpleaños: 1 vez al día por usuario
   useEffect(() => {
     if (!user) return;

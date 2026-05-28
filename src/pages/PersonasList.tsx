@@ -6,19 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered } from "lucide-react";
+import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered, Link2 } from "lucide-react";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
 import { toast } from "sonner";
+import { suggestSurnameRelationships } from "@/lib/personAutoRules";
 
 export default function PersonasList() {
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<any[]>([]);
+  const [relaciones, setRelaciones] = useState<any[]>([]);
   const [q, setQ] = useState("");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("personas").select("*").order("apellidos");
+      const [{ data }, { data: rels }] = await Promise.all([
+        supabase.from("personas").select("*").order("apellidos"),
+        supabase.from("relaciones").select("persona_id,pariente_id,tipo"),
+      ]);
       setPersonas(data ?? []);
+      setRelaciones(rels ?? []);
     })();
   }, []);
 
@@ -32,6 +38,36 @@ export default function PersonasList() {
       return `${p.nombres} ${p.apellidos}`.toLowerCase().includes(lower);
     });
   }, [personas, q]);
+
+  const generarSugerenciasApellido = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión requerida");
+    const existingPairs = new Set(
+      relaciones.map((r) => [r.persona_id, r.pariente_id].sort().join(":")),
+    );
+    const candidates = suggestSurnameRelationships(personas, existingPairs);
+    if (!candidates.length) return toast.info("No encontré nuevas relaciones probables por apellido.");
+    const rows = candidates.map((s) => ({
+      user_id: user.id,
+      persona_id: s.personA.id,
+      tipo: "relacion_por_apellido",
+      titulo: `Revisar relación: ${s.personA.nombres} ${s.personA.apellidos} y ${s.personB.nombres} ${s.personB.apellidos}`,
+      descripcion: s.reason,
+      origen: "reglas_locales",
+      confianza: s.confidence,
+      payload: {
+        person_a: s.personA.id,
+        person_b: s.personB.id,
+        shared_surname: s.sharedSurname,
+        suggested_actions: ["hermano", "padre", "madre", "hijo", "otro"],
+      },
+    }));
+    const { error } = await supabase.from("sugerencias").insert(rows);
+    if (error) return toast.error(error.message);
+    toast.success(`${rows.length} sugerencia(s) creadas por apellidos`, {
+      action: { label: "Ver", onClick: () => navigate("/sugerencias") },
+    });
+  };
 
   return (
     <div>
@@ -53,6 +89,13 @@ export default function PersonasList() {
               title="Detectar y fusionar personas duplicadas"
             >
               <GitMerge className="h-4 w-4" /> Detectar duplicados
+            </Button>
+            <Button
+              variant="outline"
+              onClick={generarSugerenciasApellido}
+              title="Sugerir conexiones familiares por apellidos compartidos"
+            >
+              <Link2 className="h-4 w-4" /> Sugerir relaciones
             </Button>
             <Button onClick={() => navigate("/personas/nueva")}>
               <Plus className="h-4 w-4" /> Nueva persona

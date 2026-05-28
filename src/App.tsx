@@ -16,7 +16,8 @@ const PersonasList = lazy(() => import("./pages/PersonasList"));
 const Apellidos = lazy(() => import("./pages/Apellidos"));
 const PersonaDetail = lazy(() => import("./pages/PersonaDetail"));
 const NuevaPersona = lazy(() => import("./pages/NuevaPersona"));
-const Arbol = lazy(() => import("./pages/Arbol"));
+const Arbol = lazy(() => import("./pages/ArbolModerno"));
+const ArbolClasico = lazy(() => import("./pages/Arbol"));
 const Familias = lazy(() => import("./pages/Familias"));
 const Documentos = lazy(() => import("./pages/Documentos"));
 const Fotos = lazy(() => import("./pages/Fotos"));
@@ -82,6 +83,7 @@ const App = () => (
                   <Route path="/inicio" element={<Inicio />} />
                   <Route path="/dashboard" element={<Navigate to="/inicio" replace />} />
                   <Route path="/arbol" element={<Arbol />} />
+                  <Route path="/arbol-clasico" element={<ArbolClasico />} />
                   <Route path="/personas" element={<PersonasList />} />
                   <Route path="/apellidos" element={<Apellidos />} />
                   <Route path="/personas/nueva" element={<NuevaPersona />} />
