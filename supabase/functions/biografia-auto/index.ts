@@ -2,13 +2,13 @@
 // (datos vitales, eventos, relaciones, documentos vinculados) y la guarda en el
 // campo `notas` de la persona, conservando lo que ya hubiera tras un separador.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 // === user-AI helper (auto-inyectado) ===
 async function _aiFetch(req: Request, body: any) {
   const auth = req.headers.get("Authorization");
   const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = { ...body, model: target.model };
+  const finalBody = _prepareEconomyChatBody(body, target.model);
   return fetch(target.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     };
 
     const aiRes = await _aiFetch(req, {
-      model: "openai/gpt-4o",
+      model: "openai/gpt-4o-mini",
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: `Escribe la biografía con estos datos:\n\n${JSON.stringify(ctx, null, 2)}` },

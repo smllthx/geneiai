@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget, prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,16 +10,18 @@ type Provider = "gemini" | "openai" | "anthropic";
 
 async function callGemini(model: string, prompt: string, system?: string, authHeader?: string | null): Promise<{ text: string }> {
   const target = await pickAiTarget(authHeader ?? null, model);
+  const body = prepareEconomyChatBody({
+    model,
+    messages: [
+      ...(system ? [{ role: "system", content: system }] : []),
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 800,
+  }, target.model);
   const r = await fetch(target.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: target.model,
-      messages: [
-        ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: prompt },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) {
     const t = await r.text();
@@ -32,16 +34,18 @@ async function callGemini(model: string, prompt: string, system?: string, authHe
 async function callOpenAI(model: string, prompt: string, system?: string, authHeader?: string | null) {
   // Prioriza la API key personal del usuario (app_config.openai_api_key)
   const target = await pickAiTarget(authHeader ?? null, model.startsWith("openai/") ? model : `openai/${model}`);
+  const body = prepareEconomyChatBody({
+    model,
+    messages: [
+      ...(system ? [{ role: "system", content: system }] : []),
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 800,
+  }, target.model);
   const r = await fetch(target.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: target.model,
-      messages: [
-        ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: prompt },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`OpenAI error ${r.status}: ${await r.text()}`);
   const data = await r.json();
@@ -60,7 +64,7 @@ async function callAnthropic(model: string, prompt: string, system?: string) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4096,
+      max_tokens: 900,
       system: system ?? undefined,
       messages: [{ role: "user", content: prompt }],
     }),

@@ -2,13 +2,13 @@
 // Devuelve datos básicos sanitizados + mini biografía generada por IA.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 // === user-AI helper (auto-inyectado) ===
 async function _aiFetch(req: Request, body: any) {
   const auth = req.headers.get("Authorization");
   const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = { ...body, model: target.model };
+  const finalBody = _prepareEconomyChatBody(body, target.model);
   return fetch(target.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },

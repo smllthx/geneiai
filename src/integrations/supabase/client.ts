@@ -17,9 +17,29 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 const originalInvoke = supabase.functions.invoke.bind(supabase.functions);
+const inFlightInvokes = new Map<string, Promise<any>>();
+
+const invokeKey = (functionName: string, options?: any) => {
+  try {
+    return `${functionName}:${JSON.stringify(options?.body ?? {})}`;
+  } catch {
+    return `${functionName}:uncached`;
+  }
+};
 
 supabase.functions.invoke = (async (functionName: string, options?: any) => {
-  const result = await originalInvoke(functionName as any, options);
+  const key = invokeKey(functionName, options);
+  if (key !== `${functionName}:uncached` && inFlightInvokes.has(key)) {
+    return await inFlightInvokes.get(key);
+  }
+
+  const pending = originalInvoke(functionName as any, options);
+  if (key !== `${functionName}:uncached`) {
+    inFlightInvokes.set(key, pending);
+    pending.finally(() => window.setTimeout(() => inFlightInvokes.delete(key), 2500));
+  }
+
+  const result = await pending;
   if (!result.error) return result;
 
   let detail = "";

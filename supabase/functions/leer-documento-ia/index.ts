@@ -5,13 +5,13 @@
 // directamente y deduplica por nombre+apellido+año-nacimiento.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
-import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 // === user-AI helper (auto-inyectado) ===
 async function _aiFetch(req: Request, body: any) {
   const auth = req.headers.get("Authorization");
   const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = { ...body, model: target.model };
+  const finalBody = _prepareEconomyChatBody(body, target.model);
   return fetch(target.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
@@ -168,7 +168,7 @@ async function splitPdfBase64(b64: string, chunkPages = CHUNK_PAGES): Promise<st
 }
 
 async function callAI(authHeader: string | null, userContent: any[]): Promise<any | null> {
-  const target = await _pickAiTarget(authHeader, "openai/gpt-4o");
+  const target = await _pickAiTarget(authHeader, "openai/gpt-4o-mini");
 
   const aiRes = await fetch(target.url, {
     method: "POST",

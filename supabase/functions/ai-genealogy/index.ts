@@ -4,13 +4,13 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 // === user-AI helper (auto-inyectado) ===
 async function _aiFetch(req: Request, body: any) {
   const auth = req.headers.get("Authorization");
   const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = { ...body, model: target.model };
+  const finalBody = _prepareEconomyChatBody(body, target.model);
   return fetch(target.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
@@ -404,10 +404,11 @@ async function executeTool(
 
 async function callModel(model: string, messages: any[], req: Request) {
   const target = await _pickAiTarget(req.headers.get("Authorization"), model);
+  const body = _prepareEconomyChatBody({ model, messages, tools, tool_choice: "auto", max_tokens: 700 }, target.model);
   const r = await fetch(target.url, {
     method: "POST",
     headers: { Authorization: `Bearer ${target.key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: target.model, messages, tools, tool_choice: "auto" }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`OpenAI ${r.status}: ${await r.text()}`);
   return await r.json();

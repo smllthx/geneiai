@@ -1,13 +1,13 @@
 // Analiza una foto subida y extrae contexto: año estimado, lugar, clase social,
 // edades, relaciones aparentes, nacionalidades, descripción. Actualiza la fila `fotos`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { pickAiTarget as _pickAiTarget } from "../_shared/userAi.ts";
+import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
 
 // === user-AI helper (auto-inyectado) ===
 async function _aiFetch(req: Request, body: any) {
   const auth = req.headers.get("Authorization");
   const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = { ...body, model: target.model };
+  const finalBody = _prepareEconomyChatBody(body, target.model);
   return fetch(target.url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if (!foto_id || !foto_url) throw new Error("Faltan foto_id o foto_url");
 
     const res = await _aiFetch(req, {
-        model: "openai/gpt-4o",
+        model: "openai/gpt-4o-mini",
         messages: [
           { role: "system", content: "Eres un historiador y archivista experto en fotografía familiar de los siglos XVIII a XXI. Observa la imagen y deduce contexto histórico (año, lugar, clase social, nacionalidad probable, edades, relaciones) usando indicios de vestimenta, mobiliario, tipo de papel, pose y composición. Si no puedes determinar algo, omítelo. Nunca inventes nombres." },
           { role: "user", content: [
