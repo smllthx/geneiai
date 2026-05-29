@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 export type DeviceKind = "phone" | "phablet" | "tablet" | "laptop" | "desktop" | "tv";
 export type Orientation = "portrait" | "landscape";
+export type DevicePlatform = "iphone" | "ipad" | "android" | "macos" | "windows" | "linux" | "unknown";
 
 export interface DeviceInfo {
   width: number;
@@ -16,6 +17,7 @@ export interface DeviceInfo {
   ua: string;
   isIOS: boolean;
   isAndroid: boolean;
+  platform: DevicePlatform;
   isStandalone: boolean;
 }
 
@@ -37,6 +39,16 @@ function read(): DeviceInfo {
   // CSS pixels are ~96 per inch reference
   const diagonalIn = Math.sqrt(w * w + h * h) / 96;
   const ua = navigator.userAgent;
+  const isIPad = /iPad/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
+  const isIPhone = /iPhone|iPod/.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const platform: DevicePlatform =
+    isIPad ? "ipad" :
+    isIPhone ? "iphone" :
+    isAndroid ? "android" :
+    /Macintosh|Mac OS X/i.test(ua) ? "macos" :
+    /Windows/i.test(ua) ? "windows" :
+    /Linux/i.test(ua) ? "linux" : "unknown";
   return {
     width: w,
     height: h,
@@ -47,8 +59,9 @@ function read(): DeviceInfo {
     touch: matchMedia("(pointer: coarse)").matches || "ontouchstart" in window,
     coarsePointer: matchMedia("(pointer: coarse)").matches,
     ua,
-    isIOS: /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && "ontouchend" in document),
-    isAndroid: /Android/i.test(ua),
+    isIOS: isIPad || isIPhone,
+    isAndroid,
+    platform,
     isStandalone:
       matchMedia("(display-mode: standalone)").matches ||
       // @ts-expect-error iOS
@@ -62,7 +75,7 @@ export function useDevice(): DeviceInfo {
       ? {
           width: 1280, height: 800, dpr: 1, diagonalIn: 15,
           kind: "laptop", orientation: "landscape", touch: false, coarsePointer: false,
-          ua: "", isIOS: false, isAndroid: false, isStandalone: false,
+          ua: "", isIOS: false, isAndroid: false, platform: "unknown", isStandalone: false,
         }
       : read()
   );

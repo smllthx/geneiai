@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X } from "lucide-react";
 
 const TIPOS = ["acta_civil","partida_parroquial","pasaporte","lista_pasajeros","censo","foto","certificado","lapida","carta","familysearch","myheritage","relato_familiar","periodico","cementerio","otro"];
 const ESTADOS = ["pendiente","transcrito","verificado","dudoso"];
 
 export default function Documentos() {
+  const { id: docId } = useParams();
+  const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [personas, setPersonas] = useState<any[]>([]);
-  const [draft, setDraft] = useState<any>({ titulo: "", tipo: "otro", fecha: "", estado: "pendiente", transcripcion: "", cita: "", repositorio: "", personas_mencionadas: [] });
+  const [draft, setDraft] = useState<any>({ titulo: "", tipo: "otro", fecha: "", estado: "pendiente", transcripcion: "", cita: "", repositorio: "", url: "", resumen: "", personas_mencionadas: [] });
   const [file, setFile] = useState<File | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editDoc, setEditDoc] = useState<any | null>(null);
+  const [draftPersona, setDraftPersona] = useState("none");
+  const [editPersona, setEditPersona] = useState("none");
 
   // Filtros
   const [q, setQ] = useState("");
@@ -31,6 +36,7 @@ export default function Documentos() {
   const [fHasta, setFHasta] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const selectedDoc = useMemo(() => items.find((d) => d.id === docId) ?? null, [items, docId]);
 
   const load = async () => {
     const [{ data }, { data: ps }] = await Promise.all([
@@ -47,6 +53,25 @@ export default function Documentos() {
     setThumbs(t);
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    setEditDoc(selectedDoc ? { ...selectedDoc } : null);
+    setEditPersona("none");
+  }, [selectedDoc?.id]);
+
+  const personName = (id: string) => {
+    const p = personas.find((persona) => persona.id === id);
+    return p ? `${p.nombres ?? ""} ${p.apellidos ?? ""}`.trim() : id;
+  };
+
+  const addPersonRef = (target: any, setter: (value: any) => void, personId: string) => {
+    if (!personId || personId === "none") return;
+    const personas_mencionadas = Array.from(new Set([...(target.personas_mencionadas ?? []), personId]));
+    setter({ ...target, personas_mencionadas });
+  };
+
+  const removePersonRef = (target: any, setter: (value: any) => void, personId: string) => {
+    setter({ ...target, personas_mencionadas: (target.personas_mencionadas ?? []).filter((id: string) => id !== personId) });
+  };
 
   const add = async () => {
     if (!draft.titulo) return toast.error("Falta título");
@@ -58,11 +83,40 @@ export default function Documentos() {
       if (error) return toast.error(error.message);
       archivo_path = path;
     }
-    const { error } = await supabase.from("documentos").insert({ ...draft, fecha: draft.fecha || null, archivo_path, user_id: user.id });
+    const { error } = await supabase.from("documentos").insert({
+      ...draft,
+      fecha: draft.fecha || null,
+      url: draft.url || null,
+      resumen: draft.resumen || null,
+      cita: draft.cita || null,
+      repositorio: draft.repositorio || null,
+      transcripcion: draft.transcripcion || null,
+      archivo_path,
+      user_id: user.id,
+    });
     if (error) return toast.error(error.message);
     toast.success("Documento creado");
-    setDraft({ titulo: "", tipo: "otro", fecha: "", estado: "pendiente", transcripcion: "", cita: "", repositorio: "", personas_mencionadas: [] });
+    setDraft({ titulo: "", tipo: "otro", fecha: "", estado: "pendiente", transcripcion: "", cita: "", repositorio: "", url: "", resumen: "", personas_mencionadas: [] });
     setFile(null); setShowForm(false); load();
+  };
+
+  const saveEditDoc = async () => {
+    if (!editDoc?.id) return;
+    const { error } = await supabase.from("documentos").update({
+      titulo: editDoc.titulo,
+      tipo: editDoc.tipo,
+      fecha: editDoc.fecha || null,
+      estado: editDoc.estado,
+      transcripcion: editDoc.transcripcion || null,
+      cita: editDoc.cita || null,
+      repositorio: editDoc.repositorio || null,
+      url: editDoc.url || null,
+      resumen: editDoc.resumen || null,
+      personas_mencionadas: editDoc.personas_mencionadas ?? [],
+    }).eq("id", editDoc.id);
+    if (error) return toast.error(error.message);
+    toast.success("Fuente actualizada");
+    await load();
   };
 
   const del = async (id: string) => {
@@ -88,7 +142,7 @@ export default function Documentos() {
       if (fDesde && (!d.fecha || d.fecha < fDesde)) return false;
       if (fHasta && (!d.fecha || d.fecha > fHasta)) return false;
       if (qn) {
-        const hay = `${d.titulo} ${d.transcripcion ?? ""} ${d.cita ?? ""} ${d.repositorio ?? ""}`.toLowerCase();
+        const hay = `${d.titulo} ${d.transcripcion ?? ""} ${d.cita ?? ""} ${d.repositorio ?? ""} ${d.url ?? ""} ${d.resumen ?? ""}`.toLowerCase();
         if (!hay.includes(qn)) return false;
       }
       return true;
@@ -171,8 +225,38 @@ export default function Documentos() {
               <SelectContent>{ESTADOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select></div>
           <div className="md:col-span-2"><Label>Transcripción</Label><Textarea rows={3} value={draft.transcripcion} onChange={(e) => setDraft({ ...draft, transcripcion: e.target.value })} /></div>
+          <div><Label>Link externo / archivo web</Label><Input value={draft.url} placeholder="https://..." onChange={(e) => setDraft({ ...draft, url: e.target.value })} /></div>
+          <div><Label>Extracto / resumen</Label><Input value={draft.resumen} onChange={(e) => setDraft({ ...draft, resumen: e.target.value })} /></div>
           <div><Label>Cita / referencia</Label><Input value={draft.cita} onChange={(e) => setDraft({ ...draft, cita: e.target.value })} /></div>
           <div><Label>Repositorio / archivo</Label><Input value={draft.repositorio} onChange={(e) => setDraft({ ...draft, repositorio: e.target.value })} /></div>
+          <div className="md:col-span-2">
+            <Label>Personas vinculadas a esta fuente</Label>
+            <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+              <Select value={draftPersona} onValueChange={setDraftPersona}>
+                <SelectTrigger><SelectValue placeholder="Elegir persona" /></SelectTrigger>
+                <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addPersonRef(draft, setDraft, draftPersona);
+                  setDraftPersona("none");
+                }}
+              >
+                <UserPlus className="h-4 w-4" /> Vincular
+              </Button>
+            </div>
+            {(draft.personas_mencionadas ?? []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {draft.personas_mencionadas.map((id: string) => (
+                  <button key={id} type="button" onClick={() => removePersonRef(draft, setDraft, id)} className="rounded-full border border-border/70 px-2 py-1 text-xs hover:bg-foreground/10">
+                    {personName(id)} <X className="ml-1 inline h-3 w-3" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="md:col-span-2"><Label>Archivo (PDF / imagen, sin límite de páginas)</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></div>
           <div className="md:col-span-2 flex gap-2">
@@ -180,6 +264,80 @@ export default function Documentos() {
             <Button variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
           </div>
         </CardContent></Card>
+      )}
+
+      {editDoc && (
+        <Card className="archivo-card mb-6 border-primary/30">
+          <CardContent className="grid gap-3 pt-6 md:grid-cols-2">
+            <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-primary">Editor de fuente</p>
+                <h2 className="font-serif text-2xl font-semibold">{editDoc.titulo || "Fuente sin título"}</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {editDoc.url && (
+                  <Button variant="outline" asChild>
+                    <a href={editDoc.url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Abrir link</a>
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => transcribir(editDoc.id)}><ScanLine className="h-4 w-4" /> Transcribir con IA</Button>
+                <Button onClick={saveEditDoc}><Save className="h-4 w-4" /> Guardar fuente</Button>
+                <Button variant="ghost" onClick={() => navigate("/documentos")}>Cerrar</Button>
+              </div>
+            </div>
+
+            <div><Label>Título</Label><Input value={editDoc.titulo ?? ""} onChange={(e) => setEditDoc({ ...editDoc, titulo: e.target.value })} /></div>
+            <div><Label>Clasificación</Label>
+              <Select value={editDoc.tipo ?? "otro"} onValueChange={(v) => setEditDoc({ ...editDoc, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{TIPOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Fecha</Label><Input type="date" value={editDoc.fecha ?? ""} onChange={(e) => setEditDoc({ ...editDoc, fecha: e.target.value })} /></div>
+            <div><Label>Estado</Label>
+              <Select value={editDoc.estado ?? "pendiente"} onValueChange={(v) => setEditDoc({ ...editDoc, estado: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{ESTADOS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Link externo / internet</Label><Input value={editDoc.url ?? ""} placeholder="https://..." onChange={(e) => setEditDoc({ ...editDoc, url: e.target.value })} /></div>
+            <div><Label>Repositorio / archivo</Label><Input value={editDoc.repositorio ?? ""} onChange={(e) => setEditDoc({ ...editDoc, repositorio: e.target.value })} /></div>
+            <div className="md:col-span-2"><Label>Cita / referencia</Label><Input value={editDoc.cita ?? ""} onChange={(e) => setEditDoc({ ...editDoc, cita: e.target.value })} /></div>
+            <div className="md:col-span-2"><Label>Extracto, resumen o hallazgo IA</Label><Textarea rows={3} value={editDoc.resumen ?? ""} onChange={(e) => setEditDoc({ ...editDoc, resumen: e.target.value })} /></div>
+            <div className="md:col-span-2"><Label>Transcripción completa</Label><Textarea rows={5} value={editDoc.transcripcion ?? ""} onChange={(e) => setEditDoc({ ...editDoc, transcripcion: e.target.value })} /></div>
+
+            <div className="md:col-span-2">
+              <Label>Vincular fuente a personas</Label>
+              <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                <Select value={editPersona} onValueChange={setEditPersona}>
+                  <SelectTrigger><SelectValue placeholder="Elegir persona" /></SelectTrigger>
+                  <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    addPersonRef(editDoc, setEditDoc, editPersona);
+                    setEditPersona("none");
+                  }}
+                >
+                  <UserPlus className="h-4 w-4" /> Vincular
+                </Button>
+              </div>
+              {(editDoc.personas_mencionadas ?? []).length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {editDoc.personas_mencionadas.map((id: string) => (
+                    <button key={id} type="button" onClick={() => removePersonRef(editDoc, setEditDoc, id)} className="rounded-full border border-border/70 px-2 py-1 text-xs hover:bg-foreground/10">
+                      {personName(id)} <X className="ml-1 inline h-3 w-3" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">Todavía no está vinculada a ninguna persona.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Resultado: grid o lista */}
@@ -207,6 +365,11 @@ export default function Documentos() {
               <CardContent className="p-3">
                 <div className="line-clamp-2 font-serif text-sm font-semibold">{d.titulo}</div>
                 <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {d.url && <Badge variant="outline">link</Badge>}
+                  {d.cita && <Badge variant="outline">cita</Badge>}
+                  {(d.personas_mencionadas ?? []).length > 0 && <Badge variant="secondary">{(d.personas_mencionadas ?? []).length} personas</Badge>}
+                </div>
                 <div className="mt-2 flex items-center justify-between gap-1">
                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => transcribir(d.id)}>
                     <ScanLine className="h-3 w-3" /> IA
@@ -232,7 +395,13 @@ export default function Documentos() {
                   <Badge variant={estadoColor(d.estado) as any}>{d.estado}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">{d.tipo} · {d.fecha ?? "s/f"} {d.repositorio ? `· ${d.repositorio}` : ""}</div>
-                {d.transcripcion && <p className="mt-1 line-clamp-2 text-sm">{d.transcripcion}</p>}
+                {d.resumen && <p className="mt-1 line-clamp-2 text-sm">{d.resumen}</p>}
+                {!d.resumen && d.transcripcion && <p className="mt-1 line-clamp-2 text-sm">{d.transcripcion}</p>}
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {d.url && <Badge variant="outline">link externo</Badge>}
+                  {d.cita && <Badge variant="outline">cita</Badge>}
+                  {(d.personas_mencionadas ?? []).length > 0 && <Badge variant="secondary">{(d.personas_mencionadas ?? []).length} personas vinculadas</Badge>}
+                </div>
               </div>
               <div className="flex flex-col gap-1">
                 <Button size="sm" variant="outline" onClick={() => transcribir(d.id)}><ScanLine className="h-3.5 w-3.5" /> IA</Button>

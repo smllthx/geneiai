@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDevice } from "@/hooks/use-device";
-import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw, Sun, Moon } from "lucide-react";
+import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw, Sun, Moon, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SCALE_KEY = "genai:ui-scale";
@@ -56,11 +56,15 @@ export default function AdaptiveViewport() {
     root.style.fontSize = `${Math.round(16 * scale)}px`;
     root.dataset.density = density;
     root.dataset.deviceKind = dev.kind;
+    root.dataset.devicePlatform = dev.platform;
     root.dataset.orientation = dev.orientation;
+    root.dataset.input = dev.coarsePointer ? "touch" : "pointer";
+    document.body.classList.toggle("is-touch-device", dev.touch);
+    document.body.classList.toggle("is-apple-device", dev.platform === "iphone" || dev.platform === "ipad" || dev.platform === "macos");
     localStorage.setItem(SCALE_KEY, String(scale));
     localStorage.setItem(DENSITY_KEY, density);
     localStorage.setItem(AUTO_KEY, auto ? "1" : "0");
-  }, [scale, density, auto, dev.kind, dev.orientation]);
+  }, [scale, density, auto, dev.kind, dev.orientation, dev.platform, dev.coarsePointer, dev.touch]);
 
   const reset = () => { setAuto(true); };
   const Icon = dev.kind === "phone" || dev.kind === "phablet" ? Smartphone
@@ -93,7 +97,7 @@ export default function AdaptiveViewport() {
           </div>
 
           <p className="mb-3 text-[11px] text-muted-foreground">
-            {dev.kind} · {dev.width}×{dev.height}px · {dev.dpr.toFixed(2)}x · ~{dev.diagonalIn.toFixed(1)}″ · {dev.orientation}
+            {dev.platform} · {dev.kind} · {dev.width}×{dev.height}px · {dev.dpr.toFixed(2)}x · ~{dev.diagonalIn.toFixed(1)}″ · {dev.orientation}
           </p>
 
           <label className="mb-3 flex items-center justify-between rounded-xl bg-foreground/5 px-3 py-2 text-sm">
@@ -162,9 +166,15 @@ export default function AdaptiveViewport() {
 
           <button
             onClick={reset}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-foreground/5 py-2 text-xs hover:bg-foreground/10"
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-foreground/5 py-2 text-xs hover:bg-foreground/10"
           >
             <RotateCcw className="h-3 w-3" /> Restablecer auto
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("genaia:clear-cache"))}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 py-2 text-xs text-amber-700 hover:bg-amber-400/15 dark:text-amber-100"
+          >
+            <Trash2 className="h-3 w-3" /> Limpiar caché y recargar
           </button>
         </div>
       )}

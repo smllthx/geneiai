@@ -37,3 +37,20 @@ export function applyAppUpdate() {
     registration?.waiting?.postMessage({ type: "SKIP_WAITING" });
   });
 }
+
+export async function clearAppCache() {
+  try {
+    if ("caches" in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map((name) => caches.delete(name)));
+    }
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.update().catch(() => undefined)));
+    }
+    localStorage.setItem("genaia:last-cache-clear", new Date().toISOString());
+    return true;
+  } catch {
+    return false;
+  }
+}
