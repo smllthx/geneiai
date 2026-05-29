@@ -31,7 +31,7 @@ export default function TreeToolbar({ filters, onFiltersChange, onCenter, onAddP
     <div className="absolute left-4 right-4 top-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
       <div className="mb-3 flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">GENAIA</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">GENEIAI</p>
           <h1 className="text-xl font-semibold leading-tight text-foreground">Árbol</h1>
         </div>
         <Button size="sm" className="rounded-full" onClick={onAddPerson}>

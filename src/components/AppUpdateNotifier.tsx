@@ -5,7 +5,7 @@ import { applyAppUpdate, clearAppCache } from "@/lib/pwa";
 export default function AppUpdateNotifier() {
   useEffect(() => {
     const onReady = () => {
-      toast("Hay una versión nueva de GENAIA", {
+      toast("Hay una versión nueva de GENEIAI", {
         description: "Toca actualizar para ver los cambios sin cambiar el link.",
         duration: Infinity,
         action: {

@@ -286,7 +286,7 @@ export default function PersonaDetail() {
   const yNac = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
   const yDef = yearOf(p.defuncion_fecha) ?? null;
   const lifespan = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? (p.viva === "si" ? "vive" : "?")}` : "";
-  const metaTitle = isNew ? "Nueva persona · GENAIA" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GENAIA`;
+  const metaTitle = isNew ? "Nueva persona · GENEIAI" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GENEIAI`;
   const metaDesc = isNew
     ? "Registra una nueva persona en tu árbol genealógico privado."
     : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);
@@ -1034,7 +1034,7 @@ function FamiliaSeccion({
                     </div>
                     {matLinea && (
                       <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-white/65">
-                        <span aria-hidden>💍</span>
+                        <span aria-hidden>∞</span>
                         <span className="break-words">{matLinea}</span>
                       </div>
                     )}
@@ -1350,10 +1350,17 @@ function TimelinePanel({ eventos, persona }: any) {
 
 function Field({ label, value }: { label: string; value: any }) {
   const empty = value === null || value === undefined || value === "";
+  const country = !empty && label.toLowerCase().includes("nacionalidad") ? String(value).toLowerCase() : "";
   return (
     <div className="border-b border-white/10 px-6 py-4">
       <div className="text-sm font-semibold text-white/45">{label}</div>
-      <div className="mt-1 text-xl font-bold leading-snug text-white">{empty ? <span className="text-white/35">Dato no registrado</span> : value}</div>
+      <div className="mt-1 text-xl font-bold leading-snug text-white">
+        {empty ? (
+          <span className="text-white/35">Dato no registrado</span>
+        ) : country ? (
+          <span className="country-chip border-white/10 bg-white/10 text-base" data-country={country}>{value}</span>
+        ) : value}
+      </div>
     </div>
   );
 }

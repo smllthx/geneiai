@@ -198,7 +198,7 @@ export default function AppLayout() {
             <div className="flex items-center gap-3">
               <BrandLogo size={52} />
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENAIA</h1>
+                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENEIAI</h1>
                 <p className="mt-1 text-[11px] text-muted-foreground">Archivo familiar privado</p>
               </div>
               <div className="ml-auto flex items-center gap-1">
@@ -232,7 +232,7 @@ export default function AppLayout() {
       <button
         onClick={() => setSidebarCollapsed(false)}
         aria-label="Mostrar menú"
-        title="Mostrar menú GENAIA"
+        title="Mostrar menú GENEIAI"
         className={cn(
           "fixed left-0 top-1/2 z-40 hidden -translate-y-1/2 items-center justify-center rounded-r-2xl border border-l-0 border-border bg-card/90 px-1.5 py-3 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-card hover:text-foreground hover:px-2 md:flex",
           sidebarCollapsed ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
@@ -259,11 +259,11 @@ export default function AppLayout() {
               className="w-[86vw] max-w-sm overflow-y-auto p-3"
               style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
             >
-              <SheetTitle className="sr-only">Menú principal de GENAIA</SheetTitle>
+              <SheetTitle className="sr-only">Menú principal de GENEIAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={44} />
                 <div className="min-w-0">
-                  <p className="font-display text-lg font-semibold leading-none">GENAIA</p>
+                  <p className="font-display text-lg font-semibold leading-none">GENEIAI</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function AppLayout() {
           </Sheet>
           <NavLink to="/inicio" className="flex items-center gap-2">
             <BrandLogo size={34} />
-            <span className="font-display text-lg font-semibold">GENAIA</span>
+            <span className="font-display text-lg font-semibold">GENEIAI</span>
           </NavLink>
           <NotificationBell />
         </div>

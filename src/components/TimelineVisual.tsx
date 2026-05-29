@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Baby, Church, Heart, Cross, MapPin, Briefcase, Plane, FileText, Sparkles } from "lucide-react";
+import { Baby, Church, Heart, Cross, MapPin, Briefcase, Ship, FileText, Sparkles, Home, Landmark } from "lucide-react";
 
 type Item = { fecha: string; label: string; tipo?: string; lugar?: string };
 
@@ -10,23 +10,29 @@ const ICONS: Record<string, any> = {
   defuncion: Cross,
   entierro: Cross,
   residencia: MapPin,
+  domicilio: Home,
   ocupacion: Briefcase,
   censo: FileText,
-  inmigracion: Plane,
-  emigracion: Plane,
+  inmigracion: Ship,
+  emigracion: Ship,
+  migracion: Ship,
+  fuente: Landmark,
 };
 
 const COLOR: Record<string, string> = {
-  nacimiento: "bg-emerald-500",
-  bautismo: "bg-sky-500",
-  matrimonio: "bg-rose-500",
-  defuncion: "bg-slate-600",
-  entierro: "bg-slate-700",
-  residencia: "bg-amber-500",
-  ocupacion: "bg-violet-500",
-  censo: "bg-cyan-500",
-  inmigracion: "bg-indigo-500",
-  emigracion: "bg-indigo-400",
+  nacimiento: "bg-[hsl(var(--event-birth))]",
+  bautismo: "bg-[hsl(var(--event-baptism))]",
+  matrimonio: "bg-[hsl(var(--event-union))]",
+  defuncion: "bg-[hsl(var(--event-death))]",
+  entierro: "bg-[hsl(var(--event-death))]",
+  residencia: "bg-[hsl(var(--event-residence))]",
+  domicilio: "bg-[hsl(var(--event-residence))]",
+  ocupacion: "bg-[hsl(var(--event-work))]",
+  censo: "bg-[hsl(var(--genealogy-record))]",
+  inmigracion: "bg-[hsl(var(--event-migration))]",
+  emigracion: "bg-[hsl(var(--event-migration))]",
+  migracion: "bg-[hsl(var(--event-migration))]",
+  fuente: "bg-[hsl(var(--genealogy-record))]",
 };
 
 function clasifica(label: string, tipo?: string): string {
@@ -55,7 +61,7 @@ export default function TimelineVisual({ eventos, persona }: { eventos: any[]; p
   const nacYear = persona.nac_fecha ? new Date(persona.nac_fecha).getUTCFullYear() : null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-background to-primary/[0.03] p-4 sm:p-6">
+    <div className="genealogy-visual-band relative overflow-hidden rounded-2xl border border-border/60 p-4 sm:p-6">
       <div className="pointer-events-none absolute inset-y-0 left-[28px] w-[2px] bg-gradient-to-b from-primary/60 via-accent/40 to-transparent sm:left-[40px]" />
       <ol className="space-y-4">
         {items.map((it, i) => {
@@ -69,7 +75,7 @@ export default function TimelineVisual({ eventos, persona }: { eventos: any[]; p
               <div className={`relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-background sm:h-20 sm:w-20 ${color}`}>
                 <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
               </div>
-              <div className="flex-1 rounded-xl border border-border/50 bg-card/70 p-3 backdrop-blur-sm">
+              <div className="relative flex-1 rounded-xl border border-border/50 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-2xl font-bold tracking-tight">{y}</span>
@@ -79,7 +85,7 @@ export default function TimelineVisual({ eventos, persona }: { eventos: any[]; p
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{key}</span>
+                  <span className="event-chip" data-event={key}>{key}</span>
                 </div>
                 <div className="mt-1 text-sm font-medium capitalize">{it.label}</div>
                 {it.lugar && (

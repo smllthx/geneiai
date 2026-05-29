@@ -15,17 +15,17 @@ type EventoTipo =
   | "residencia" | "censo" | "inmigracion" | "viaje" | "ocupacion" | "otro";
 
 const TIPOS: { value: EventoTipo; label: string; icon: string }[] = [
-  { value: "nacimiento", label: "Nacimiento", icon: "👶" },
-  { value: "bautismo", label: "Bautismo", icon: "💧" },
-  { value: "matrimonio", label: "Matrimonio", icon: "💍" },
-  { value: "residencia", label: "Residencia", icon: "🏠" },
-  { value: "ocupacion", label: "Ocupación", icon: "💼" },
-  { value: "censo", label: "Censo", icon: "📋" },
-  { value: "inmigracion", label: "Inmigración", icon: "🚢" },
-  { value: "viaje", label: "Viaje", icon: "✈️" },
-  { value: "defuncion", label: "Defunción", icon: "🕊️" },
-  { value: "entierro", label: "Entierro", icon: "⚱️" },
-  { value: "otro", label: "Otro", icon: "📌" },
+  { value: "nacimiento", label: "Nacimiento", icon: "○" },
+  { value: "bautismo", label: "Bautismo / rito", icon: "✚" },
+  { value: "matrimonio", label: "Matrimonio / unión", icon: "∞" },
+  { value: "residencia", label: "Residencia", icon: "⌂" },
+  { value: "ocupacion", label: "Ocupación", icon: "⚒" },
+  { value: "censo", label: "Censo / padrón", icon: "▦" },
+  { value: "inmigracion", label: "Inmigración", icon: "⇢" },
+  { value: "viaje", label: "Viaje / traslado", icon: "↝" },
+  { value: "defuncion", label: "Defunción", icon: "✝" },
+  { value: "entierro", label: "Entierro", icon: "▱" },
+  { value: "otro", label: "Otro hecho", icon: "•" },
 ];
 
 export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
@@ -84,8 +84,8 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
           <div className="mt-4 grid grid-cols-2 gap-2">
             {TIPOS.map((t) => (
               <button key={t.value} onClick={() => pick(t.value)}
-                className="flex flex-col items-start gap-1 rounded-xl border border-border bg-card/40 p-3 text-left hover:border-primary hover:bg-accent/40 transition">
-                <span className="text-xl">{t.icon}</span>
+                className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card/40 p-3 text-left transition hover:border-primary hover:bg-accent/20">
+                <span className="genealogy-symbol h-8 w-8 text-sm">{t.icon}</span>
                 <span className="text-sm font-medium">{t.label}</span>
               </button>
             ))}

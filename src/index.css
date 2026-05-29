@@ -8,9 +8,9 @@
 
 @layer base {
   :root {
-    /* FamilySearch-inspired archival canvas */
-    --background: 204 38% 97%;
-    --foreground: 203 35% 10%;
+    /* GENEIAI archival canvas: genealogy, migration, country context */
+    --background: 202 48% 97%;
+    --foreground: 206 38% 9%;
 
     --card: 0 0% 100%;
     --card-foreground: 215 28% 10%;
@@ -18,8 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 28% 10%;
 
-    /* FamilySearch-inspired teal blue */
-    --primary: 190 82% 34%;
+    --primary: 190 84% 34%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 22% 94%;
@@ -28,8 +27,7 @@
     --muted: 210 18% 95%;
     --muted-foreground: 215 12% 40%;
 
-    /* Lighter cousin of primary */
-    --accent: 186 76% 42%;
+    --accent: 42 88% 54%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 4 86% 56%;
@@ -50,11 +48,31 @@
     --glass-shadow: 215 40% 20% / 0.07;
     --glass-highlight: 0 0% 100% / 0.75;
 
-    /* Cool, restrained ambient mesh */
-    --mesh-1: 190 82% 72%;
-    --mesh-2: 204 72% 78%;
-    --mesh-3: 42 82% 76%;
-    --mesh-4: 172 50% 82%;
+    /* Visual language: sea routes, roots, records, branches */
+    --mesh-1: 190 84% 68%;
+    --mesh-2: 214 82% 66%;
+    --mesh-3: 42 92% 62%;
+    --mesh-4: 145 54% 58%;
+
+    --genealogy-root: 28 78% 48%;
+    --genealogy-branch: 145 54% 38%;
+    --genealogy-record: 42 92% 58%;
+    --genealogy-route: 205 88% 47%;
+    --genealogy-memory: 335 70% 56%;
+
+    --event-birth: 154 62% 42%;
+    --event-baptism: 198 76% 48%;
+    --event-union: 330 72% 55%;
+    --event-residence: 42 84% 50%;
+    --event-migration: 205 88% 50%;
+    --event-work: 260 58% 58%;
+    --event-death: 224 18% 48%;
+
+    --country-chile: 214 82% 50%;
+    --country-italy: 142 58% 42%;
+    --country-switzerland: 4 78% 56%;
+    --country-spain: 42 92% 55%;
+    --country-yugoslavia: 232 62% 54%;
 
     --sidebar-background: 220 30% 97%;
     --sidebar-foreground: 222 25% 18%;
@@ -85,7 +103,7 @@
     --muted: 202 22% 13%;
     --muted-foreground: 220 12% 65%;
 
-    --accent: 43 86% 56%;
+    --accent: 42 92% 58%;
     --accent-foreground: 202 38% 5%;
 
     --destructive: 4 90% 60%;
@@ -102,10 +120,30 @@
     --glass-shadow: 0 0% 0% / 0.5;
     --glass-highlight: 0 0% 100% / 0.08;
 
-    --mesh-1: 188 92% 36%;
-    --mesh-2: 205 80% 28%;
-    --mesh-3: 43 86% 42%;
-    --mesh-4: 166 58% 30%;
+    --mesh-1: 188 92% 38%;
+    --mesh-2: 214 84% 34%;
+    --mesh-3: 42 88% 46%;
+    --mesh-4: 145 58% 32%;
+
+    --genealogy-root: 28 72% 54%;
+    --genealogy-branch: 145 58% 46%;
+    --genealogy-record: 42 92% 60%;
+    --genealogy-route: 202 92% 58%;
+    --genealogy-memory: 335 72% 62%;
+
+    --event-birth: 154 62% 46%;
+    --event-baptism: 198 80% 58%;
+    --event-union: 330 74% 62%;
+    --event-residence: 42 88% 58%;
+    --event-migration: 202 92% 58%;
+    --event-work: 260 64% 66%;
+    --event-death: 224 18% 64%;
+
+    --country-chile: 214 86% 58%;
+    --country-italy: 142 62% 52%;
+    --country-switzerland: 4 82% 62%;
+    --country-spain: 42 94% 62%;
+    --country-yugoslavia: 232 70% 64%;
 
     --sidebar-background: 202 38% 6%;
     --sidebar-foreground: 210 30% 96%;
@@ -136,9 +174,10 @@
     user-select: none;
     -webkit-touch-callout: none;
     background-image:
-      radial-gradient(at 18% 0%, hsl(var(--mesh-1) / 0.16) 0px, transparent 46%),
-      radial-gradient(at 90% 8%, hsl(var(--mesh-2) / 0.12) 0px, transparent 44%),
-      radial-gradient(at 80% 100%, hsl(var(--mesh-4) / 0.10) 0px, transparent 42%);
+      radial-gradient(at 12% 0%, hsl(var(--mesh-1) / 0.18) 0px, transparent 42%),
+      radial-gradient(at 88% 6%, hsl(var(--mesh-2) / 0.14) 0px, transparent 42%),
+      radial-gradient(at 72% 100%, hsl(var(--mesh-4) / 0.13) 0px, transparent 38%),
+      radial-gradient(at 8% 84%, hsl(var(--mesh-3) / 0.10) 0px, transparent 34%);
     background-attachment: fixed;
   }
   input, textarea, [contenteditable="true"], p, h1, h2, h3, h4, h5, h6, span, li, td, th, blockquote, pre, code, a {
@@ -196,6 +235,99 @@
   /* Legacy aliases so existing pages keep working */
   .archivo-card { @apply glass-card; }
   .archivo-chip { @apply glass-pill; }
+
+  .archivo-card {
+    overflow: hidden;
+  }
+
+  .archivo-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    height: 3px;
+    width: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--genealogy-root)),
+      hsl(var(--genealogy-branch)),
+      hsl(var(--genealogy-route)),
+      hsl(var(--genealogy-record)),
+      hsl(var(--genealogy-memory))
+    );
+    opacity: 0.78;
+  }
+
+  .genealogy-visual-band {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background:
+      linear-gradient(135deg, hsl(var(--genealogy-route) / 0.16), hsl(var(--genealogy-record) / 0.12)),
+      radial-gradient(circle at 18% 20%, hsl(var(--genealogy-branch) / 0.18), transparent 28%),
+      hsl(var(--card));
+  }
+
+  .genealogy-visual-band::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(120deg, transparent 0 44%, hsl(var(--genealogy-route) / 0.22) 45% 46%, transparent 47% 100%),
+      radial-gradient(circle at 72% 32%, hsl(var(--genealogy-record) / 0.28) 0 2px, transparent 3px),
+      radial-gradient(circle at 80% 58%, hsl(var(--genealogy-branch) / 0.22) 0 2px, transparent 3px),
+      radial-gradient(circle at 64% 74%, hsl(var(--genealogy-root) / 0.20) 0 2px, transparent 3px);
+    opacity: 0.9;
+  }
+
+  .genealogy-symbol {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    color: white;
+    background: linear-gradient(135deg, hsl(var(--genealogy-branch)), hsl(var(--genealogy-route)));
+    box-shadow: 0 10px 30px -14px hsl(var(--genealogy-route));
+  }
+
+  .migration-route-accent {
+    background-image: linear-gradient(90deg, hsl(var(--genealogy-route) / 0.42) 50%, transparent 0);
+    background-size: 12px 2px;
+    background-repeat: repeat-x;
+  }
+
+  .event-chip,
+  .country-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border) / 0.7);
+    background: hsl(var(--card) / 0.72);
+  }
+
+  .event-chip[data-event*="nacimiento"] { background: hsl(var(--event-birth) / 0.16); color: hsl(var(--event-birth)); }
+  .event-chip[data-event*="bautismo"] { background: hsl(var(--event-baptism) / 0.16); color: hsl(var(--event-baptism)); }
+  .event-chip[data-event*="matrimonio"],
+  .event-chip[data-event*="union"],
+  .event-chip[data-event*="convivencia"] { background: hsl(var(--event-union) / 0.16); color: hsl(var(--event-union)); }
+  .event-chip[data-event*="residencia"] { background: hsl(var(--event-residence) / 0.16); color: hsl(var(--event-residence)); }
+  .event-chip[data-event*="inmigracion"],
+  .event-chip[data-event*="emigracion"],
+  .event-chip[data-event*="viaje"] { background: hsl(var(--event-migration) / 0.16); color: hsl(var(--event-migration)); }
+  .event-chip[data-event*="ocupacion"] { background: hsl(var(--event-work) / 0.16); color: hsl(var(--event-work)); }
+  .event-chip[data-event*="defuncion"],
+  .event-chip[data-event*="entierro"] { background: hsl(var(--event-death) / 0.16); color: hsl(var(--event-death)); }
+
+  .country-chip[data-country*="chile"] { background: hsl(var(--country-chile) / 0.16); color: hsl(var(--country-chile)); }
+  .country-chip[data-country*="ital"] { background: hsl(var(--country-italy) / 0.16); color: hsl(var(--country-italy)); }
+  .country-chip[data-country*="suiza"],
+  .country-chip[data-country*="switzerland"] { background: hsl(var(--country-switzerland) / 0.16); color: hsl(var(--country-switzerland)); }
+  .country-chip[data-country*="espa"],
+  .country-chip[data-country*="spain"] { background: hsl(var(--country-spain) / 0.18); color: hsl(var(--country-spain)); }
+  .country-chip[data-country*="yug"],
+  .country-chip[data-country*="croacia"],
+  .country-chip[data-country*="serbia"] { background: hsl(var(--country-yugoslavia) / 0.16); color: hsl(var(--country-yugoslavia)); }
 
   .siri-orb {
     background: conic-gradient(from 180deg at 50% 50%,

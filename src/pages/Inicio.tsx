@@ -85,8 +85,8 @@ export default function Inicio() {
   }, []);
 
   const QuickAction = ({ icon: Icon, label, to }: any) => (
-    <Link to={to} className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-all hover:scale-[1.02] hover:shadow-xl">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary"><Icon className="h-5 w-5" /></div>
+    <Link to={to} className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-all hover:shadow-xl">
+      <div className="genealogy-symbol h-10 w-10 rounded-xl"><Icon className="h-5 w-5" /></div>
       <span className="text-sm font-medium">{label}</span>
     </Link>
   );
@@ -147,10 +147,10 @@ export default function Inicio() {
       {/* HERO árbol genealógico — protagonista visual */}
       <Link
         to="/arbol"
-        className="group relative mb-6 block overflow-hidden rounded-3xl ring-1 ring-border/40 shadow-xl transition-all hover:scale-[1.005] hover:shadow-2xl"
+        className="genealogy-visual-band group relative mb-6 block overflow-hidden rounded-3xl ring-1 ring-border/40 shadow-xl transition-all hover:shadow-2xl"
         style={{
           background:
-            "radial-gradient(120% 80% at 0% 0%, hsl(var(--primary)/0.30), transparent 55%), radial-gradient(100% 90% at 100% 100%, hsl(var(--accent)/0.28), transparent 60%), linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)",
+            "radial-gradient(120% 80% at 0% 0%, hsl(var(--genealogy-route)/0.28), transparent 55%), radial-gradient(100% 90% at 100% 100%, hsl(var(--genealogy-record)/0.26), transparent 60%), linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)",
         }}
       >
         <div className="relative z-10 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
@@ -162,6 +162,7 @@ export default function Inicio() {
             <p className="mt-2 text-sm text-muted-foreground md:text-base">
               {stats.personas} personas · {stats.apellidos.length} apellidos · explora generaciones, ramas y migraciones de tu familia.
             </p>
+            <div className="migration-route-accent mt-3 h-0.5 w-44 opacity-80" />
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/25">
                 <GitBranch className="h-3 w-3" /> Abrir árbol

@@ -161,7 +161,7 @@ function PossibleDuplicatesCard({ persona, people }: any) {
 
 function RecentChangesCard({ eventos, fotos }: any) {
   const changes = [
-    ...((eventos ?? []).slice(-3).map((e: any) => ({ id: `ev-${e.id}`, type: `Evento: ${e.tipo}`, date: e.updated_at ?? e.created_at ?? e.fecha, author: "GENAIA" }))),
+    ...((eventos ?? []).slice(-3).map((e: any) => ({ id: `ev-${e.id}`, type: `Evento: ${e.tipo}`, date: e.updated_at ?? e.created_at ?? e.fecha, author: "GENEIAI" }))),
     ...((fotos ?? []).slice(0, 2).map((f: any) => ({ id: `fo-${f.id}`, type: "Foto agregada", date: f.created_at, author: "Usuario" }))),
   ].slice(0, 5);
   return (

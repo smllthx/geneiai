@@ -1,6 +1,6 @@
 // Service Worker para Archivo Familiar — instalable + push + notificaciones.
 // Mínimo y seguro: NO cachea HTML (evita pantallas viejas).
-const CACHE = "archivo-v2-branding";
+const CACHE = "geneiai-v3-visual-context";
 const ASSETS = [
   "/",
   "/index.html",
@@ -47,7 +47,7 @@ self.addEventListener("fetch", (event) => {
 
 // Web Push
 self.addEventListener("push", (event) => {
-  let payload = { title: "Archivo Familiar", body: "Nueva actividad", url: "/" };
+  let payload = { title: "GENEIAI", body: "Nueva actividad", url: "/" };
   try { if (event.data) payload = { ...payload, ...event.data.json() }; } catch {}
   event.waitUntil(self.registration.showNotification(payload.title, {
     body: payload.body,
