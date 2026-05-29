@@ -15,7 +15,7 @@ const FilterButton = ({ active, children, onClick }: { active: boolean; children
     type="button"
     onClick={onClick}
     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-      active ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+      active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted"
     }`}
   >
     {children}
@@ -28,11 +28,11 @@ export default function TreeToolbar({ filters, onFiltersChange, onCenter, onAddP
   };
 
   return (
-    <div className="absolute left-4 right-4 top-4 z-20 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur">
-      <div className="mb-3 flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="absolute left-4 right-4 top-4 z-20 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur">
+      <div className="mb-3 flex flex-col gap-2 border-b border-border/60 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">GENAIA</p>
-          <h1 className="text-xl font-semibold leading-tight text-slate-950">Árbol</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">GENAIA</p>
+          <h1 className="text-xl font-semibold leading-tight text-foreground">Árbol</h1>
         </div>
         <Button size="sm" className="rounded-full" onClick={onAddPerson}>
           <UserPlus className="h-4 w-4" /> Agregar persona
@@ -45,7 +45,7 @@ export default function TreeToolbar({ filters, onFiltersChange, onCenter, onAddP
             value={filters.query}
             onChange={(event) => setFilter("query", event.target.value)}
             placeholder="Buscar persona, apellido, lugar o ID"
-            className="h-10 rounded-full border-slate-200 bg-slate-50 pl-9"
+            className="h-10 rounded-full border-border bg-background pl-9"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">

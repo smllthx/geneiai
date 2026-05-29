@@ -17,7 +17,7 @@ type TreeViewSelectorProps = {
 
 export default function TreeViewSelector({ value, onChange }: TreeViewSelectorProps) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1 shadow-sm">
+    <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-card/95 p-1 shadow-sm">
       {VIEWS.map(({ value: itemValue, label, icon: Icon }) => (
         <Button
           key={itemValue}

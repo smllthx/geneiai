@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isSpouseLikeRelation } from "@/lib/kinship";
 import { buildGenealogyLayout, mockPeople, mockRelationships } from "./genealogyLayout";
 import DescendancyView from "./DescendancyView";
 import FanChartView from "./FanChartView";
@@ -59,7 +60,7 @@ const convertRelationship = (row: any): GenealogyRelationship | null => {
   if (row.tipo === "hijo") {
     return { id: row.id, from: row.persona_id, to: row.pariente_id, type: "hijo" };
   }
-  if (row.tipo === "conyuge") {
+  if (isSpouseLikeRelation(row)) {
     return { id: row.id, from: row.persona_id, to: row.pariente_id, type: "conyuge" };
   }
   return null;
@@ -177,7 +178,7 @@ export default function GenealogyTreeView() {
       }
       const [{ data: personas }, { data: rels }, { data: lugares }, { data: docs }, { data: profile }] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza").eq("user_id", user.id).limit(5000),
-        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo").eq("user_id", user.id).limit(10000),
+        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo,notas").eq("user_id", user.id).limit(10000),
         supabase.from("lugares").select("id,ciudad,provincia,region,pais").eq("user_id", user.id).limit(5000),
         supabase.from("documentos").select("personas_mencionadas").eq("user_id", user.id).limit(5000),
         supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle(),
@@ -250,7 +251,7 @@ export default function GenealogyTreeView() {
     if (!user) return;
     const { data: rels } = await supabase
       .from("relaciones")
-      .select("id,persona_id,pariente_id,tipo")
+      .select("id,persona_id,pariente_id,tipo,notas")
       .eq("user_id", user.id)
       .or(`persona_id.eq.${person.id},pariente_id.eq.${person.id}`)
       .limit(200);
@@ -286,7 +287,20 @@ export default function GenealogyTreeView() {
   const handleAction = (action: "profile" | "ai" | "expand", person: GenealogyPerson) => {
     setSelected(person);
     if (action === "profile") navigate(`/personas/${person.id}/ficha`);
-    if (action === "ai") toast.info(`Buscar evidencia con IA para ${person.givenNames}`);
+    if (action === "ai") {
+      toast.promise(
+        supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: person.id } }),
+        {
+          loading: `Buscando evidencia para ${person.givenNames}…`,
+          success: ({ data, error }) => {
+            if (error || data?.error) throw error ?? new Error(data.error);
+            window.dispatchEvent(new CustomEvent("genaia:smart-insights-refresh", { detail: { personId: person.id } }));
+            return `${data?.hallazgos?.length ?? 0} hallazgo(s) encontrados`;
+          },
+          error: "No se pudo completar la búsqueda IA. Revisa la API key o créditos de OpenAI.",
+        },
+      );
+    }
     if (action === "expand") expandBranch(person);
   };
 
@@ -300,8 +314,8 @@ export default function GenealogyTreeView() {
         ref={viewportRef}
         className={`relative h-[calc(100vh-1px)] min-h-[720px] overflow-hidden [background-size:28px_28px] ${
           options.darkMode
-            ? "bg-[radial-gradient(circle_at_1px_1px,#334155_1px,transparent_0)]"
-            : "bg-[radial-gradient(circle_at_1px_1px,#cbd5e1_1px,transparent_0)]"
+            ? "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
+            : "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
         }`}
         onWheel={handleWheel}
         onMouseDown={(event) => {
@@ -318,7 +332,7 @@ export default function GenealogyTreeView() {
         <TreeToolbar filters={filters} onFiltersChange={setFilters} onCenter={centerTree} onAddPerson={() => navigate("/personas/nueva")} />
 
         {loading && (
-          <div className="absolute left-1/2 top-28 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
+          <div className="absolute left-1/2 top-28 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Cargando árbol desde Supabase…
           </div>
         )}

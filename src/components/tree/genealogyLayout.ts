@@ -162,8 +162,8 @@ const childrenOf = (id: string, relationships: GenealogyRelationship[]) =>
     .filter((relationship) => relationship.from === id && (relationship.type === "hijo" || relationship.type === "padre" || relationship.type === "madre"))
     .map((relationship) => relationship.to);
 
-const spouseOf = (id: string, relationships: GenealogyRelationship[]) =>
-  relationships.find((relationship) => relationship.type === "conyuge" && (relationship.from === id || relationship.to === id));
+const spousesOf = (id: string, relationships: GenealogyRelationship[]) =>
+  relationships.filter((relationship) => relationship.type === "conyuge" && (relationship.from === id || relationship.to === id));
 
 const inferLineages = (centerId: string, relationships: GenealogyRelationship[]) => {
   const result = new Map<string, LineageSide>([[centerId, "central"]]);
@@ -175,8 +175,9 @@ const inferLineages = (centerId: string, relationships: GenealogyRelationship[])
   for (const parent of parentRelsOf(centerId, relationships)) {
     markAncestors(parent.from, parent.type === "madre" ? "materna" : "paterna");
   }
-  const spouse = spouseOf(centerId, relationships);
-  if (spouse) result.set(spouse.from === centerId ? spouse.to : spouse.from, "central");
+  for (const spouse of spousesOf(centerId, relationships)) {
+    result.set(spouse.from === centerId ? spouse.to : spouse.from, "central");
+  }
   for (const childId of childrenOf(centerId, relationships)) result.set(childId, "central");
   return result;
 };
@@ -206,8 +207,11 @@ const buildDynamicPositions = (centerId: string, relationships: GenealogyRelatio
     positions.set(siblingId, { x: -360 - index * 280, y: 40 });
   });
 
-  const spouse = spouseOf(centerId, relationships);
-  if (spouse) positions.set(spouse.from === centerId ? spouse.to : spouse.from, { x: 360, y: 40 });
+  const spouses = spousesOf(centerId, relationships);
+  spouses.forEach((spouse, index) => {
+    const spouseId = spouse.from === centerId ? spouse.to : spouse.from;
+    positions.set(spouseId, { x: 360 + index * 300, y: 40 + (index % 2) * 52 });
+  });
 
   const children = childrenOf(centerId, relationships);
   children.forEach((childId, index) => {
