@@ -14,7 +14,7 @@ import TreeInsights from "@/components/TreeInsights";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
-import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
+import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 import { checkCoherence } from "@/lib/coherence";
 import { notify } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
@@ -159,6 +159,7 @@ export default function Arbol() {
   const padresDe = (pid: string) => kPadresDe(pid, rels as any, byId);
   const conyugesDe = (pid: string) => kConyugesDe(pid, rels as any, byId);
   const hijosDe = (pid: string) => kHijosDe(pid, rels as any, byId);
+  const hermanosDe = (pid: string) => kHermanosDe(pid, rels as any, byId);
 
   const reload = () => setReloadKey((k) => k + 1);
 
@@ -363,6 +364,31 @@ export default function Arbol() {
     );
   };
 
+  const PersonTile = ({ p, highlighted = false }: { p: PersonaLite; highlighted?: boolean }) => (
+    <Draggable p={p}>
+      <Hl p={p}>
+        <PersonCard p={p} compact highlighted={highlighted} onClick={() => setCenter(p.id)} />
+      </Hl>
+    </Draggable>
+  );
+
+  const AddTile = ({ personaId, tipo, label }: { personaId: string; tipo: "padre" | "madre" | "conyuge" | "hijo"; label: string }) => (
+    <QuickAddRelative personaId={personaId} defaultTipo={tipo} onAdded={reload}
+      trigger={<button className="block"><EmptySlot label={label} onClick={() => {}} /></button>} />
+  );
+
+  const CouplePair = ({ childId, padre, madre }: { childId: string; padre?: PersonaLite; madre?: PersonaLite }) => (
+    <div className="relative flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
+      <div className="pointer-events-none absolute left-[22%] right-[22%] top-1/2 h-px bg-foreground/25" />
+      <div className="relative z-10">
+        {padre ? <PersonTile p={padre} /> : <AddTile personaId={childId} tipo="padre" label="padre" />}
+      </div>
+      <div className="relative z-10">
+        {madre ? <PersonTile p={madre} /> : <AddTile personaId={childId} tipo="madre" label="madre" />}
+      </div>
+    </div>
+  );
+
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
   const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
     if (gen <= 0 || trail.includes(pid)) return null;
@@ -370,36 +396,53 @@ export default function Arbol() {
     const hasAny = !!(padre || madre);
     const nextTrail = [...trail, pid];
     return (
-      <div className="flex flex-col items-center">
-        <div className="relative flex flex-wrap items-end justify-center gap-4 px-3 pb-3">
-          {/* horizontal bar joining the two parents */}
-          {padre && madre && (
-            <div className="pointer-events-none absolute bottom-1 left-1/2 h-px w-[55%] -translate-x-1/2 bg-foreground/30" />
-          )}
-          <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-2">
+        <div className="grid grid-cols-2 items-end justify-center gap-5 px-2 pb-1">
+          <div className="flex min-w-[292px] flex-col items-center gap-2">
             {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            {padre ? (
-              <Draggable p={padre}><Hl p={padre}><PersonCard p={padre} compact /></Hl></Draggable>
-            ) : (
-              <QuickAddRelative personaId={pid} defaultTipo="padre" onAdded={reload}
-                trigger={<button className="block"><EmptySlot label="padre" onClick={() => {}} /></button>} />
-            )}
           </div>
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex min-w-[292px] flex-col items-center gap-2">
             {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            {madre ? (
-              <Draggable p={madre}><Hl p={madre}><PersonCard p={madre} compact /></Hl></Draggable>
-            ) : (
-              <QuickAddRelative personaId={pid} defaultTipo="madre" onAdded={reload}
-                trigger={<button className="block"><EmptySlot label="madre" onClick={() => {}} /></button>} />
-            )}
           </div>
         </div>
-        {/* vertical drop line to the child below */}
+        <CouplePair childId={pid} padre={padre} madre={madre} />
         {hasAny && <div className="h-4 w-px bg-foreground/30" />}
       </div>
     );
   };
+
+  const DescendantTree = ({ pid, depth = 2 }: { pid: string; depth?: number }) => {
+    if (depth <= 0) return null;
+    const children = hijosDe(pid);
+    if (!children.length) return null;
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-4 w-px bg-foreground/30" />
+        <div className="flex items-start justify-center gap-5">
+          {children.map((child) => (
+            <div key={child.id} className="flex flex-col items-center gap-2">
+              <PartnershipStrip p={child} compact />
+              <DescendantTree pid={child.id} depth={depth - 1} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const SiblingBranch = ({ p }: { p: PersonaLite }) => (
+    <div className="flex min-w-[220px] flex-col items-center gap-2 rounded-2xl border border-border/45 bg-card/20 p-3">
+      <PartnershipStrip p={p} compact />
+      {hijosDe(p.id).length > 0 && (
+        <>
+          <div className="h-3 w-px bg-foreground/25" />
+          <div className="flex max-w-[360px] flex-wrap justify-center gap-2">
+            {hijosDe(p.id).map((child) => <PersonTile key={child.id} p={child} />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => (
     <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
@@ -832,19 +875,41 @@ export default function Arbol() {
       ) : (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div
-            className="mx-auto flex flex-col items-center gap-6 origin-top transition-transform"
+            className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
             style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}
           >
+            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Ascendencia paterna y materna
+            </div>
             <Ascendants pid={persona.id} gen={generaciones} />
 
+            <div className="h-4 w-px bg-foreground/30" />
+            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Persona central y uniones
+            </div>
             <PartnershipStrip p={persona} />
 
-            <div className="flex flex-wrap justify-center gap-3">
-              {hijosDe(persona.id).map((h) => (
-                <Draggable key={h.id} p={h}><Hl p={h}><PersonCard p={h} compact /></Hl></Draggable>
-              ))}
-              <QuickAddRelative personaId={persona.id} defaultTipo="hijo" onAdded={reload}
-                trigger={<button className="block"><EmptySlot label="hijo/a" onClick={() => {}} /></button>} />
+            {hermanosDe(persona.id).length > 0 && (
+              <>
+                <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Hermanos, cuñados y sobrinos
+                </div>
+                <div className="flex max-w-[1100px] flex-wrap items-start justify-center gap-4">
+                  {hermanosDe(persona.id).map((sibling) => <SiblingBranch key={sibling.id} p={sibling} />)}
+                </div>
+              </>
+            )}
+
+            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Descendencia
+            </div>
+            {hijosDe(persona.id).length > 0 ? (
+              <DescendantTree pid={persona.id} depth={3} />
+            ) : (
+              <div className="text-xs text-muted-foreground">Sin hijos registrados.</div>
+            )}
+            <div className="flex justify-center">
+              <AddTile personaId={persona.id} tipo="hijo" label="hijo/a" />
             </div>
 
             <Link to={`/personas/${persona.id}`} className="text-sm text-link underline">

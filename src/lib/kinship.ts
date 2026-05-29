@@ -50,9 +50,33 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
   }
   const ids = new Set([...fatherIds, ...motherIds]);
   const list = [...ids].map((i) => byId.get(i)).filter(Boolean) as PersonaLite[];
-  const padre = [...fatherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "masculino") ?? list.find((p) => p.sexo !== "femenino");
-  const madre = [...motherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "femenino") ?? list.find((p) => p !== padre);
-  return { padre, madre, all: list.sort(sortByBirth) };
+  let padre = [...fatherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "masculino") ?? list.find((p) => p.sexo !== "femenino");
+  let madre = [...motherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "femenino") ?? list.find((p) => p !== padre);
+
+  // Visual/inference fallback: GEDCOM imports often preserve spouses but miss
+  // the direct mother/father edge for children. If one parent exists, show that
+  // parent's spouse as the likely missing parent in tree/profile views.
+  const spouseIdsFor = (personId?: string) => {
+    if (!personId) return [] as string[];
+    const ids = new Set<string>();
+    for (const r of rels) {
+      if (!isSpouseLikeRelation(r)) continue;
+      if (r.persona_id === personId) ids.add(r.pariente_id);
+      if (r.pariente_id === personId) ids.add(r.persona_id);
+    }
+    return [...ids];
+  };
+  if (!madre && padre) {
+    madre = spouseIdsFor(padre.id).map((id) => byId.get(id)).find((p) => p?.sexo === "femenino");
+  }
+  if (!padre && madre) {
+    padre = spouseIdsFor(madre.id).map((id) => byId.get(id)).find((p) => p?.sexo === "masculino");
+  }
+
+  const all = new Map(list.map((p) => [p.id, p]));
+  if (padre) all.set(padre.id, padre);
+  if (madre) all.set(madre.id, madre);
+  return { padre, madre, all: [...all.values()].sort(sortByBirth) };
 }
 
 export function conyugesDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {

@@ -217,7 +217,7 @@ export default function PersonaDetail() {
     for (const r of relaciones) if (r.pariente?.id) byId.set(r.pariente.id, r.pariente);
     if (p?.id) byId.set(p.id, p);
     // Normalise rows so helper sees both directions (relaciones returned for this person already include both)
-    const flat = relaciones.map((r: any) => ({ id: r.id, persona_id: r.persona_id, pariente_id: r.pariente_id, tipo: r.tipo }));
+    const flat = relaciones.map((r: any) => ({ id: r.id, persona_id: r.persona_id, pariente_id: r.pariente_id, tipo: r.tipo, notas: r.notas }));
     const padres = kPadresDe(id, flat, byId).all;
     const conyuges = kConyugesDe(id, flat, byId);
     const hijos = kHijosDe(id, flat, byId);
