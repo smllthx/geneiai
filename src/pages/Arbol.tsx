@@ -62,7 +62,7 @@ export default function Arbol() {
       const user = (await supabase.auth.getUser()).data.user;
       const [{ data: p }, { data: r }, profRes, { data: docs }] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url").order("apellidos").limit(10000),
-        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo").limit(20000),
+        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo,notas").limit(20000),
         user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
         supabase.from("documentos").select("personas_mencionadas").limit(5000),
       ]);
@@ -209,6 +209,7 @@ export default function Arbol() {
       duration: 5000,
     });
     setDropTarget(null);
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: sourceId } }));
     reload();
   };
 
@@ -317,6 +318,35 @@ export default function Arbol() {
   );
 
   const Draggable = TreeCard; // backwards-compat alias used by older sections below
+
+  const PartnershipStrip = ({ p, compact = false }: { p: PersonaLite; compact?: boolean }) => {
+    const partners = conyugesDe(p.id);
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
+          <Draggable p={p}>
+            <Hl p={p}>
+              <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => setCenter(p.id)} />
+            </Hl>
+          </Draggable>
+          {partners.map((partner) => (
+            <Draggable key={partner.id} p={partner}>
+              <Hl p={partner}>
+                <PersonCard p={partner} compact={compact} />
+              </Hl>
+            </Draggable>
+          ))}
+          <QuickAddRelative personaId={p.id} defaultTipo="conyuge" onAdded={reload}
+            trigger={<button className="block"><EmptySlot label="cónyuge / unión" onClick={() => {}} /></button>} />
+        </div>
+        {partners.length > 0 && (
+          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            {partners.length} unión{partners.length === 1 ? "" : "es"} registrada{partners.length === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Recursive ascendants renderer — FamilySearch-style with visible connector lines
   const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
@@ -723,6 +753,9 @@ export default function Arbol() {
       ) : vista === "abanico" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
+            <div className="mb-3 flex justify-center">
+              <PartnershipStrip p={persona} compact />
+            </div>
             <FanChart personas={personas} rels={rels} centerId={persona.id} generations={generaciones} size={760} />
           </div>
           <p className="mt-2 text-center text-xs text-muted-foreground">
@@ -733,6 +766,9 @@ export default function Arbol() {
       ) : vista === "dinastica" ? (
         <div className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
+            <div className="mb-4 flex justify-center">
+              <PartnershipStrip p={persona} compact />
+            </div>
             <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
           </div>
         </div>
@@ -753,7 +789,7 @@ export default function Arbol() {
                   <div className="flex h-8 items-start justify-center">
                     <div className="h-8 w-px bg-foreground/30" />
                   </div>
-                  <Draggable p={persona}><Hl p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Hl></Draggable>
+                  <PartnershipStrip p={persona} />
                   <p className="max-w-md text-center text-xs text-muted-foreground">
                     Vista conjunta de ramas paterna y materna. Usa Editar relaciones para corregir vínculos o agregar familiares faltantes.
                   </p>
@@ -770,14 +806,7 @@ export default function Arbol() {
           >
             <Ascendants pid={persona.id} gen={generaciones} />
 
-            <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2">
-              <Draggable p={persona}><Hl p={persona}><PersonCard p={persona} highlighted onClick={() => setCenter(persona.id)} /></Hl></Draggable>
-              {conyugesDe(persona.id).map((c) => (
-                <Draggable key={c.id} p={c}><Hl p={c}><PersonCard p={c} /></Hl></Draggable>
-              ))}
-              <QuickAddRelative personaId={persona.id} defaultTipo="conyuge" onAdded={reload}
-                trigger={<button className="block"><EmptySlot label="cónyuge" onClick={() => {}} /></button>} />
-            </div>
+            <PartnershipStrip p={persona} />
 
             <div className="flex flex-wrap justify-center gap-3">
               {hijosDe(persona.id).map((h) => (

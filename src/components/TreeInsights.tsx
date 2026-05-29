@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Lightbulb, Sparkles, Compass, TrendingUp, AlertCircle, ChevronRight } from "lucide-react";
+import { Lightbulb, Sparkles, Compass, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
 
 type Stats = {
   sugerenciasPendientes: number;
@@ -13,6 +13,7 @@ type Stats = {
 
 export default function TreeInsights({ personaId, personaNombre }: { personaId: string; personaNombre: string }) {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!personaId) return;
@@ -32,6 +33,19 @@ export default function TreeInsights({ personaId, personaNombre }: { personaId: 
         ultimaWeb: ultimaWeb ? { titulo: ultimaWeb.titulo, url: ultimaWeb.url_externa } : null,
       });
     })();
+  }, [personaId, refreshTick]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ personId?: string }>).detail;
+      if (!detail?.personId || detail.personId === personaId) setRefreshTick((n) => n + 1);
+    };
+    window.addEventListener("genaia:smart-insights-refresh", refresh);
+    window.addEventListener("genaia:data-changed", refresh);
+    return () => {
+      window.removeEventListener("genaia:smart-insights-refresh", refresh);
+      window.removeEventListener("genaia:data-changed", refresh);
+    };
   }, [personaId]);
 
   if (!stats) return null;
@@ -53,6 +67,15 @@ export default function TreeInsights({ personaId, personaNombre }: { personaId: 
             Insights · {personaNombre}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setRefreshTick((n) => n + 1)}
+          className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-1 text-[10px] font-medium text-muted-foreground transition hover:border-primary/40 hover:text-primary"
+          title="Actualizar insights del árbol"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Actualizar
+        </button>
       </div>
       <div className="grid grid-cols-3 gap-2">
         {cards.map((c) => (

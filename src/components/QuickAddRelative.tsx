@@ -23,9 +23,16 @@ const labels: Record<Tipo, string> = {
 };
 
 const dbTipoFor = (t: Tipo) =>
-  (["padre", "madre", "conyuge", "hijo", "hermano"].includes(t) ? t : "otro") as "padre" | "madre" | "conyuge" | "hijo" | "hermano" | "otro";
+  (["union_civil", "conviviente", "cohabitante"].includes(t)
+    ? "conyuge"
+    : ["padre", "madre", "conyuge", "hijo", "hermano"].includes(t) ? t : "otro") as "padre" | "madre" | "conyuge" | "hijo" | "hermano" | "otro";
 
-const relationNoteFor = (t: Tipo) => dbTipoFor(t) === "otro" ? `relación genealógica: ${labels[t]}` : null;
+const relationNoteFor = (t: Tipo) => {
+  const dbTipo = dbTipoFor(t);
+  if (dbTipo === "otro") return `relación genealógica: ${labels[t]}`;
+  if (dbTipo === "conyuge" && t !== "conyuge") return `tipo de unión: ${labels[t]}`;
+  return null;
+};
 
 export default function QuickAddRelative({
   personaId, personaSexo, defaultTipo, trigger, onAdded,
@@ -53,7 +60,12 @@ export default function QuickAddRelative({
 
   useEffect(() => {
     if (!open) return;
-    supabase.from("personas").select("id, nombres, apellidos, sexo, nac_fecha, nac_rango_ini").then(({ data }) => setAll(data ?? []));
+    supabase
+      .from("personas")
+      .select("id, nombres, apellidos, sexo, nac_fecha, nac_rango_ini")
+      .order("apellidos", { ascending: true })
+      .order("nombres", { ascending: true })
+      .then(({ data }) => setAll(data ?? []));
   }, [open]);
 
   // Mantener el sexo coherente con el tipo elegido (padre→masculino, madre→femenino)
@@ -201,6 +213,7 @@ export default function QuickAddRelative({
       toast.success(`${labels[tipo]} ${mode === "buscar" ? "vinculado/a" : "agregado/a"}`);
       setOpen(false);
       setNombres(""); setApellidos(""); setNacAprox(""); setQuery(""); setPicked(null);
+      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: personaId } }));
       onAdded?.();
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo agregar");

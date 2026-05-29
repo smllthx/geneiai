@@ -39,6 +39,35 @@ export function localPhotoAnalysis({ titulo, descripcion, fechaAprox }: { titulo
 export async function localAssistantReply(text: string) {
   const q = norm(text);
   const tool_events: any[] = [];
+  const personaWords = q
+    .replace(/\b(busca|buscar|buscame|encuentra|encontrar|persona|personas|ficha|arbol|árbol|de|del|la|el|a|por|favor|muestrame|mostrame|ver|abrir|abre)\b/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3);
+  if ((q.includes("buscar") || q.includes("busca") || q.includes("persona") || q.includes("ficha")) && personaWords.length) {
+    const { data } = await supabase
+      .from("personas")
+      .select("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha")
+      .order("apellidos", { ascending: true })
+      .order("nombres", { ascending: true })
+      .limit(1500);
+    const matches = (data ?? [])
+      .filter((p: any) => {
+        const haystack = norm(`${p.nombres ?? ""} ${p.apellidos ?? ""} ${p.nac_fecha ?? ""} ${p.nac_rango_ini ?? ""}`);
+        return personaWords.every((word) => haystack.includes(word));
+      })
+      .slice(0, 8);
+    if (matches.length) {
+      tool_events.push({ name: "search_personas", result: { ok: true, results: matches } });
+      if (matches.length === 1) tool_events.push({ name: "navigate_to", result: { ok: true, navigate_to: `/personas/${matches[0].id}` } });
+      const lines = matches.map((p: any) => {
+        const born = y(p.nac_fecha) ?? p.nac_rango_ini ?? "?";
+        const died = y(p.defuncion_fecha) ?? "";
+        return `- ${p.nombres ?? ""} ${p.apellidos ?? ""} (${born}${died ? `–${died}` : ""})`;
+      });
+      return { content: `Encontré ${matches.length} persona(s), ordenadas por apellido:\n\n${lines.join("\n")}${matches.length === 1 ? "\n\nAbro su ficha." : "\n\nPuedes escribir el nombre completo para abrir una ficha concreta."}`, tool_events };
+    }
+  }
   if (q.includes("arbol")) {
     tool_events.push({ name: "navigate_to", result: { ok: true, navigate_to: "/arbol" } });
     return { content: "Abro el árbol familiar. Esta acción se resolvió localmente.", tool_events };

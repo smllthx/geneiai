@@ -11,6 +11,7 @@ export type RelRow = {
   persona_id: string;
   pariente_id: string;
   tipo: RelTipo | string;
+  notas?: string | null;
 };
 
 export const yearOf = (p?: { nac_fecha?: string | null; nac_rango_ini?: number | null }) => {
@@ -25,6 +26,15 @@ export const sortByBirth = <T extends { nac_fecha?: string | null; nac_rango_ini
 /** Sky for paternal line, pink for maternal line — consistent across all views. */
 export const lineColor = (sexo?: string | null) =>
   sexo === "femenino" ? "pink" : sexo === "masculino" ? "sky" : "neutral";
+
+const spouseLikeNotes = ["unión civil", "union civil", "conviviente", "convivencia", "cohabitante", "cohabitación", "cohabitacion"];
+
+export const isSpouseLikeRelation = (r: Pick<RelRow, "tipo" | "notas">) => {
+  if (r.tipo === "conyuge") return true;
+  if (r.tipo !== "otro") return false;
+  const notas = (r.notas ?? "").toLowerCase();
+  return spouseLikeNotes.some((label) => notas.includes(label));
+};
 
 export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const fatherIds = new Set<string>();
@@ -48,7 +58,7 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
 export function conyugesDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const ids = new Set<string>();
   for (const r of rels) {
-    if (r.tipo !== "conyuge") continue;
+    if (!isSpouseLikeRelation(r)) continue;
     if (r.persona_id === pid) ids.add(r.pariente_id);
     if (r.pariente_id === pid) ids.add(r.persona_id);
   }

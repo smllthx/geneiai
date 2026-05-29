@@ -291,6 +291,67 @@ export default function PersonaDetail() {
     ? "Registra una nueva persona en tu árbol genealógico privado."
     : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);
 
+  const buscarMasConIa = async () => {
+    const t = toast.loading("Agente IA buscando más sobre esta persona…");
+    try {
+      const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: id } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revisa en Búsqueda IA`);
+      notify("Búsqueda IA finalizada", { body: `${data.hallazgos?.length ?? 0} hallazgos para ${p.nombres} ${p.apellidos}`, url: "/busqueda-ia", tag: `bia-${id}` });
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const investigarConIa = async () => {
+    const t = toast.loading("Investigando con IA…");
+    try {
+      const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const investigarAuto = async (foco: "ascendientes" | "descendientes") => {
+    const t = toast.loading(`Buscando ${foco} con IA…`);
+    try {
+      const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const n = data.sugerencias_creadas ?? 0;
+      toast.success(`${n} sugerencias de ${foco}`);
+      if (n > 0) notify(`Nuevas sugerencias de ${foco}`, { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `${foco}-${id}` });
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const generarBiografia = async () => {
+    const t = toast.loading("Escribiendo biografía con IA…");
+    try {
+      const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Biografía generada y guardada en Notas");
+      notify("Biografía generada", { body: `${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `bio-${id}` });
+      const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
+      if (fresh) setP(fresh);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const generarContextoHistorico = async () => {
+    const t = toast.loading("Generando hipótesis de contexto histórico…");
+    try {
+      const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
+      toast.dismiss(t);
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
+    } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
   return (
     <div>
       <Helmet>
@@ -338,120 +399,62 @@ export default function PersonaDetail() {
 
       {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
 
-      {/* Acción horizontal destacada — Ver árbol centrado en esta persona */}
       {!isNew && (
-        <button
-          type="button"
-          onClick={() => navigate(`/arbol?centro=${id}`)}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-[15px] font-semibold text-primary transition-colors hover:bg-primary/10"
-        >
-          <GitBranch className="h-5 w-5" /> Ver árbol de {p.nombres?.split(" ")[0] || "esta persona"}
-        </button>
+        <div className="mb-4 grid gap-3 xl:grid-cols-[1fr_1.35fr]">
+          <Card className="archivo-card overflow-hidden">
+            <CardHeader className="border-b border-border/60 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <GitBranch className="h-4 w-4 text-primary" /> Acciones rápidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 pt-4 sm:grid-cols-2">
+              <Button className="justify-start sm:col-span-2" onClick={() => navigate(`/arbol?centro=${id}`)}>
+                <GitBranch className="h-4 w-4" /> Ver árbol de {p.nombres?.split(" ")[0] || "esta persona"}
+              </Button>
+              {user && !editMode && <Button variant="outline" className="justify-start" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar ficha</Button>}
+              {user && editMode && <Button className="justify-start" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar cambios</Button>}
+              {user && editMode && <Button variant="outline" className="justify-start text-destructive hover:text-destructive" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+              <AgregarInfoSheet personaId={id!} onAdded={async () => {
+                const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
+                setEventos(data ?? []);
+              }} trigger={<Button variant="outline" className="justify-start"><Sparkles className="h-4 w-4" /> Agregar dato vital</Button>} />
+            </CardContent>
+          </Card>
+
+          <Card className="archivo-card overflow-hidden">
+            <CardHeader className="border-b border-border/60 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="h-4 w-4 text-primary" /> Investigación y contenido IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <Button className="justify-start sm:col-span-2" onClick={buscarMasConIa}><Sparkles className="h-4 w-4" /> Buscar evidencia</Button>
+                <Button variant="secondary" className="justify-start" onClick={investigarConIa}><Sparkles className="h-4 w-4" /> Investigar</Button>
+                <Button variant="outline" className="justify-start" onClick={lanzarInsightsSegundoPlano}><Sparkles className="h-4 w-4" /> Insights</Button>
+                <Button variant="outline" className="justify-start" onClick={() => investigarAuto("ascendientes")}><Sparkles className="h-4 w-4" /> Ascendientes</Button>
+                <Button variant="outline" className="justify-start" onClick={() => investigarAuto("descendientes")}><Sparkles className="h-4 w-4" /> Descendientes</Button>
+                <Button variant="outline" className="justify-start" onClick={generarBiografia}><Sparkles className="h-4 w-4" /> Biografía</Button>
+                <Button variant="outline" className="justify-start" onClick={generarContextoHistorico}><Sparkles className="h-4 w-4" /> Contexto</Button>
+                <CoincidenciasWebButton personaId={id!} />
+                <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Las acciones de IA quedan agrupadas por investigación, contenido y fuentes para evitar botones sueltos.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Acciones agrupadas: edición → IA → exportación/fuentes */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {/* Edición */}
-        {user && !editMode && !isNew && (
-          <Button variant="outline" size="sm" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar persona</Button>
-        )}
-        {user && (editMode || isNew) && (
-          <Button size="sm" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>
-        )}
-        {user && !isNew && editMode && <Button size="sm" variant="outline" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
-
-        {/* IA — búsqueda e investigación */}
-        {!isNew && <Button size="sm" onClick={async () => {
-          const t = toast.loading("Agente IA buscando más sobre esta persona…");
-          try {
-            const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: id } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revisa en Búsqueda IA`);
-            notify("Búsqueda IA finalizada", { body: `${data.hallazgos?.length ?? 0} hallazgos para ${p.nombres} ${p.apellidos}`, url: "/busqueda-ia", tag: `bia-${id}` });
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Buscar más con IA</Button>}
-        {!isNew && <Button size="sm" variant="default" onClick={lanzarInsightsSegundoPlano}>
-          <Sparkles className="h-4 w-4" /> Insights smart en segundo plano
-        </Button>}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Investigando con IA…");
-          try {
-            const { data, error } = await supabase.functions.invoke("investigar-persona", { body: { person_id: id } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            toast.success(`${data.hipotesis_creadas} hipótesis · ${data.busquedas_creadas} búsquedas · ${data.tareas_creadas} tareas`);
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Investigar</Button>}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Buscando ascendientes con IA…");
-          try {
-            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "ascendientes" } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            const n = data.sugerencias_creadas ?? 0;
-            toast.success(`${n} sugerencias de ascendientes`);
-            if (n > 0) notify("Nuevas sugerencias de ascendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `asc-${id}` });
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Ascendientes</Button>}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Buscando descendientes con IA…");
-          try {
-            const { data, error } = await supabase.functions.invoke("investigar-auto", { body: { person_id: id, foco: "descendientes" } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            const n = data.sugerencias_creadas ?? 0;
-            toast.success(`${n} sugerencias de descendientes`);
-            if (n > 0) notify("Nuevas sugerencias de descendientes", { body: `${n} para ${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `desc-${id}` });
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Descendientes</Button>}
-
-        {/* IA — contenido narrativo */}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Escribiendo biografía con IA…");
-          try {
-            const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            toast.success("Biografía generada y guardada en Notas");
-            notify("Biografía generada", { body: `${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `bio-${id}` });
-            const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-            if (fresh) setP(fresh);
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Biografía automática</Button>}
-        {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-          const t = toast.loading("Generando hipótesis de contexto histórico…");
-          try {
-            const { data, error } = await supabase.functions.invoke("contexto-historico", { body: { person_id: id } });
-            toast.dismiss(t);
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            toast.success(`${data.creadas ?? 0} hipótesis contextuales agregadas`);
-          } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-        }}><Sparkles className="h-4 w-4" /> Contexto histórico</Button>}
-
-        {/* Fuentes y exportación */}
-        {!isNew && <CoincidenciasWebButton personaId={id!} />}
-        {!isNew && <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />}
-      </div>
+      {isNew && (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar persona</Button>
+        </div>
+      )}
 
       {isNew && (
         <h1 className="mb-4 font-display text-3xl font-bold tracking-tight">Nueva persona</h1>
-      )}
-
-      {!isNew && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <AgregarInfoSheet personaId={id!} onAdded={async () => {
-            const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
-            setEventos(data ?? []);
-          }} />
-          <span className="text-xs text-muted-foreground">Bautismo · Residencia · Ocupación · Censo · Inmigración · etc.</span>
-        </div>
       )}
 
       <Tabs defaultValue="detalles">
@@ -496,7 +499,7 @@ export default function PersonaDetail() {
               </CardContent>
             </Card>
           )}
-          {!isNew && (
+          {!isNew && !editMode && (
             <div className="mb-3">
               <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
             </div>
@@ -558,15 +561,6 @@ export default function PersonaDetail() {
               <LugarSelect value={p.entierro_lugar_id} onChange={(v) => set("entierro_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
             <div><Label>Ocupación</Label><Input value={p.ocupacion ?? ""} onChange={(e) => set("ocupacion", e.target.value)} /></div>
             <div><Label>Nacionalidad / origen</Label><Input value={p.nacionalidad ?? ""} onChange={(e) => set("nacionalidad", e.target.value)} /></div>
-            <div className="sm:col-span-2">
-              <NombresMultilingues
-                nombres={p.nombres}
-                apellidos={p.apellidos}
-                origen={p.nacionalidad}
-                nacionalidad={p.nacionalidad}
-                onApply={(v) => { set("nombres", v.nombres); set("apellidos", v.apellidos); }}
-              />
-            </div>
             <div><Label>Religión / rito</Label><Input value={p.religion ?? ""} onChange={(e) => set("religion", e.target.value)} /></div>
             <div><Label>Certeza</Label>
               <Select value={p.certeza} onValueChange={(v) => set("certeza", v)}>

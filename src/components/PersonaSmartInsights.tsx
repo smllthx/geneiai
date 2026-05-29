@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, RefreshCw } from "lucide-react";
 import { localPersonaInsight } from "@/lib/offlineAi";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
@@ -13,6 +13,7 @@ type Insight = { icon?: string; texto: string };
  */
 export default function PersonaSmartInsights({ persona, eventos = [], fam }: { persona: any; eventos?: any[]; fam: { padres: any[]; conyuges: any[]; hijos: any[]; hermanos: any[] } }) {
   const [extra, setExtra] = useState<Insight[]>([]);
+  const [refreshTick, setRefreshTick] = useState(0);
   const insights: Insight[] = [];
   const yN = yearOf(persona?.nac_fecha) ?? persona?.nac_rango_ini ?? null;
   const yD = yearOf(persona?.defuncion_fecha) ?? null;
@@ -65,6 +66,19 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
   useEffect(() => {
     if (!persona?.id) return;
     setExtra([{ icon: "✨", texto: localPersonaInsight(persona) }]);
+  }, [persona?.id, persona?.updated_at, refreshTick]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ personId?: string }>).detail;
+      if (!detail?.personId || detail.personId === persona?.id) setRefreshTick((n) => n + 1);
+    };
+    window.addEventListener("genaia:smart-insights-refresh", refresh);
+    window.addEventListener("genaia:data-changed", refresh);
+    return () => {
+      window.removeEventListener("genaia:smart-insights-refresh", refresh);
+      window.removeEventListener("genaia:data-changed", refresh);
+    };
   }, [persona?.id]);
 
   const all = [...insights, ...extra];
@@ -78,6 +92,15 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
         </div>
         <h2 className="font-display text-lg font-bold tracking-tight">Smart Insights</h2>
         <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">Local</span>
+        <button
+          type="button"
+          onClick={() => setRefreshTick((n) => n + 1)}
+          className="grid h-7 w-7 place-items-center rounded-full border border-primary/15 text-primary transition hover:bg-primary/10"
+          aria-label="Actualizar insights"
+          title="Actualizar insights"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
         {all.map((i, idx) => (
