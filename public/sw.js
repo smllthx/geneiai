@@ -1,7 +1,16 @@
 // Service Worker para Archivo Familiar — instalable + push + notificaciones.
 // Mínimo y seguro: NO cachea HTML (evita pantallas viejas).
-const CACHE = "archivo-v1";
-const ASSETS = ["/", "/index.html", "/app-icon-512.png", "/favicon.svg", "/manifest.webmanifest"];
+const CACHE = "archivo-v2-branding";
+const ASSETS = [
+  "/",
+  "/index.html",
+  "/favicon.png",
+  "/logo-sidebar.png",
+  "/apple-touch-icon.png",
+  "/app-icon-192.png",
+  "/app-icon-512.png",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS).catch(() => {})));
