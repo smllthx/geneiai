@@ -26,6 +26,21 @@ type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 type Panel = "arbol" | "tareas" | "recientes" | "mas";
 
+const generationName = (level: number) => {
+  if (level <= 1) return "padres";
+  if (level === 2) return "abuelos";
+  if (level === 3) return "bisabuelos";
+  if (level === 4) return "tatarabuelos";
+  if (level === 5) return "trastatarabuelos";
+  return `${level}.ª generación`;
+};
+
+const generationOptionLabel = (generations: number) => {
+  if (generations === 999) return "Todas las generaciones";
+  const lastLevel = Math.max(1, generations - 1);
+  return `${generations} gen · hasta ${generationName(lastLevel)}`;
+};
+
 export default function Arbol() {
   const [searchParams, setSearchParams] = useSearchParams();
   const centroParam = searchParams.get("centro");
@@ -506,10 +521,10 @@ export default function Arbol() {
         <h1 className="min-w-0 flex-1 font-display text-2xl font-bold leading-tight tracking-tight md:text-3xl">Árbol</h1>
         <div className="glass inline-flex rounded-full p-1">
           {([
-            ["ascendientes", GitBranch, "Clásica"],
-            ["lineas", Columns2, "Líneas"],
+            ["ascendientes", GitBranch, "Retrato"],
+            ["lineas", Columns2, "Ramas"],
             ["abanico", Sparkles, "Abanico"],
-            ["dinastica", LayoutGrid, "Dinástica"],
+            ["dinastica", LayoutGrid, "Linaje"],
           ] as [Vista, any, string][]).map(([k, Icon, label]) => (
             <button
               key={k}
@@ -543,15 +558,31 @@ export default function Arbol() {
           <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
         </div>
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
-          <SelectTrigger className="h-9 w-[118px] rounded-full text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-[186px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             {[2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50].map((n) => (
-              <SelectItem key={n} value={String(n)}>{n} gen</SelectItem>
+              <SelectItem key={n} value={String(n)}>{generationOptionLabel(n)}</SelectItem>
             ))}
-            <SelectItem value="999">Todas</SelectItem>
+            <SelectItem value="999">Todas las generaciones</SelectItem>
           </SelectContent>
         </Select>
       </div>
+
+      {vista === "ascendientes" && (
+        <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
+          {["Padres", "Abuelos", "Bisabuelos", "Tatarabuelos", "Trastatarabuelos"].map((label) => (
+            <span
+              key={label}
+              className="shrink-0 rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-medium text-muted-foreground"
+            >
+              {label}
+            </span>
+          ))}
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            La vista retrato mantiene madres, padres, cónyuges y uniones visibles cuando existen.
+          </span>
+        </div>
+      )}
 
       {/* Configuración del árbol: resaltado por categoría */}
       <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">

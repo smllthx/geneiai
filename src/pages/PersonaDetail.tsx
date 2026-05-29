@@ -290,6 +290,21 @@ export default function PersonaDetail() {
   const metaDesc = isNew
     ? "Registra una nueva persona en tu árbol genealógico privado."
     : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);
+  const lugarTexto = (lugarId?: string | null) => {
+    const lugar = lugarId ? lugaresById.get(lugarId) : null;
+    return lugar ? [lugar.ciudad, lugar.provincia, lugar.region, lugar.pais].filter(Boolean).join(", ") : null;
+  };
+  const vitalValue = (fecha?: string | null, lugarId?: string | null, fallback?: string | null) => {
+    const fechaTxt = fmtDate(fecha) ?? fallback ?? null;
+    const lugarTxt = lugarTexto(lugarId);
+    if (!fechaTxt && !lugarTxt) return null;
+    return (
+      <>
+        {fechaTxt && <div>{fechaTxt}</div>}
+        {lugarTxt && <div>{lugarTxt}</div>}
+      </>
+    );
+  };
 
   const buscarMasConIa = async () => {
     const t = toast.loading("Agente IA buscando más sobre esta persona…");
@@ -400,51 +415,34 @@ export default function PersonaDetail() {
       {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
 
       {!isNew && (
-        <div className="mb-4 grid gap-3 xl:grid-cols-[1fr_1.35fr]">
-          <Card className="archivo-card overflow-hidden">
-            <CardHeader className="border-b border-border/60 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <GitBranch className="h-4 w-4 text-primary" /> Acciones rápidas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2 pt-4 sm:grid-cols-2">
-              <Button className="justify-start sm:col-span-2" onClick={() => navigate(`/arbol?centro=${id}`)}>
-                <GitBranch className="h-4 w-4" /> Ver árbol de {p.nombres?.split(" ")[0] || "esta persona"}
-              </Button>
-              {user && !editMode && <Button variant="outline" className="justify-start" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar ficha</Button>}
-              {user && editMode && <Button className="justify-start" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar cambios</Button>}
-              {user && editMode && <Button variant="outline" className="justify-start text-destructive hover:text-destructive" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
-              <AgregarInfoSheet personaId={id!} onAdded={async () => {
-                const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
-                setEventos(data ?? []);
-              }} trigger={<Button variant="outline" className="justify-start"><Sparkles className="h-4 w-4" /> Agregar dato vital</Button>} />
-            </CardContent>
-          </Card>
-
-          <Card className="archivo-card overflow-hidden">
-            <CardHeader className="border-b border-border/60 pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="h-4 w-4 text-primary" /> Investigación y contenido IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-4">
-              <div className="grid gap-2 sm:grid-cols-3">
-                <Button className="justify-start sm:col-span-2" onClick={buscarMasConIa}><Sparkles className="h-4 w-4" /> Buscar evidencia</Button>
-                <Button variant="secondary" className="justify-start" onClick={investigarConIa}><Sparkles className="h-4 w-4" /> Investigar</Button>
-                <Button variant="outline" className="justify-start" onClick={lanzarInsightsSegundoPlano}><Sparkles className="h-4 w-4" /> Insights</Button>
-                <Button variant="outline" className="justify-start" onClick={() => investigarAuto("ascendientes")}><Sparkles className="h-4 w-4" /> Ascendientes</Button>
-                <Button variant="outline" className="justify-start" onClick={() => investigarAuto("descendientes")}><Sparkles className="h-4 w-4" /> Descendientes</Button>
-                <Button variant="outline" className="justify-start" onClick={generarBiografia}><Sparkles className="h-4 w-4" /> Biografía</Button>
-                <Button variant="outline" className="justify-start" onClick={generarContextoHistorico}><Sparkles className="h-4 w-4" /> Contexto</Button>
-                <CoincidenciasWebButton personaId={id!} />
-                <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Las acciones de IA quedan agrupadas por investigación, contenido y fuentes para evitar botones sueltos.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="archivo-card mb-4 overflow-hidden">
+          <CardHeader className="border-b border-border/60 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" /> Herramientas de ficha
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Button className="justify-start lg:col-span-2" onClick={() => navigate(`/arbol?centro=${id}`)}>
+              <GitBranch className="h-4 w-4" /> Ver árbol
+            </Button>
+            {user && !editMode && <Button variant="outline" className="justify-start" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar ficha</Button>}
+            {user && editMode && <Button className="justify-start" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>}
+            {user && editMode && <Button variant="outline" className="justify-start text-destructive hover:text-destructive" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
+            <AgregarInfoSheet personaId={id!} onAdded={async () => {
+              const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
+              setEventos(data ?? []);
+            }} trigger={<Button variant="outline" className="justify-start"><Sparkles className="h-4 w-4" /> Agregar dato</Button>} />
+            <Button variant="outline" className="justify-start" onClick={buscarMasConIa}><Sparkles className="h-4 w-4" /> Buscar evidencia</Button>
+            <Button variant="outline" className="justify-start" onClick={investigarConIa}><Sparkles className="h-4 w-4" /> Investigar</Button>
+            <Button variant="outline" className="justify-start" onClick={lanzarInsightsSegundoPlano}><Sparkles className="h-4 w-4" /> Insights</Button>
+            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("ascendientes")}><Sparkles className="h-4 w-4" /> Ascendientes</Button>
+            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("descendientes")}><Sparkles className="h-4 w-4" /> Descendientes</Button>
+            <Button variant="outline" className="justify-start" onClick={generarBiografia}><Sparkles className="h-4 w-4" /> Biografía</Button>
+            <Button variant="outline" className="justify-start" onClick={generarContextoHistorico}><Sparkles className="h-4 w-4" /> Contexto</Button>
+            <CoincidenciasWebButton personaId={id!} />
+            <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />
+          </CardContent>
+        </Card>
       )}
 
       {isNew && (
@@ -482,18 +480,24 @@ export default function PersonaDetail() {
         </TabsList>
 
         <TabsContent value="detalles">
-          {!isNew && (
+          {!isNew && !editMode && (
             <Card className="mb-3 overflow-hidden rounded-none border-x-0 border-border bg-zinc-950 text-white md:rounded-2xl md:border-x">
               <CardHeader className="border-b border-border/70 bg-zinc-900 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-white/70">Información esencial</CardTitle></CardHeader>
               <CardContent className="grid gap-0 p-0 text-sm">
-                <Field label="Nombres" value={p.nombres} />
-                <Field label="Apellidos" value={p.apellidos} />
+                <Field label="Nombre" value={fullName} />
+                <Field label="Nacimiento" value={vitalValue(p.nac_fecha, p.nac_lugar_id, p.nac_fecha_aprox)} />
+                <Field label="Defunción" value={vitalValue(p.defuncion_fecha, p.defuncion_lugar_id, p.viva === "si" ? "Vive" : null)} />
+                <Field label="Bautismo" value={vitalValue(p.bautismo_fecha, p.bautismo_lugar_id)} />
+                <Field label="Matrimonio" value={vitalValue(p.matrimonio_fecha, p.matrimonio_lugar_id)} />
+              </CardContent>
+            </Card>
+          )}
+          {!isNew && !editMode && (
+            <Card className="mb-3 overflow-hidden rounded-none border-x-0 border-border bg-zinc-950 text-white md:rounded-2xl md:border-x">
+              <CardHeader className="border-b border-border/70 bg-zinc-900 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-white/70">Otra información</CardTitle></CardHeader>
+              <CardContent className="grid gap-0 p-0 text-sm">
                 <Field label="Sexo" value={p.sexo} />
-                <Field label="Nacionalidad" value={p.nacionalidad} />
-                <Field label="Nacimiento" value={fmtDate(p.nac_fecha) ?? p.nac_fecha_aprox} />
-                <Field label="Defunción" value={fmtDate(p.defuncion_fecha) ?? (p.viva === "si" ? "Vive" : null)} />
-                <Field label="Bautismo" value={fmtDate(p.bautismo_fecha)} />
-                <Field label="Matrimonio" value={fmtDate(p.matrimonio_fecha)} />
+                <Field label="Nacionalidad / origen" value={p.nacionalidad} />
                 <Field label="Ocupación" value={p.ocupacion} />
                 <Field label="Religión" value={p.religion} />
               </CardContent>
@@ -504,7 +508,7 @@ export default function PersonaDetail() {
               <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
             </div>
           )}
-          {!isNew && eventos.length > 0 && (
+          {!isNew && !editMode && eventos.length > 0 && (
             <Card className="archivo-card mb-3">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <CardTitle className="font-serif text-lg">Otros hechos vitales</CardTitle>
@@ -530,7 +534,12 @@ export default function PersonaDetail() {
             </Card>
           )}
           {(editMode || isNew) && (
-          <Card className="archivo-card"><CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+          <Card className="archivo-card overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-3">
+              <CardTitle className="text-base">{isNew ? "Crear persona" : "Editar información"}</CardTitle>
+              {!isNew && <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>Cerrar edición</Button>}
+            </CardHeader>
+            <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
             <div><Label>Nombres</Label><Input value={p.nombres ?? ""} onChange={(e) => set("nombres", e.target.value)} /></div>
             <div><Label>Apellidos</Label><Input value={p.apellidos ?? ""} onChange={(e) => set("apellidos", e.target.value)} /></div>
             <div><Label>Variantes de nombre/apellido (separadas por coma)</Label>
