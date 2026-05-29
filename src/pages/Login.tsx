@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
-import { ShieldCheck } from "lucide-react";
+import { Mail, Phone, ShieldCheck } from "lucide-react";
 import {
   authenticateDevicePasskey,
   hasDevicePasskey,
@@ -25,11 +25,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [devicePasskeyReady, setDevicePasskeyReady] = useState(false);
   const [deviceUnlocking, setDeviceUnlocking] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
+    const isRecovery = window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery");
+    setRecoveryMode(isRecovery);
     setDevicePasskeyReady(isDevicePasskeySupported() && hasDevicePasskey());
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) return;
+      if (isRecovery) return;
       if (hasDevicePasskey() && !isDeviceUnlocked()) return;
       navigate("/inicio", { replace: true });
     });
@@ -71,20 +78,61 @@ export default function Login() {
     toast.success("Cuenta creada. Revisa tu correo si se solicita confirmación.");
   };
 
+  const handleEmailRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryEmail) return toast.error("Escribe tu correo");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+      redirectTo: `${window.location.origin}/login?type=recovery`,
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Te envié un correo para recuperar la cuenta.");
+  };
+
+  const handleNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) return toast.error("La nueva contraseña debe tener al menos 8 caracteres.");
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Contraseña actualizada");
+    markDeviceUnlocked();
+    navigate("/inicio", { replace: true });
+  };
+
+  const handlePhoneRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryPhone) return toast.error("Escribe tu número con código de país");
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({ phone: recoveryPhone });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Si tu Supabase tiene SMS activo, recibirás un código de acceso.");
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandLogo size={96} />
           <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground">GENAIA</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sanguineti · Aeschlimann</p>
+          <p className="mt-1 text-sm text-muted-foreground">Archivo familiar privado</p>
         </div>
         <Card className="archivo-card">
           <CardHeader>
-            <CardTitle className="font-serif text-2xl">Acceder al archivo</CardTitle>
-            <CardDescription>Tus datos genealógicos son privados.</CardDescription>
+            <CardTitle className="font-serif text-2xl">{recoveryMode ? "Crear nueva contraseña" : "Acceder al archivo"}</CardTitle>
+            <CardDescription>{recoveryMode ? "Escribe una contraseña nueva para recuperar tu cuenta." : "Tus datos genealógicos son privados."}</CardDescription>
           </CardHeader>
           <CardContent>
+            {recoveryMode ? (
+              <form onSubmit={handleNewPassword} className="space-y-4">
+                <div><Label>Nueva contraseña</Label><Input type="password" minLength={8} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Guardando…" : "Guardar nueva contraseña"}</Button>
+              </form>
+            ) : (
+            <>
             {devicePasskeyReady && (
               <Button
                 type="button"
@@ -98,9 +146,10 @@ export default function Login() {
               </Button>
             )}
               <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="login">Ingresar</TabsTrigger>
                 <TabsTrigger value="signup">Crear cuenta</TabsTrigger>
+                <TabsTrigger value="recover">Recuperar</TabsTrigger>
               </TabsList>
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4 pt-4">
@@ -117,7 +166,26 @@ export default function Login() {
                   <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creando…" : "Crear cuenta"}</Button>
                 </form>
               </TabsContent>
+              <TabsContent value="recover">
+                <div className="space-y-5 pt-4">
+                  <form onSubmit={handleEmailRecovery} className="space-y-3">
+                    <div><Label>Recuperar por correo</Label><Input type="email" value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} placeholder="tu-correo@ejemplo.com" /></div>
+                    <Button type="submit" variant="outline" className="w-full gap-2" disabled={loading}>
+                      <Mail className="h-4 w-4" /> Enviar correo de recuperación
+                    </Button>
+                  </form>
+                  <form onSubmit={handlePhoneRecovery} className="space-y-3 border-t border-border/60 pt-4">
+                    <div><Label>Acceso por número</Label><Input value={recoveryPhone} onChange={(e) => setRecoveryPhone(e.target.value)} placeholder="+56912345678" /></div>
+                    <Button type="submit" variant="outline" className="w-full gap-2" disabled={loading}>
+                      <Phone className="h-4 w-4" /> Enviar código SMS
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground">El SMS funciona si el proveedor telefónico está activado en Supabase.</p>
+                  </form>
+                </div>
+              </TabsContent>
             </Tabs>
+            </>
+            )}
           </CardContent>
         </Card>
       </div>

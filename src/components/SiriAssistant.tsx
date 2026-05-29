@@ -58,7 +58,7 @@ export default function SiriAssistant() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submit()}
-                placeholder="¿Qué querés hacer? Ej: investigar a Pedro Sanguineti…"
+                placeholder="¿Qué querés hacer? Ej: investigar una rama familiar…"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
               <Button size="icon" className="h-8 w-8 rounded-full" onClick={submit}>

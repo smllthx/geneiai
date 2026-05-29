@@ -154,7 +154,7 @@ export default function ADN() {
                   <div><Label>Región / etnia</Label><Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Italia (Liguria)" /></div>
                   <div><Label>Porcentaje</Label><Input type="number" step="0.01" value={pct} onChange={(e) => setPct(e.target.value)} placeholder="42.5" /></div>
                   <div><Label>Fuente (opcional)</Label><Input value={fuente} onChange={(e) => setFuente(e.target.value)} placeholder={origenTipo === "arbol" ? "Cálculo por árbol" : "MyHeritage DNA"} /></div>
-                  <div><Label>Rama familiar (opcional)</Label><Input value={rama} onChange={(e) => setRama(e.target.value)} placeholder="Paterna / Materna / Sanguineti" /></div>
+                  <div><Label>Rama familiar (opcional)</Label><Input value={rama} onChange={(e) => setRama(e.target.value)} placeholder="Paterna / Materna / apellido" /></div>
                   <Button onClick={agregar} disabled={!region || !pct}>Agregar</Button>
                 </div>
               </DialogContent>

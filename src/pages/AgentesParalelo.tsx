@@ -180,7 +180,7 @@ export default function AgentesParalelo() {
               </div>
               <textarea
                 className="glass-input mt-2 min-h-[80px] w-full"
-                placeholder="¿Qué tiene que hacer este agente? Ej: Investigar a Pedro Sanguineti, nacido c.1820 en Liguria, posibles registros parroquiales y lista de pasajeros."
+                placeholder="¿Qué tiene que hacer este agente? Ej: investigar una persona nacida c.1820, posibles registros parroquiales y lista de pasajeros."
                 value={t.prompt}
                 onChange={(e) => updateTask(i, { prompt: e.target.value })}
               />

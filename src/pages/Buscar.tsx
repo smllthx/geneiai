@@ -177,9 +177,9 @@ export default function Buscar() {
             Sugiere variantes ortográficas, lugares cercanos, rangos de fechas y búsquedas paralelas según la persona o apellido.
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-            <span className="glass-pill">Sanguineti / Sanguinetti</span>
-            <span className="glass-pill">Aeschlimann / Eschlimann</span>
-            <span className="glass-pill">Chile / Italia / Suiza</span>
+            <span className="glass-pill">Apellido / variante</span>
+            <span className="glass-pill">Lugar cercano</span>
+            <span className="glass-pill">Rango histórico</span>
           </div>
         </div>
       </div>

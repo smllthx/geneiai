@@ -52,7 +52,7 @@ export default function Familias() {
             <DialogContent>
               <DialogHeader><DialogTitle>Crear familia</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <div><Label>Nombre de la familia</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Familia Sanguineti" /></div>
+                <div><Label>Nombre de la familia</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Familia por apellido o rama" /></div>
                 <div><Label>Cabeza de familia (opcional)</Label>
                   <Select value={head} onValueChange={setHead}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
@@ -70,7 +70,7 @@ export default function Familias() {
         <EmptyState
           icon={<Heart className="h-5 w-5" />}
           title="Aún no hay familias"
-          description="Crea una familia para agrupar a tus parientes por ramas: Sanguineti, Aeschlimann, etc."
+          description="Crea una familia para agrupar a tus parientes por apellido, rama, linaje o casa familiar."
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

@@ -199,7 +199,7 @@ export default function AppLayout() {
               <BrandLogo size={52} />
               <div className="min-w-0">
                 <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENAIA</h1>
-                <p className="mt-1 text-[11px] text-muted-foreground">Sanguineti · Aeschlimann</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">Archivo familiar privado</p>
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <NotificationBell />

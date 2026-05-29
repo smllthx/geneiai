@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles } from "lucide-react";
+import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
@@ -20,9 +20,9 @@ import { summarizeAiUsage, type AiUsagePeriod } from "@/lib/aiUsage";
 
 
 const SEED_VARIANTES: [string, string][] = [
-  ["Sanguineti","Sanguinetti"],["Sanguineti","Sanguinetto"],
-  ["Aeschlimann","Aeschliman"],["Aeschlimann","Eschlimann"],
-  ["Queirolo","Queyrolo"],["Queirolo","Quirolo"],["Queirolo","Cairolo"],
+  ["González","Gonzales"],["Fernández","Fernandes"],
+  ["Muñoz","Munoz"],["Martínez","Martines"],
+  ["López","Lopez"],["Díaz","Dias"],["Pérez","Peres"],
 ];
 
 const AI_FEATURES = [
@@ -63,6 +63,14 @@ export default function Configuracion() {
   const [devicePasskeySupported, setDevicePasskeySupported] = useState(false);
   const [devicePasskeyEnabled, setDevicePasskeyEnabled] = useState(false);
   const [usageTick, setUsageTick] = useState(0);
+  const [accountProfile, setAccountProfile] = useState({
+    nombre_completo: "",
+    fecha_nacimiento: "",
+    lugar_nacimiento: "",
+    numero_identificacion: "",
+    correo_recuperacion: "",
+    telefono_recuperacion: "",
+  });
   const aiUsage = useMemo(() => summarizeAiUsage(), [usageTick]);
 
   const load = async () => {
@@ -74,6 +82,17 @@ export default function Configuracion() {
     ]);
     setVariantes(v ?? []);
     setFsAccount(a);
+    if (user) {
+      const meta = (user.user_metadata ?? {}) as any;
+      setAccountProfile({
+        nombre_completo: meta.nombre_completo ?? meta.display_name ?? "",
+        fecha_nacimiento: meta.fecha_nacimiento ?? "",
+        lugar_nacimiento: meta.lugar_nacimiento ?? "",
+        numero_identificacion: meta.numero_identificacion ?? "",
+        correo_recuperacion: meta.correo_recuperacion ?? user.email ?? "",
+        telefono_recuperacion: meta.telefono_recuperacion ?? user.phone ?? "",
+      });
+    }
     if (cfg) {
       const k = (cfg as any).openai_api_key as string | null;
       setAiCfg({
@@ -128,6 +147,61 @@ export default function Configuracion() {
     if (error) return toast.error(error.message);
     toast.success("API key de OpenAI eliminada.");
     load();
+  };
+
+  const saveAccountProfile = async () => {
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...accountProfile,
+        display_name: accountProfile.nombre_completo,
+      },
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Datos de cuenta guardados");
+  };
+
+  const suggestCentralPerson = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión requerida");
+    const { data, error } = await supabase
+      .from("personas")
+      .select("id,nombres,apellidos,nac_fecha,nac_lugar")
+      .eq("user_id", user.id);
+    if (error) return toast.error(error.message);
+    const full = accountProfile.nombre_completo.toLowerCase();
+    const best = (data ?? [])
+      .map((p: any) => {
+        const personText = `${p.nombres ?? ""} ${p.apellidos ?? ""}`.toLowerCase();
+        let score = 0;
+        for (const word of full.split(/\s+/).filter(Boolean)) if (personText.includes(word)) score += 2;
+        if (accountProfile.fecha_nacimiento && p.nac_fecha === accountProfile.fecha_nacimiento) score += 5;
+        if (accountProfile.lugar_nacimiento && `${p.nac_lugar ?? ""}`.toLowerCase().includes(accountProfile.lugar_nacimiento.toLowerCase())) score += 2;
+        return { p, score };
+      })
+      .sort((a, b) => b.score - a.score)[0];
+    if (!best || best.score < 2) return toast.error("No encontré una persona suficientemente parecida. Elígela manualmente en Centro de la app.");
+    const { error: upError } = await supabase
+      .from("profiles")
+      .update({ proband_id: best.p.id, proband_asked: true })
+      .eq("id", user.id);
+    if (upError) return toast.error(upError.message);
+    toast.success(`Persona central sugerida: ${best.p.nombres} ${best.p.apellidos}`);
+  };
+
+  const requestRemoteAppUpdate = async () => {
+    const t = toast.loading("Buscando actualización remota…");
+    try {
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        await registration?.update();
+      }
+      window.dispatchEvent(new CustomEvent("genaia:clear-cache"));
+      toast.dismiss(t);
+      toast.success("Actualización remota solicitada");
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e?.message ?? "No se pudo solicitar la actualización");
+    }
   };
 
   const enableDevicePasskey = async () => {
@@ -203,16 +277,57 @@ export default function Configuracion() {
   const seedDatosEjemplo = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
     await supabase.from("personas").insert([
-      { user_id: user.id, nombres: "Giovanni Battista", apellidos: "Sanguineti", nacionalidad: "Italia (Liguria)", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — origen posible Liguria, sin verificar." },
-      { user_id: user.id, nombres: "Maria Rosa", apellidos: "Queirolo", nacionalidad: "Italia (Liguria)", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — origen posible Liguria, sin verificar." },
-      { user_id: user.id, nombres: "Johann", apellidos: "Aeschlimann", nacionalidad: "Suiza", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — origen europeo, sin verificar." },
+      { user_id: user.id, nombres: "Persona", apellidos: "Ejemplo Uno", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — sin verificar." },
+      { user_id: user.id, nombres: "Persona", apellidos: "Ejemplo Dos", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — sin verificar." },
+      { user_id: user.id, nombres: "Persona", apellidos: "Ejemplo Tres", certeza: "hipotesis", notas: "DATO DE EJEMPLO / HIPÓTESIS — sin verificar." },
     ]);
     toast.success("Personas de ejemplo creadas (marcadas como hipótesis).");
   };
 
   return (
     <div>
-      <PageHeader title="Configuración" subtitle="IA, conexiones, menús, variantes de apellido y datos de ejemplo." />
+      <PageHeader title="Configuración" subtitle="Cuenta, persona central, IA, conexiones, menús y actualizaciones remotas." />
+
+      <Card className="archivo-card mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-serif text-xl">
+            <UserRound className="h-5 w-5" /> Datos de cuenta y persona central
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div><Label>Nombre completo</Label><Input value={accountProfile.nombre_completo} onChange={(e) => setAccountProfile({ ...accountProfile, nombre_completo: e.target.value })} /></div>
+            <div><Label>Número de identificación</Label><Input value={accountProfile.numero_identificacion} onChange={(e) => setAccountProfile({ ...accountProfile, numero_identificacion: e.target.value })} placeholder="ID personal, RUT, código interno, etc." /></div>
+            <div><Label>Fecha de nacimiento</Label><Input type="date" value={accountProfile.fecha_nacimiento} onChange={(e) => setAccountProfile({ ...accountProfile, fecha_nacimiento: e.target.value })} /></div>
+            <div><Label>Lugar de nacimiento</Label><Input value={accountProfile.lugar_nacimiento} onChange={(e) => setAccountProfile({ ...accountProfile, lugar_nacimiento: e.target.value })} /></div>
+            <div><Label>Correo de recuperación</Label><Input type="email" value={accountProfile.correo_recuperacion} onChange={(e) => setAccountProfile({ ...accountProfile, correo_recuperacion: e.target.value })} /></div>
+            <div><Label>Número de recuperación</Label><Input value={accountProfile.telefono_recuperacion} onChange={(e) => setAccountProfile({ ...accountProfile, telefono_recuperacion: e.target.value })} placeholder="+569..." /></div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={saveAccountProfile}><Mail className="h-4 w-4" /> Guardar datos</Button>
+            <Button variant="outline" onClick={suggestCentralPerson}><UserRound className="h-4 w-4" /> Sugerir persona central</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Estos datos ayudan a GENAIA a identificar tu persona central del árbol y a mantener vías de recuperación de cuenta.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="archivo-card mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-serif text-xl">
+            <RefreshCw className="h-5 w-5" /> Actualización remota de la app
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Cuando yo publique cambios desde aquí, este botón fuerza a tu navegador a buscar la versión nueva, limpiar caché y sincronizar la interfaz.
+          </p>
+          <Button variant="outline" onClick={requestRemoteAppUpdate}>
+            <RefreshCw className="h-4 w-4" /> Buscar actualización y sincronizar
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="font-serif text-xl">IA — ChatGPT con tu cuenta de OpenAI</CardTitle></CardHeader>
@@ -380,7 +495,7 @@ export default function Configuracion() {
       <Card className="archivo-card">
         <CardHeader><CardTitle className="font-serif text-xl">Datos de ejemplo</CardTitle></CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-muted-foreground">Crea tres personas de ejemplo (Sanguineti, Queirolo, Aeschlimann) marcadas como hipótesis. No son hechos comprobados.</p>
+          <p className="mb-3 text-sm text-muted-foreground">Crea tres personas de ejemplo marcadas como hipótesis. No son hechos comprobados.</p>
           <Button variant="outline" onClick={seedDatosEjemplo}>Crear datos de ejemplo</Button>
         </CardContent>
       </Card>

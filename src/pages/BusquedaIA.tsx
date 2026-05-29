@@ -131,7 +131,7 @@ export default function BusquedaIA() {
         {tab === "manual" && (
           <div className="grid gap-3 sm:grid-cols-2">
             <div><Label>Nombres</Label><Input value={manual.nombres} onChange={(e) => setManual({ ...manual, nombres: e.target.value })} placeholder="Luis Armando" /></div>
-            <div><Label>Apellidos</Label><Input value={manual.apellidos} onChange={(e) => setManual({ ...manual, apellidos: e.target.value })} placeholder="Sanguineti" /></div>
+            <div><Label>Apellidos</Label><Input value={manual.apellidos} onChange={(e) => setManual({ ...manual, apellidos: e.target.value })} placeholder="Apellido principal" /></div>
             <div><Label>Lugar</Label><Input value={manual.lugar} onChange={(e) => setManual({ ...manual, lugar: e.target.value })} placeholder="Chile, Valparaíso" /></div>
             <div><Label>Años aprox.</Label><Input value={manual.anos} onChange={(e) => setManual({ ...manual, anos: e.target.value })} placeholder="1900-1930" /></div>
             <div className="sm:col-span-2"><Label>Palabras clave</Label><Input value={manual.palabras} onChange={(e) => setManual({ ...manual, palabras: e.target.value })} placeholder="origen italiano, inmigración, marina mercante…" /></div>
