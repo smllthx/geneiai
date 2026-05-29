@@ -52,6 +52,19 @@ export type TreeFilters = {
   paternal: boolean;
   maternal: boolean;
   noSources: boolean;
+  withSources: boolean;
   incomplete: boolean;
 };
 
+export type TreeViewMode = "portrait" | "horizontal" | "fan" | "descendancy" | "founder";
+
+export type TreeOptions = {
+  showAiHints: boolean;
+  showProblems: boolean;
+  showPortraits: boolean;
+  showNoSources: boolean;
+  showAlternativeParents: boolean;
+  showAlternativeSpouses: boolean;
+  showIncompleteBranches: boolean;
+  darkMode: boolean;
+};

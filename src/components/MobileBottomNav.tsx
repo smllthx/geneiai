@@ -16,6 +16,8 @@ const ALL = {
   "/calendario": { label: "Fechas", icon: Calendar },
   "/investigacion": { label: "Investigar", icon: Sparkles },
   "/asistente": { label: "ChatGPT", icon: Bot },
+  "/origen-ancestral": { label: "Origen", icon: Dna },
+  "/cuadros-ia": { label: "Cuadros", icon: ImageIcon },
   "/insights": { label: "Insights", icon: Lightbulb },
   "/coincidencias": { label: "Coincidir", icon: Compass },
   "/adn": { label: "ADN", icon: Dna },

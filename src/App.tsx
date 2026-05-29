@@ -15,6 +15,7 @@ import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
 const PersonasList = lazy(() => import("./pages/PersonasList"));
 const Apellidos = lazy(() => import("./pages/Apellidos"));
 const PersonaDetail = lazy(() => import("./pages/PersonaDetail"));
+const GenealogyProfilePage = lazy(() => import("./pages/GenealogyProfilePage"));
 const NuevaPersona = lazy(() => import("./pages/NuevaPersona"));
 const Arbol = lazy(() => import("./pages/ArbolModerno"));
 const ArbolClasico = lazy(() => import("./pages/Arbol"));
@@ -24,12 +25,15 @@ const Fotos = lazy(() => import("./pages/Fotos"));
 const Buscar = lazy(() => import("./pages/Buscar"));
 const Investigacion = lazy(() => import("./pages/Investigacion"));
 const InvestigacionExterna = lazy(() => import("./pages/InvestigacionExterna"));
+const PersonasImportadasPendientes = lazy(() => import("./pages/PersonasImportadasPendientes"));
 const Importar = lazy(() => import("./pages/Importar"));
 const Agente = lazy(() => import("./pages/Agente"));
 const Asistente = lazy(() => import("./pages/Asistente"));
 const Credenciales = lazy(() => import("./pages/Credenciales"));
 const Parecidos = lazy(() => import("./pages/Parecidos"));
 const ADN = lazy(() => import("./pages/ADN"));
+const OrigenAncestral = lazy(() => import("./pages/OrigenAncestral"));
+const CuadrosIA = lazy(() => import("./pages/CuadrosIA"));
 const Coincidencias = lazy(() => import("./pages/Coincidencias"));
 const Pistas = lazy(() => import("./pages/Pistas"));
 const Hipotesis = lazy(() => import("./pages/Hipotesis"));
@@ -87,6 +91,7 @@ const App = () => (
                   <Route path="/personas" element={<PersonasList />} />
                   <Route path="/apellidos" element={<Apellidos />} />
                   <Route path="/personas/nueva" element={<NuevaPersona />} />
+                  <Route path="/personas/:id/ficha" element={<GenealogyProfilePage />} />
                   <Route path="/personas/:id" element={<PersonaDetail />} />
                   <Route path="/familias" element={<Familias />} />
                   <Route path="/documentos" element={<Documentos />} />
@@ -94,10 +99,13 @@ const App = () => (
                   <Route path="/fotos" element={<Fotos />} />
                   <Route path="/fuentes" element={<Fuentes />} />
                   <Route path="/investigacion" element={<Investigacion />} />
+                  <Route path="/importadas-pendientes" element={<PersonasImportadasPendientes />} />
                   <Route path="/investigacion-externa" element={<InvestigacionExterna />} />
                   <Route path="/buscar" element={<Buscar />} />
                   <Route path="/coincidencias" element={<Coincidencias />} />
                   <Route path="/adn" element={<ADN />} />
+                  <Route path="/origen-ancestral" element={<OrigenAncestral />} />
+                  <Route path="/cuadros-ia" element={<CuadrosIA />} />
                   <Route path="/estimacion-etnica" element={<Navigate to="/adn" replace />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/agente" element={<Agente />} />

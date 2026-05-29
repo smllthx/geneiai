@@ -1,13 +1,19 @@
-import { Brain, ChevronDown, Plus, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyPerson } from "./types";
+import AddRelativeButton, { type RelativeKind } from "./AddRelativeButton";
+import AIEvidenceButton from "./AIEvidenceButton";
+import ExpandBranchButton from "./ExpandBranchButton";
 
 type PersonNodeProps = {
   person: GenealogyPerson;
   selected?: boolean;
   dimmed?: boolean;
+  showPortrait?: boolean;
+  expanded?: boolean;
   onSelect?: (person: GenealogyPerson) => void;
-  onAction?: (action: "profile" | "relative" | "ai" | "expand", person: GenealogyPerson) => void;
+  onAction?: (action: "profile" | "ai" | "expand", person: GenealogyPerson) => void;
+  onAddRelative?: (kind: RelativeKind, person: GenealogyPerson) => void;
 };
 
 const statusLabel: Record<GenealogyPerson["researchStatus"], string> = {
@@ -17,12 +23,18 @@ const statusLabel: Record<GenealogyPerson["researchStatus"], string> = {
 };
 
 const lineageClass: Record<GenealogyPerson["lineage"], string> = {
-  paterna: "border-sky-200",
-  materna: "border-rose-200",
-  central: "border-emerald-200",
+  paterna: "border-emerald-300",
+  materna: "border-violet-300",
+  central: "border-slate-300",
 };
 
-export default function PersonNode({ person, selected, dimmed, onSelect, onAction }: PersonNodeProps) {
+const lineageBar: Record<GenealogyPerson["lineage"], string> = {
+  paterna: "bg-emerald-500",
+  materna: "bg-violet-500",
+  central: "bg-slate-400",
+};
+
+export default function PersonNode({ person, selected, dimmed, showPortrait = true, expanded, onSelect, onAction, onAddRelative }: PersonNodeProps) {
   const years = [person.birth, person.death ?? (person.birth ? "Vive" : undefined)].filter(Boolean).join("-");
   const fullName = `${person.givenNames} ${person.surnames}`.trim();
 
@@ -34,15 +46,16 @@ export default function PersonNode({ person, selected, dimmed, onSelect, onActio
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") onSelect?.(person);
       }}
-      className={`w-[240px] rounded-2xl border bg-white p-3 text-left shadow-sm transition ${
+      className={`relative w-[260px] overflow-hidden rounded-2xl border bg-white p-3 text-left shadow-sm transition ${
         lineageClass[person.lineage]
       } ${selected ? "ring-2 ring-emerald-500" : "hover:-translate-y-0.5 hover:shadow-md"} ${
         dimmed ? "opacity-35" : "opacity-100"
       }`}
       title={fullName}
     >
+      <span className={`absolute inset-x-0 top-0 h-1 ${person.incomplete ? "bg-slate-300" : lineageBar[person.lineage]}`} />
       <div className="flex gap-3">
-        <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-100 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+        {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-100 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
           {person.avatarUrl ? (
             <img src={person.avatarUrl} alt={fullName} className="h-full w-full object-cover" />
           ) : person.initials ? (
@@ -50,7 +63,7 @@ export default function PersonNode({ person, selected, dimmed, onSelect, onActio
           ) : (
             <UserRound className="h-5 w-5" />
           )}
-        </div>
+        </div>}
         <div className="min-w-0 flex-1">
           <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-950">{person.givenNames}</h3>
           <p className="truncate text-xs font-medium text-slate-700">{person.surnames}</p>
@@ -65,25 +78,18 @@ export default function PersonNode({ person, selected, dimmed, onSelect, onActio
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">{statusLabel[person.researchStatus]}</span>
-          {person.incomplete && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">Incompleto</span>}
+          {person.incomplete && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Incompleto</span>}
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-4 gap-1">
+      <div className="mt-3 grid grid-cols-[1fr_auto_auto_auto] gap-1">
         <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={(event) => { event.stopPropagation(); onAction?.("profile", person); }}>
-          Perfil
+          Ver perfil
         </Button>
-        <Button size="sm" variant="outline" className="h-7 px-2" title="Agregar familiar" onClick={(event) => { event.stopPropagation(); onAction?.("relative", person); }}>
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
-        <Button size="sm" variant="outline" className="h-7 px-2" title="Buscar con IA" onClick={(event) => { event.stopPropagation(); onAction?.("ai", person); }}>
-          <Brain className="h-3.5 w-3.5" />
-        </Button>
-        <Button size="sm" variant="outline" className="h-7 px-2" title="Expandir rama" onClick={(event) => { event.stopPropagation(); onAction?.("expand", person); }}>
-          <ChevronDown className="h-3.5 w-3.5" />
-        </Button>
+        <AddRelativeButton onSelect={(kind) => onAddRelative?.(kind, person)} />
+        <AIEvidenceButton compact onClick={() => onAction?.("ai", person)} />
+        <ExpandBranchButton expanded={expanded} onClick={() => onAction?.("expand", person)} />
       </div>
     </article>
   );
 }
-

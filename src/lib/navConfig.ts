@@ -9,7 +9,7 @@ const NAV_VERSION_KEY = "genaia:nav-version";
 const HIDDEN_KEY = (group: string) => `genaia:nav-hidden:${group}`;
 const MOBILE_KEY = "genaia:nav-mobile"; // array de paths para la barra inferior
 
-export const DEFAULT_MOBILE: string[] = ["/inicio", "/arbol", "/personas", "/apellidos", "/asistente"];
+export const DEFAULT_MOBILE: string[] = ["/inicio", "/arbol", "/personas", "/investigacion", "/configuracion"];
 
 // Qué se oculta en cada preset (paths). El preset "pro" no oculta nada.
 const PRESET_HIDDEN: Record<NavPreset, Record<string, string[]>> = {
@@ -36,13 +36,13 @@ const PRESET_HIDDEN: Record<NavPreset, Record<string, string[]>> = {
 
 function migrateNavDefaults() {
   try {
-    if (localStorage.getItem(NAV_VERSION_KEY) === "minimal-apellidos-2026-05-27") return;
+    if (localStorage.getItem(NAV_VERSION_KEY) === "genaia-sections-2026-05-28") return;
     localStorage.setItem(PRESET_KEY, "avanzado");
     Object.entries(PRESET_HIDDEN.avanzado).forEach(([group, hidden]) => {
       localStorage.setItem(HIDDEN_KEY(group), JSON.stringify(hidden));
     });
     localStorage.setItem(MOBILE_KEY, JSON.stringify(DEFAULT_MOBILE));
-    localStorage.setItem(NAV_VERSION_KEY, "minimal-apellidos-2026-05-27");
+    localStorage.setItem(NAV_VERSION_KEY, "genaia-sections-2026-05-28");
   } catch {}
 }
 

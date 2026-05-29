@@ -6,14 +6,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Agente = lazy(() => import("./Agente"));
 const AgentesParalelo = lazy(() => import("./AgentesParalelo"));
 const InvestigacionExterna = lazy(() => import("./InvestigacionExterna"));
+const PersonasImportadasPendientes = lazy(() => import("./PersonasImportadasPendientes"));
 const Pistas = lazy(() => import("./Pistas"));
 const Hipotesis = lazy(() => import("./Hipotesis"));
 const Inferencias = lazy(() => import("./Inferencias"));
 const BusquedaIA = lazy(() => import("./BusquedaIA"));
 const Insights = lazy(() => import("./Insights"));
+const Buscar = lazy(() => import("./Buscar"));
 
 const TABS = [
+  { v: "hub", l: "Buscar", C: Buscar },
   { v: "agente", l: "Agente IA", C: Agente },
+  { v: "importadas", l: "Importadas pendientes", C: PersonasImportadasPendientes },
   { v: "busqueda", l: "Búsqueda IA", C: BusquedaIA },
   { v: "insights", l: "Insights", C: Insights },
   { v: "paralelo", l: "Paralelo", C: AgentesParalelo },
@@ -25,7 +29,7 @@ const TABS = [
 
 export default function Investigacion() {
   const [params, setParams] = useSearchParams();
-  const current = params.get("tab") ?? "agente";
+  const current = params.get("tab") ?? "hub";
 
   return (
     <div>

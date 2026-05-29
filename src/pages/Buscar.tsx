@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Loader2, Sparkles } from "lucide-react";
+import { BookOpen, Building2, Camera, Cross, FileSearch, Image, Library, Loader2, Map, Search, Sparkles, Trees, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { expandTerm, fuzzyScore, norm } from "@/lib/search/fuzzy";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
 import PersonaName from "@/components/PersonaName";
@@ -25,16 +26,29 @@ const CAT_LABEL: Record<Cat, string> = {
   lugares: "Lugares",
 };
 
+const SEARCH_MODES = [
+  { key: "registros", label: "Registros", icon: FileSearch, desc: "Actas, censos, padrones y documentos indexados." },
+  { key: "texto", label: "Texto completo", icon: BookOpen, desc: "Buscar dentro de transcripciones, OCR y notas." },
+  { key: "imagenes", label: "Imágenes", icon: Image, desc: "Explorar fotos, documentos e imágenes históricas." },
+  { key: "arbol", label: "Árbol familiar", icon: Trees, desc: "Buscar personas y relaciones dentro del árbol." },
+  { key: "genealogias", label: "Genealogías", icon: Users, desc: "Colecciones familiares, ramas y clanes." },
+  { key: "catalogo", label: "Catálogo", icon: Library, desc: "Lugar, título, autor, tema, apellido o referencia." },
+  { key: "libros", label: "Libros", icon: Building2, desc: "Libros genealógicos e historia local." },
+  { key: "wiki", label: "Wiki", icon: Map, desc: "Guías de investigación por país y época." },
+  { key: "cementerios", label: "Cementerios", icon: Cross, desc: "Entierros, sepulturas y memoriales." },
+];
+
 export default function Buscar() {
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(params.get("q") ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [loading, setLoading] = useState(false);
   const [expansionInfo, setExpansionInfo] = useState<string[]>([]);
+  const [mode, setMode] = useState(params.get("modo") ?? "registros");
 
   useEffect(() => {
     if (!q || q.length < 2) { setHits([]); setExpansionInfo([]); return; }
-    setParams({ q }, { replace: true });
+    setParams({ q, modo: mode }, { replace: true });
     const t = setTimeout(async () => {
       setLoading(true);
       try {
@@ -110,7 +124,7 @@ export default function Buscar() {
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [q]); // eslint-disable-line
+  }, [q, mode]); // eslint-disable-line
 
   const grouped = useMemo(() => {
     const g: Record<Cat, Hit[]> = { personas: [], documentos: [], eventos: [], hipotesis: [], lugares: [] };
@@ -121,11 +135,53 @@ export default function Buscar() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Búsqueda universal</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">Investigación y búsqueda</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Tolera errores de tipeo, variantes ortográficas, traducciones y nombres equivalentes
-          (Giovanni ↔ Juan ↔ John, Sanguineti ↔ Sanguinetti, etc.).
+          Hub de búsqueda genealógica: registros, texto completo, imágenes, árbol, genealogías, catálogo, libros, wiki y cementerios.
         </p>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {SEARCH_MODES.map(({ key, label, icon: Icon, desc }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMode(key)}
+            className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${mode === key ? "border-primary bg-primary/5" : "bg-card"}`}
+          >
+            <Icon className="mb-2 h-5 w-5 text-primary" />
+            <p className="font-medium">{label}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="glass-card p-4">
+          <p className="mb-3 text-sm font-semibold">Formulario {SEARCH_MODES.find((m) => m.key === mode)?.label}</p>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Nombres" />
+            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Apellidos" />
+            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Lugar" />
+            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Año aprox." />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm"><Search className="h-4 w-4" /> Buscar</Button>
+            <Button size="sm" variant="outline">Más opciones</Button>
+            <Button size="sm" variant="outline"><Sparkles className="h-4 w-4" /> Buscar con IA</Button>
+          </div>
+        </div>
+        <div className="glass-card p-4">
+          <p className="font-semibold">Asistente de consulta IA</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sugiere variantes ortográficas, lugares cercanos, rangos de fechas y búsquedas paralelas según la persona o apellido.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+            <span className="glass-pill">Sanguineti / Sanguinetti</span>
+            <span className="glass-pill">Aeschlimann / Eschlimann</span>
+            <span className="glass-pill">Chile / Italia / Suiza</span>
+          </div>
+        </div>
       </div>
 
       <div className="glass-strong flex items-center gap-2 rounded-2xl px-4 py-3">
