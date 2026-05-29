@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { User, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 
@@ -47,6 +47,7 @@ export const PersonCard = memo(function PersonCard({
   const lifespan = yN || yD ? `${yN ?? "?"}–${yD ?? (p.viva === "si" ? "Vive" : "?")}` : "—";
   const isF = p.sexo === "femenino";
   const isM = p.sexo === "masculino";
+  const sexSymbol = isF ? "♀" : isM ? "♂" : "◌";
   // FamilySearch-style colored top bar
   const topBar = isF ? "bg-pink-400" : isM ? "bg-sky-400" : "bg-foreground/20";
   const avatarBg = isF ? "bg-pink-100 dark:bg-pink-950/40" : isM ? "bg-sky-100 dark:bg-sky-950/40" : "bg-foreground/5";
@@ -69,7 +70,9 @@ export const PersonCard = memo(function PersonCard({
           {p.foto_url ? (
             <img src={p.foto_url} alt={`${p.nombres} ${p.apellidos}`} className="h-full w-full object-cover" loading="lazy" />
           ) : (
-            <User className={cn("h-7 w-7", avatarFg)} />
+            <span className={cn("font-serif text-3xl font-bold leading-none", avatarFg)} aria-label={isF ? "Mujer" : isM ? "Hombre" : "Sexo no registrado"}>
+              {sexSymbol}
+            </span>
           )}
         </div>
         <div className="line-clamp-2 w-full text-center font-display text-[13.5px] font-extrabold leading-tight tracking-tight">
@@ -93,13 +96,31 @@ export const PersonCard = memo(function PersonCard({
 });
 
 export function EmptySlot({ label, onClick }: { label: string; onClick: () => void }) {
+  const lower = label.toLowerCase();
+  const symbol = lower.includes("madre")
+    ? "♀"
+    : lower.includes("padre")
+      ? "♂"
+      : lower.includes("cónyuge") || lower.includes("conyuge") || lower.includes("unión") || lower.includes("union")
+        ? "∞"
+        : lower.includes("hijo")
+          ? "+"
+          : "＋";
+  const tone = lower.includes("madre")
+    ? "bg-pink-500/15 text-pink-300"
+    : lower.includes("padre")
+      ? "bg-sky-500/15 text-sky-300"
+      : lower.includes("cónyuge") || lower.includes("conyuge") || lower.includes("unión") || lower.includes("union")
+        ? "bg-amber-500/15 text-amber-300"
+        : "bg-primary/10 text-primary";
+
   return (
     <button
       onClick={onClick}
       className="flex w-[140px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/40 px-2 py-3 text-[11px] text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground/5">
-        <UserPlus className="h-4 w-4" />
+      <div className={cn("flex h-9 w-9 items-center justify-center rounded-full font-serif text-xl font-bold", tone)}>
+        {symbol === "＋" ? <UserPlus className="h-4 w-4" /> : symbol}
       </div>
       <span>Agregar {label}</span>
     </button>
