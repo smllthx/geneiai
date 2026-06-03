@@ -29,7 +29,7 @@ export default function GlobalDataSync() {
       document.body.dataset.geneiaiEditing === "1" ||
       Boolean(document.querySelector("[data-geneiai-editing='true']"));
 
-    const notifyChange = (source: "remote" | "tab" | "poll", table?: string) => {
+    const notifyChange = (source: "remote" | "tab", table?: string) => {
       if (isEditing()) return;
       window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table, source } }));
       if (source === "remote" && Date.now() - lastNotice > 4000) {
@@ -54,10 +54,8 @@ export default function GlobalDataSync() {
       );
     });
     channel.subscribe();
-    const poll = window.setInterval(() => notifyChange("poll"), 1000);
 
     return () => {
-      window.clearInterval(poll);
       broadcast?.close();
       supabase.removeChannel(channel);
     };

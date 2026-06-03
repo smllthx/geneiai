@@ -16,8 +16,11 @@ export function useRealtimeReload(tables: string[], userId?: string | null, debo
 
   useEffect(() => {
     if (!userId) return;
-    const bump = () => {
+    const relevant = new Set(tables);
+    const bump = (event?: Event) => {
       if (document.body.dataset.geneiaiEditing === "1" || document.querySelector("[data-geneiai-editing='true']")) return;
+      const table = (event as CustomEvent)?.detail?.table;
+      if (table && !relevant.has(table)) return;
       if (timer.current) window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => setReloadKey((k) => k + 1), debounceMs);
     };

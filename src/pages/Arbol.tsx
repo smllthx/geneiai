@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 // SectionHeader removed — replaced by minimal sticky header
@@ -66,6 +66,7 @@ export default function Arbol() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
+  const initialTreeLoaded = useRef(false);
 
   const { user: authUser } = useAuth();
   const rtKey = useRealtimeReload(["personas", "relaciones", "eventos"], authUser?.id ?? null);
@@ -74,7 +75,7 @@ export default function Arbol() {
 
   useEffect(() => {
     (async () => {
-      setLoadingTree(true);
+      if (!initialTreeLoaded.current) setLoadingTree(true);
       const user = (await supabase.auth.getUser()).data.user;
       const [{ data: p }, { data: r }, profRes, { data: docs }] = await Promise.all([
         supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url").order("apellidos").limit(10000),
@@ -104,6 +105,7 @@ export default function Arbol() {
       } else if (!center && p?.length) {
         setCenter(p[0].id);
       }
+      initialTreeLoaded.current = true;
       setLoadingTree(false);
     })();
   }, [reloadKey, centroParam]);
@@ -163,21 +165,6 @@ export default function Arbol() {
   const hermanosDe = (pid: string) => kHermanosDe(pid, rels as any, byId);
 
   const reload = () => setReloadKey((k) => k + 1);
-
-  useEffect(() => {
-    let active = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    (async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user || !active) return;
-      channel = supabase
-        .channel(`arbol-live-${user.id}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "personas", filter: `user_id=eq.${user.id}` }, reload)
-        .on("postgres_changes", { event: "*", schema: "public", table: "relaciones", filter: `user_id=eq.${user.id}` }, reload)
-        .subscribe();
-    })();
-    return () => { active = false; if (channel) supabase.removeChannel(channel); };
-  }, []);
 
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");

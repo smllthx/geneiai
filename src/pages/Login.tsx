@@ -142,7 +142,7 @@ export default function Login() {
                 disabled={deviceUnlocking}
               >
                 <ShieldCheck className="h-4 w-4" />
-                {deviceUnlocking ? "Desbloqueando..." : "Desbloquear con Face ID / Touch ID"}
+                {deviceUnlocking ? "Desbloqueando..." : "Desbloquear con llave iCloud / Face ID / Touch ID"}
               </Button>
             )}
               <Tabs defaultValue="login">

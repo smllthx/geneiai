@@ -3,6 +3,7 @@
 // parents/children/spouses/siblings from the `relaciones` table.
 
 import type { PersonaLite } from "@/components/PersonCard";
+import { inferSexFromName } from "@/lib/personAutoRules";
 
 export type RelTipo = "padre" | "madre" | "hijo" | "conyuge" | "hermano";
 
@@ -27,6 +28,8 @@ export const sortByBirth = <T extends { nac_fecha?: string | null; nac_rango_ini
 export const lineColor = (sexo?: string | null) =>
   sexo === "femenino" ? "pink" : sexo === "masculino" ? "sky" : "neutral";
 
+const sexOf = (p?: PersonaLite | null) => p?.sexo ?? inferSexFromName(p?.nombres) ?? null;
+
 const spouseLikeNotes = ["unión civil", "union civil", "conviviente", "convivencia", "cohabitante", "cohabitación", "cohabitacion"];
 
 export const isSpouseLikeRelation = (r: Pick<RelRow, "tipo" | "notas">) => {
@@ -44,14 +47,14 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
     if (r.persona_id === pid && r.tipo === "madre") motherIds.add(r.pariente_id);
     if (r.pariente_id === pid && r.tipo === "hijo") {
       const p = byId.get(r.persona_id);
-      if (p?.sexo === "femenino") motherIds.add(r.persona_id);
+      if (sexOf(p) === "femenino") motherIds.add(r.persona_id);
       else fatherIds.add(r.persona_id);
     }
   }
   const ids = new Set([...fatherIds, ...motherIds]);
   const list = [...ids].map((i) => byId.get(i)).filter(Boolean) as PersonaLite[];
-  let padre = [...fatherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "masculino") ?? list.find((p) => p.sexo !== "femenino");
-  let madre = [...motherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => p.sexo === "femenino") ?? list.find((p) => p !== padre);
+  let padre = [...fatherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => sexOf(p) === "masculino") ?? list.find((p) => sexOf(p) !== "femenino");
+  let madre = [...motherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => sexOf(p) === "femenino") ?? list.find((p) => p !== padre);
 
   // Visual/inference fallback: GEDCOM imports often preserve spouses but miss
   // the direct mother/father edge for children. If one parent exists, show that
@@ -67,10 +70,10 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
     return [...ids];
   };
   if (!madre && padre) {
-    madre = spouseIdsFor(padre.id).map((id) => byId.get(id)).find((p) => p?.sexo === "femenino");
+    madre = spouseIdsFor(padre.id).map((id) => byId.get(id)).find((p) => sexOf(p) === "femenino");
   }
   if (!padre && madre) {
-    padre = spouseIdsFor(madre.id).map((id) => byId.get(id)).find((p) => p?.sexo === "masculino");
+    padre = spouseIdsFor(madre.id).map((id) => byId.get(id)).find((p) => sexOf(p) === "masculino");
   }
 
   const all = new Map(list.map((p) => [p.id, p]));

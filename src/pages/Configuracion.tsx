@@ -406,10 +406,10 @@ export default function Configuracion() {
 
 
       <Card className="archivo-card mb-6">
-        <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><ShieldCheck className="h-5 w-5" /> Face ID / Touch ID</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><ShieldCheck className="h-5 w-5" /> Llave iCloud / Face ID / Touch ID</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Activa una passkey local para desbloquear GENEIAI en este dispositivo. En iPhone usará Face ID; en Mac compatible usará Touch ID.
+            Activa una passkey del dispositivo para desbloquear GENEIAI. En iPhone usa Face ID; en Mac compatible usa Touch ID; Safari puede guardarla en el llavero/iCloud Keychain.
           </p>
           {!devicePasskeySupported ? (
             <p className="text-sm text-muted-foreground">Este navegador no soporta passkeys para esta app.</p>
@@ -418,7 +418,7 @@ export default function Configuracion() {
               {devicePasskeyEnabled ? (
                 <Button variant="outline" onClick={disableDevicePasskey}>Desactivar en este dispositivo</Button>
               ) : (
-                <Button onClick={enableDevicePasskey}>Activar Face ID / Touch ID</Button>
+                <Button onClick={enableDevicePasskey}>Activar llave iCloud / Face ID / Touch ID</Button>
               )}
             </div>
           )}

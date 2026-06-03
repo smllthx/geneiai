@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { padresDe } from "@/lib/kinship";
 
 type Persona = {
   id: string; nombres: string; apellidos: string; sexo?: string | null;
   nac_fecha?: string | null; defuncion_fecha?: string | null; viva?: string | null;
 };
-type Rel = { persona_id: string; pariente_id: string; tipo: string };
+type Rel = { id?: string; persona_id: string; pariente_id: string; tipo: string; notas?: string | null };
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 
@@ -31,11 +32,9 @@ export default function FanChart({
       const next: (string | null)[] = new Array(prev.length * 2).fill(null);
       prev.forEach((pid, idx) => {
         if (!pid) return;
-        const padres = rels
-          .filter((r) => r.persona_id === pid && (r.tipo === "padre" || r.tipo === "madre"))
-          .map((r) => ({ id: r.pariente_id, tipo: r.tipo, sexo: byId.get(r.pariente_id)?.sexo }));
-        const padre = padres.find((x) => x.tipo === "padre" || x.sexo === "masculino")?.id ?? null;
-        const madre = padres.find((x) => x.tipo === "madre" || x.sexo === "femenino")?.id ?? null;
+        const parents = padresDe(pid, rels.map((r, i) => ({ id: r.id ?? `${i}`, ...r })) as any, byId as any);
+        const padre = parents.padre?.id ?? null;
+        const madre = parents.madre?.id ?? null;
         next[idx * 2] = padre;
         next[idx * 2 + 1] = madre;
       });
@@ -76,6 +75,7 @@ export default function FanChart({
 
   const fullName = (p?: Persona) => p ? `${p.nombres} ${p.apellidos}`.trim() : "";
   const truncate = (s: string, n: number) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+  const labelLimit = (gen: number) => Math.max(4, 18 - gen * 2);
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} className="max-w-full" style={{ width: size }}>
@@ -110,8 +110,8 @@ export default function FanChart({
           const mid = (a1 + a2) / 2;
           const midR = (r1 + r2) / 2;
           const tp = polar(midR, mid);
-          const rotate = ((mid + 90) % 360);
-          const flipped = rotate > 90 && rotate < 270;
+          const fontMain = Math.max(6, 12 - gen);
+          const maxName = labelLimit(gen);
           return (
             <g key={`${gen}-${idx}`}
               style={{ cursor: pid ? "pointer" : "default" }}
@@ -122,15 +122,15 @@ export default function FanChart({
                 stroke="hsl(0 0% 100% / 0.9)" strokeWidth={1.5}
                 opacity={pid ? 1 : 0.5} />
               {p && (
-                <g transform={`translate(${tp.x} ${tp.y}) rotate(${flipped ? rotate + 180 : rotate})`}>
+                <g transform={`translate(${tp.x} ${tp.y})`}>
                   <text
-                    textAnchor="middle" fontSize={Math.max(8, 13 - gen)}
+                    textAnchor="middle" fontSize={fontMain}
                     fontWeight="600" fill="white" y={-2}
                   >
-                    {truncate(p.nombres, 10)}
+                    {truncate(p.nombres, maxName)}
                   </text>
-                  <text textAnchor="middle" fontSize={Math.max(7, 11 - gen)} fill="white" opacity={0.85} y={Math.max(8, 11 - gen)}>
-                    {truncate(p.apellidos, 12)}
+                  <text textAnchor="middle" fontSize={Math.max(6, fontMain - 1)} fill="white" opacity={0.85} y={Math.max(8, 11 - gen)}>
+                    {truncate(p.apellidos, maxName)}
                   </text>
                   {(yearOf(p.nac_fecha) || yearOf(p.defuncion_fecha)) && (
                     <text textAnchor="middle" fontSize={Math.max(6, 9 - gen)} fill="white" opacity={0.7} y={Math.max(18, 22 - gen)}>
