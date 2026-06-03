@@ -12,8 +12,9 @@ const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 /**
  * Fan chart: radial ancestor view.
  * - center: probandus at center (gen 0)
- * - gen 1..N: arcs going outward, split between maternal (left) and paternal (right)
- * - color: paternal line = sky/blue, maternal line = pink/rose
+ * - gen 1..N: arcs going outward.
+ * - color repeats by ancestor role in every branch:
+ *   father / paternal ancestor = blue, mother / maternal ancestor = pink.
  */
 export default function FanChart({
   personas, rels, centerId, generations = 5, size = 720,
@@ -59,15 +60,18 @@ export default function FanChart({
     return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${r2} ${r2} 0 ${large} 1 ${p3.x} ${p3.y} L ${p4.x} ${p4.y} A ${r1} ${r1} 0 ${large} 0 ${p1.x} ${p1.y} Z`;
   };
 
-  // Color by branch: idx 0 = father side, idx 1 = mother side (at gen 1).
-  // At higher gens, the high bit determines side.
+  // Color by role inside every ancestral couple:
+  // idx even = father/paternal slot, idx odd = mother/maternal slot.
+  // This keeps father-of-father and father-of-mother blue, while
+  // mother-of-father and mother-of-mother stay rose.
   const colorFor = (gen: number, idx: number, hasPerson: boolean) => {
     if (gen === 0) return hasPerson ? "hsl(211, 100%, 50%)" : "hsl(220, 16%, 90%)";
-    const side = idx < ancestors[gen].length / 2 ? "paternal" : "maternal";
-    const baseHue = side === "paternal" ? 210 : 335;
-    const lightness = hasPerson ? Math.max(45, 75 - gen * 5) : 92;
-    const sat = hasPerson ? 70 : 25;
-    return `hsl(${baseHue}, ${sat}%, ${lightness}%)`;
+    if (!hasPerson) return "hsl(214, 8%, 52%)";
+    const paternalSlot = idx % 2 === 0;
+    const hue = paternalSlot ? 207 : 335;
+    const saturation = paternalSlot ? 82 : 76;
+    const lightness = Math.max(43, 73 - gen * 5);
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   };
 
   const fullName = (p?: Persona) => p ? `${p.nombres} ${p.apellidos}`.trim() : "";
