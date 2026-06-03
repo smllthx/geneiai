@@ -378,8 +378,8 @@ export default function Arbol() {
   );
 
   const CouplePair = ({ childId, padre, madre }: { childId: string; padre?: PersonaLite; madre?: PersonaLite }) => (
-    <div className="relative flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
-      <div className="pointer-events-none absolute left-[22%] right-[22%] top-1/2 h-px bg-foreground/25" />
+    <div className="relative inline-flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
+      <div className="pointer-events-none absolute left-[50%] top-1/2 h-px w-[calc(100%-2.5rem)] -translate-x-1/2 bg-foreground/30" />
       <div className="relative z-10">
         {padre ? <PersonTile p={padre} /> : <AddTile personaId={childId} tipo="padre" label="padre" />}
       </div>
@@ -389,23 +389,29 @@ export default function Arbol() {
     </div>
   );
 
-  // Recursive ascendants renderer — FamilySearch-style with visible connector lines
+  // Recursive ascendants renderer — compact, connected, and symmetric.
   const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
     if (gen <= 0 || trail.includes(pid)) return null;
     const { padre, madre } = padresDe(pid);
     const hasAny = !!(padre || madre);
     const nextTrail = [...trail, pid];
     return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="grid grid-cols-2 items-end justify-center gap-5 px-2 pb-1">
-          <div className="flex min-w-[292px] flex-col items-center gap-2">
-            {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
+      <div className="inline-flex flex-col items-center">
+        {hasAny && (
+          <div className="relative mb-2 inline-grid grid-cols-2 items-end justify-center gap-3 sm:gap-4">
+            <div className="flex min-w-[156px] flex-col items-center justify-end">
+              {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
+            </div>
+            <div className="flex min-w-[156px] flex-col items-center justify-end">
+              {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-1/4 right-1/4 h-px bg-foreground/25" />
+            <div className="pointer-events-none absolute bottom-0 left-1/2 h-4 w-px translate-y-full bg-foreground/25" />
           </div>
-          <div className="flex min-w-[292px] flex-col items-center gap-2">
-            {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
-          </div>
+        )}
+        <div className="relative mt-4">
+          <CouplePair childId={pid} padre={padre} madre={madre} />
         </div>
-        <CouplePair childId={pid} padre={padre} madre={madre} />
         {hasAny && <div className="h-4 w-px bg-foreground/30" />}
       </div>
     );
@@ -416,11 +422,13 @@ export default function Arbol() {
     const children = hijosDe(pid);
     if (!children.length) return null;
     return (
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-4 w-px bg-foreground/30" />
-        <div className="flex items-start justify-center gap-5">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-4 w-px bg-foreground/30" />
+        <div className="relative flex items-start justify-center gap-4">
+          {children.length > 1 && <div className="pointer-events-none absolute left-[12%] right-[12%] top-0 h-px bg-foreground/25" />}
           {children.map((child) => (
-            <div key={child.id} className="flex flex-col items-center gap-2">
+            <div key={child.id} className="relative flex flex-col items-center gap-2">
+              <div className="h-3 w-px bg-foreground/25" />
               <PartnershipStrip p={child} compact />
               <DescendantTree pid={child.id} depth={depth - 1} />
             </div>
