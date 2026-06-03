@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/glass";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Scan, Sparkles, Loader2, Users } from "lucide-react";
+import { Scan, Sparkles, Loader2, Users, Camera, ShieldAlert } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { compararRasgos, estimacionGenetica, parentescoFraccion } from "@/lib/parecido";
 
@@ -17,6 +17,7 @@ export default function Parecidos() {
   const [rasgos, setRasgos] = useState<Rasgo[]>([]);
   const [relaciones, setRelaciones] = useState<any[]>([]);
   const [selected, setSelected] = useState<string>("");
+  const [compareWith, setCompareWith] = useState<string>("");
   const [running, setRunning] = useState<string | null>(null);
 
   const load = async () => {
@@ -29,6 +30,7 @@ export default function Parecidos() {
     setRasgos((r ?? []) as Rasgo[]);
     setRelaciones(rel ?? []);
     if (!selected && p && p.length) setSelected(p[0].id);
+    if (!compareWith && p && p.length > 1) setCompareWith(p[1].id);
   };
   useEffect(() => { load(); }, []);
 
@@ -75,13 +77,34 @@ export default function Parecidos() {
   }, [selected, rasgosByPersona, personas, relaciones]);
 
   const personaSel = personas.find((p) => p.id === selected);
+  const personaCompare = personas.find((p) => p.id === compareWith);
   const rasgosSel = selected ? rasgosByPersona[selected] : null;
+  const rasgosCompare = compareWith ? rasgosByPersona[compareWith] : null;
+  const directRel = relaciones.find(
+    (r) => (r.persona_id === selected && r.pariente_id === compareWith) ||
+           (r.persona_id === compareWith && r.pariente_id === selected),
+  );
+  const directComparison = rasgosSel && rasgosCompare
+    ? compararRasgos(rasgosSel.rasgos ?? {}, rasgosCompare.rasgos ?? {})
+    : null;
+  const directAdn = directComparison
+    ? estimacionGenetica(parentescoFraccion(directRel?.tipo), directComparison.score)
+    : null;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Rasgos faciales y parecidos" subtitle="Análisis IA de fotos + estimación de parentesco visual." />
+      <PageHeader title="Laboratorio de fotos y parecidos" subtitle="Compara retratos familiares, rasgos visibles no sensibles, fecha probable y evidencia genealógica." />
 
-      <GlassCard className="space-y-4 p-4">
+      <GlassCard className="border-amber-500/30 bg-amber-500/5 p-4">
+        <div className="flex gap-3 text-sm">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <p className="text-muted-foreground">
+            La app no afirma etnia, raza u origen biológico por una cara. Analiza rasgos fenotípicos visibles, ropa, época, ambiente y parecido familiar como hipótesis; la prueba genealógica debe venir de fuentes, relaciones y documentos.
+          </p>
+        </div>
+      </GlassCard>
+
+      <GlassCard className="space-y-4 p-5">
         <div className="flex items-center gap-2 text-sm font-semibold"><Scan className="h-4 w-4" /> Analizar fotos</div>
         <p className="text-xs text-muted-foreground">Selecciona personas con foto principal y extrae sus rasgos.</p>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
@@ -103,9 +126,41 @@ export default function Parecidos() {
         </div>
       </GlassCard>
 
-      <GlassCard className="space-y-4 p-4">
+      <GlassCard className="space-y-4 p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold"><Camera className="h-4 w-4" /> Comparación directa A/B</div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr]">
+          <PhotoCompareColumn label="Persona A" value={selected} onChange={setSelected} personas={personas} rasgo={rasgosSel} persona={personaSel} analizar={analizar} running={running} />
+          <div className="flex items-center justify-center">
+            <div className="rounded-3xl border border-border bg-foreground/5 px-5 py-4 text-center">
+              <div className="text-4xl font-black tabular-nums">{directComparison ? `${directComparison.score}%` : "--"}</div>
+              <div className="text-xs text-muted-foreground">parecido visual</div>
+              <div className="mt-2 text-sm font-semibold">{directRel?.tipo ? `Relación: ${directRel.tipo}` : "Sin relación directa registrada"}</div>
+              <div className="text-xs text-muted-foreground">ADN estimado: {directAdn !== null ? `${(directAdn * 100).toFixed(1)}%` : "--"}</div>
+            </div>
+          </div>
+          <PhotoCompareColumn label="Persona B" value={compareWith} onChange={setCompareWith} personas={personas} rasgo={rasgosCompare} persona={personaCompare} analizar={analizar} running={running} />
+        </div>
+        {directComparison && (
+          <div className="rounded-xl bg-foreground/5 p-3 text-sm">
+            <p className="font-semibold">Rasgos compartidos detectados</p>
+            {directComparison.comunes.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {directComparison.comunes.map((c: any) => (
+                  <span key={`${c.rasgo}-${c.valor}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                    {c.rasgo.replace(/_/g, " ")}: {c.valor}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-muted-foreground">No hay suficientes rasgos coincidentes o ambas fotos necesitan análisis.</p>
+            )}
+          </div>
+        )}
+      </GlassCard>
+
+      <GlassCard className="space-y-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4" /> Parecidos</div>
+          <div className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4" /> Ranking de parecidos familiares</div>
           <Select value={selected} onValueChange={setSelected}>
             <SelectTrigger className="w-[260px]"><SelectValue placeholder="Persona base" /></SelectTrigger>
             <SelectContent>
@@ -121,13 +176,16 @@ export default function Parecidos() {
         {rasgosSel && (
           <>
             <div className="rounded-xl bg-foreground/5 p-3 text-xs">
-              <p className="mb-1 font-semibold">Rasgos detectados</p>
+              <p className="mb-1 font-semibold">Análisis de foto y rasgos de {personaSel?.nombres}</p>
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                 {Object.entries(rasgosSel.rasgos ?? {}).filter(([k]) => k !== "resumen" && k !== "rasgos_distintivos").map(([k, v]) => (
                   <div key={k} className="text-muted-foreground"><span className="font-medium text-foreground">{k.replace(/_/g, " ")}:</span> {String(v)}</div>
                 ))}
               </div>
               {rasgosSel.resumen && <p className="mt-2 italic text-muted-foreground">{rasgosSel.resumen}</p>}
+              <p className="mt-2 text-muted-foreground">
+                Próximo paso sugerido: comparar con familiares de la rama paterna y materna, y confirmar con fuentes documentales.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -156,6 +214,38 @@ export default function Parecidos() {
           </>
         )}
       </GlassCard>
+    </div>
+  );
+}
+
+function PhotoCompareColumn({ label, value, onChange, personas, persona, rasgo, analizar, running }: any) {
+  return (
+    <div className="rounded-3xl border border-border bg-foreground/[0.03] p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        {persona && <Button size="sm" variant="outline" disabled={running === persona.id || !persona.foto_url} onClick={() => analizar(persona)}>
+          {running === persona.id ? <Loader2 className="h-3 w-3 animate-spin" /> : rasgo ? "Reanalizar" : "Analizar"}
+        </Button>}
+      </div>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
+        <SelectContent>
+          {personas.map((p: Persona) => (
+            <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="mt-4 overflow-hidden rounded-3xl bg-black/20">
+        {persona?.foto_url ? (
+          <img src={persona.foto_url} alt="" className="h-72 w-full object-cover" />
+        ) : (
+          <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">Sin retrato principal</div>
+        )}
+      </div>
+      <div className="mt-3">
+        <p className="font-semibold">{persona ? `${persona.nombres} ${persona.apellidos}` : "Selecciona persona"}</p>
+        <p className="text-xs text-muted-foreground">{rasgo ? "Rasgos IA disponibles" : "Pendiente de análisis"}</p>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 // SectionHeader removed — replaced by minimal sticky header
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,6 +42,7 @@ const generationOptionLabel = (generations: number) => {
 };
 
 export default function Arbol() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const centroParam = searchParams.get("centro");
   const [personas, setPersonas] = useState<PersonaLite[]>([]);
@@ -243,7 +244,8 @@ export default function Arbol() {
     reload();
   };
 
-  // Wrapper: in edit mode = drag/drop + delete badge; otherwise click focuses on that ancestor
+  // Wrapper: in edit mode = drag/drop + delete badge; otherwise person cards open
+  // the full genealogical profile. The center is changed from the header control.
   const TreeCard = ({ p, focusable = true, children }: { p: PersonaLite; focusable?: boolean; children: React.ReactNode }) => {
     if (editMode) {
       const linkedToCenter = persona && p.id !== persona.id && relacionesEntre(persona.id, p.id, rels as any).length > 0;
@@ -274,29 +276,8 @@ export default function Arbol() {
         </div>
       );
     }
-    if (focusable && p.id !== center && !probandLocked) {
-      // override default navigation: single click focuses on this person in the tree
-      return (
-        <div className="relative group">
-          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCenter(p.id); toast.success(`Centro: ${p.nombres}`, { duration: 1200 }); }}>
-            <PersonCardClickIntercept>{children}</PersonCardClickIntercept>
-          </div>
-          <Link
-            to={`/personas/${p.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute -top-2 -right-2 z-10 hidden group-hover:grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md text-[10px]"
-            title="Abrir ficha completa"
-          >→</Link>
-        </div>
-      );
-    }
     return <>{children}</>;
   };
-
-  // Swallows the inner PersonCard's button click so our outer onClick wins
-  const PersonCardClickIntercept = ({ children }: { children: React.ReactNode }) => (
-    <div onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}>{children}</div>
-  );
 
   // Determine highlight ring based on selected categoria
   const catRing = (p: PersonaLite | undefined): string => {
@@ -342,7 +323,7 @@ export default function Arbol() {
         <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
           <Draggable p={p}>
             <Hl p={p}>
-              <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => setCenter(p.id)} />
+              <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => navigate(`/personas/${p.id}`)} />
             </Hl>
           </Draggable>
           {partners.map((partner) => (
@@ -367,13 +348,13 @@ export default function Arbol() {
   const PersonTile = ({ p, highlighted = false }: { p: PersonaLite; highlighted?: boolean }) => (
     <Draggable p={p}>
       <Hl p={p}>
-        <PersonCard p={p} compact highlighted={highlighted} onClick={() => setCenter(p.id)} />
+        <PersonCard p={p} compact highlighted={highlighted} onClick={() => navigate(`/personas/${p.id}`)} />
       </Hl>
     </Draggable>
   );
 
   const AddTile = ({ personaId, tipo, label }: { personaId: string; tipo: "padre" | "madre" | "conyuge" | "hijo"; label: string }) => (
-    <QuickAddRelative personaId={personaId} defaultTipo={tipo} onAdded={reload}
+    <QuickAddRelative personaId={personaId} personaSexo={byId.get(personaId)?.sexo} defaultTipo={tipo} onAdded={reload}
       trigger={<button className="block"><EmptySlot label={label} onClick={() => {}} /></button>} />
   );
 

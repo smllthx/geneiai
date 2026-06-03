@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import CertezaBadge from "@/components/CertezaBadge";
 import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered, Link2 } from "lucide-react";
-import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
+import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";
+import { filterPeopleForQuery } from "@/lib/personSearch";
 
 export default function PersonasList() {
   const navigate = useNavigate();
@@ -30,14 +31,17 @@ export default function PersonasList() {
 
   const filtered = useMemo(() => {
     if (!q.trim()) return personas;
-    const lower = q.toLowerCase();
-    const codeNorm = normalizeCode(q);
-    const looksLikeCode = /^[A-Z2-9]{2,}-?[A-Z2-9]*$/i.test(q.trim()) && codeNorm.length >= 3;
-    return personas.filter((p) => {
-      if (looksLikeCode && matchesCode(q, p.id)) return true;
-      return `${p.nombres} ${p.apellidos}`.toLowerCase().includes(lower);
-    });
+    return filterPeopleForQuery(personas, q, { limit: 500 });
   }, [personas, q]);
+
+  const linkedIds = useMemo(() => {
+    const ids = new Set<string>();
+    relaciones.forEach((r) => {
+      if (r.persona_id) ids.add(r.persona_id);
+      if (r.pariente_id) ids.add(r.pariente_id);
+    });
+    return ids;
+  }, [relaciones]);
 
   const generarSugerenciasApellido = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -104,11 +108,14 @@ export default function PersonasList() {
         }
       />
       <Input
-        placeholder="Buscar por nombre, apellido o código (ej. GDVB-TS5)…"
+        placeholder="Buscar todas las personas por nombre, apellido, variante, fecha, código o UUID…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         className="mb-4 max-w-md"
       />
+      <div className="mb-3 text-xs text-muted-foreground">
+        Mostrando {filtered.length} de {personas.length} persona(s). Incluye vinculadas al árbol, importadas, sueltas y pendientes.
+      </div>
       {filtered.length === 0 ? (
         <Card className="archivo-card"><CardContent className="py-12 text-center text-muted-foreground">
           Sin resultados. Prueba con otro nombre o código.
@@ -126,6 +133,9 @@ export default function PersonasList() {
                     {personaCode(p.id)}
                   </span>
                   {p.viva === "si" && <span title="Persona viva — privada"><EyeOff className="inline h-3.5 w-3.5 text-muted-foreground" /></span>}
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${linkedIds.has(p.id) ? "bg-emerald-500/12 text-emerald-500" : "bg-amber-500/12 text-amber-500"}`}>
+                    {linkedIds.has(p.id) ? "en árbol" : "sin vincular"}
+                  </span>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {p.nac_fecha ? `n. ${new Date(p.nac_fecha).getUTCFullYear()}` : p.nac_rango_ini ? `n. ${p.nac_rango_ini}–${p.nac_rango_fin}` : "nacimiento s/d"}

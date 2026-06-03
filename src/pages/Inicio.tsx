@@ -66,10 +66,16 @@ export default function Inicio() {
       setSinFotos((allPersonas.data ?? []).filter((per: any) => !per.foto_url && !conFotos.has(per.id)).slice(0, 6));
 
       // Vistas recientes (localStorage)
-      const recentIds = getRecent().map((r) => r.id);
+      const recentEntries = getRecent();
+      const recentIds = recentEntries.map((r) => r.id);
       if (recentIds.length) {
         const map = new Map((allPersonas.data ?? []).map((x: any) => [x.id, x]));
         setVistasRecientes(recentIds.map((rid) => map.get(rid)).filter(Boolean).slice(0, 8));
+        const editedIds = recentEntries.filter((r) => r.action === "edited").map((r) => r.id);
+        if (editedIds.length) {
+          const edited = editedIds.map((rid) => map.get(rid)).filter(Boolean).slice(0, 8);
+          if (edited.length) setRecientes(edited);
+        }
       }
     })();
 

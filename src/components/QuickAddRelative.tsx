@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { UserPlus, Search } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { filterPeopleForQuery } from "@/lib/personSearch";
+import { inferSexFromName } from "@/lib/personAutoRules";
 
 type Tipo =
   | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
@@ -131,7 +132,7 @@ export default function QuickAddRelative({
             user_id: user.id,
             nombres: nombres.trim(),
             apellidos: apellidos.trim(),
-            sexo: sexo || null,
+            sexo: sexo || inferSexFromName(nombres) || null,
             nac_fecha_aprox: nacAprox || null,
             certeza: "probable",
           })
@@ -145,6 +146,12 @@ export default function QuickAddRelative({
       if (parienteId === personaId) { toast.error("No puedes vincular a la misma persona"); setBusy(false); return; }
 
       const dbTipo = dbTipoFor(tipo);
+      const pickedSex = picked?.sexo || inferSexFromName(picked?.nombres);
+      if (mode === "buscar" && picked && !picked.sexo && pickedSex) {
+        await supabase.from("personas").update({ sexo: pickedSex }).eq("id", picked.id).is("sexo", null);
+      }
+      if (dbTipo === "padre") await supabase.from("personas").update({ sexo: "masculino" }).eq("id", parienteId).is("sexo", null);
+      if (dbTipo === "madre") await supabase.from("personas").update({ sexo: "femenino" }).eq("id", parienteId).is("sexo", null);
 
       // Crea/asegura ambos sentidos de la relación con UPSERT para tolerar
       // re-vinculaciones y evitar que falle silenciosamente si ya existe una

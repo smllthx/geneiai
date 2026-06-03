@@ -33,6 +33,7 @@ import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 
 import { personaCode, matchesCode } from "@/lib/personaCode";
 import { pushRecent } from "@/lib/recent";
+import { inferSexFromName } from "@/lib/personAutoRules";
 import TimelineVisual from "@/components/TimelineVisual";
 import ContextoHistorico from "@/components/ContextoHistorico";
 import PersonaExports from "@/components/PersonaExports";
@@ -109,7 +110,7 @@ export default function PersonaDetail() {
         const initial = { ...(data as any) };
         delete initial.id;
         autoSaveSignature.current = JSON.stringify(initial);
-        pushRecent(data.id);
+        pushRecent(data.id, "viewed");
         const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
           supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
           supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
@@ -137,6 +138,7 @@ export default function PersonaDetail() {
     setLoading(true);
     const user = (await supabase.auth.getUser()).data.user!;
     const payload = { ...p, user_id: user.id };
+    if (!payload.sexo) payload.sexo = inferSexFromName(payload.nombres);
     delete payload.id;
     if (isNew) {
       const { data, error } = await supabase.from("personas").insert(payload).select().single();
@@ -150,6 +152,7 @@ export default function PersonaDetail() {
       if (error) return toast.error(error.message);
       autoSaveSignature.current = JSON.stringify(payload);
       setEditMode(false);
+      pushRecent(id!, "edited");
       window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "personas", personId: id } }));
       toast.success("Cambios guardados");
     }
