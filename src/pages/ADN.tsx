@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical, Calculator } from "lucide-react";
+import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical, Calculator, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { findRegion } from "@/lib/dna-regions";
 import { guardarEtnicidadArbol } from "@/lib/etnicidadArbol";
@@ -35,13 +35,42 @@ export default function ADN() {
   const [vista, setVista] = useState<"lista" | "mapa">("lista");
   const [filtro, setFiltro] = useState<Tipo>("todos");
   const [importando, setImportando] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const { data } = await supabase.from("dna_estimates").select("*").order("porcentaje", { ascending: false });
     setItems(data ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const refresh = () => load();
+    window.addEventListener("genaia:origin-updated", refresh);
+    return () => window.removeEventListener("genaia:origin-updated", refresh);
+  }, []);
+
+  const calcularPorArbol = async () => {
+    setSyncing(true);
+    const t = toast.loading("Calculando origen documental por árbol…");
+    try {
+      const { data: prof } = await supabase.from("profiles").select("proband_id").maybeSingle();
+      let probandId = prof?.proband_id;
+      if (!probandId) {
+        const { data: ps } = await supabase.from("personas").select("id,nac_fecha").order("nac_fecha", { ascending: false }).limit(1);
+        probandId = ps?.[0]?.id;
+      }
+      if (!probandId) { toast.dismiss(t); return toast.error("Crea al menos una persona primero"); }
+      const res = await guardarEtnicidadArbol(probandId);
+      toast.dismiss(t);
+      toast.success(`Origen actualizado: ${res.insertados} regiones · cobertura ${Math.round(res.cobertura * 100)}%`);
+      load();
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "Error");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const agregar = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
@@ -102,9 +131,9 @@ export default function ADN() {
   return (
     <div>
       <SectionHeader
-        eyebrow="Origen estimado"
-        title="Estimación étnica"
-        subtitle="Calcula por árbol genealógico y compara contra resultados de tests de ADN (MyHeritage, AncestryDNA, 23andMe)."
+        eyebrow="ADN y origen ancestral"
+        title="Origen documental y ADN"
+        subtitle="Une el origen calculado por lugares del árbol con resultados externos de ADN. Se recalcula en segundo plano cuando cambian personas, relaciones o lugares."
         actions={
           <div className="flex flex-wrap gap-2">
             <input
@@ -117,23 +146,8 @@ export default function ADN() {
             <Button variant="outline" disabled={importando} onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4" /> Importar test ADN
             </Button>
-            <Button variant="outline" onClick={async () => {
-              const t = toast.loading("Calculando origen por árbol…");
-              try {
-                const { data: prof } = await supabase.from("profiles").select("proband_id").maybeSingle();
-                let probandId = prof?.proband_id;
-                if (!probandId) {
-                  const { data: ps } = await supabase.from("personas").select("id,nac_fecha").order("nac_fecha", { ascending: false }).limit(1);
-                  probandId = ps?.[0]?.id;
-                }
-                if (!probandId) { toast.dismiss(t); return toast.error("Crea al menos una persona primero"); }
-                const res = await guardarEtnicidadArbol(probandId);
-                toast.dismiss(t);
-                toast.success(`Calculado: ${res.insertados} orígenes (cobertura ${Math.round(res.cobertura * 100)}%)`);
-                load();
-              } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-            }}>
-              <Calculator className="h-4 w-4" /> Calcular por árbol
+            <Button variant="outline" disabled={syncing} onClick={calcularPorArbol}>
+              {syncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />} Recalcular árbol
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nuevo origen</Button></DialogTrigger>
@@ -167,7 +181,7 @@ export default function ADN() {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Estimación referencial</AlertTitle>
         <AlertDescription>
-          No es un diagnóstico ni una prueba genética oficial. Los porcentajes son aproximaciones.
+          El origen documental sale de lugares de nacimiento registrados; el ADN se ingresa desde pruebas externas. No se infieren razas ni origen biológico desde rostros o fotos.
         </AlertDescription>
       </Alert>
 

@@ -9,6 +9,7 @@ const TABLES = [
   "eventos",
   "documentos",
   "fotos",
+  "dna_estimates",
   "familias",
   "research_tasks",
   "hipotesis",

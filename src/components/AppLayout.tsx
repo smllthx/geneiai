@@ -18,6 +18,7 @@ import AdaptiveViewport from "@/components/AdaptiveViewport";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import GlobalDataSync from "@/components/GlobalDataSync";
+import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
 import { toast } from "sonner";
@@ -38,9 +39,8 @@ const investigationNav = [
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/importadas-pendientes", label: "Importadas pendientes", icon: Link2 },
   { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },
-  { to: "/origen-ancestral", label: "Origen ancestral", icon: Dna },
+  { to: "/adn", label: "ADN y origen", icon: Dna },
   { to: "/cuadros-ia", label: "Cuadros IA", icon: ImageIcon },
-  { to: "/adn", label: "ADN", icon: Dna },
   { to: "/fuentes", label: "Fuentes", icon: BookOpen },
   { to: "/coincidencias", label: "Coincidencias", icon: Compass },
   { to: "/parecidos", label: "Rasgos y parecidos", icon: Scan },
@@ -297,6 +297,7 @@ export default function AppLayout() {
       <AdaptiveViewport />
       <AppUpdateNotifier />
       <GlobalDataSync />
+      <OriginBackgroundSync />
       <KeyboardAwareScroller />
     </div>
   );

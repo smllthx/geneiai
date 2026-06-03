@@ -1547,7 +1547,9 @@ function PersonaQuickMenu({
     setCuadroUrl(null);
     setCuadroLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generar-cuadro-persona", { body: { persona } });
+      const { data, error } = await supabase.functions.invoke("generar-cuadro-persona", {
+        body: { persona_id: personaId, person_id: personaId, persona },
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setCuadroUrl(data.imageUrl);
@@ -1608,8 +1610,11 @@ function PersonaQuickMenu({
           <DropdownMenuItem onClick={() => toast.info("Los cambios recientes están en la pestaña Línea de tiempo.")}>
             <RefreshCw className="h-4 w-4" /> Cambios recientes
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={generarCuadro}>
+          <DropdownMenuItem onClick={() => navigate(`/cuadros-ia?persona=${personaId}`)}>
             <ImageIcon className="h-4 w-4" /> Cuadros
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={generarCuadro}>
+            <Sparkles className="h-4 w-4" /> Generar cuadro rápido
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate(`/calendario`)}>

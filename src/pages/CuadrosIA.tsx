@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Download, FileText, Image, MapPinned, Printer, Sparkles, UserRound, Users } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,14 +19,26 @@ const TEMPLATES = [
 export default function CuadrosIA() {
   const [personas, setPersonas] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const [searchParams] = useSearchParams();
+  const personaParam = searchParams.get("persona");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("personas").select("id,nombres,apellidos,nac_fecha,defuncion_fecha,foto_url,notas").order("updated_at", { ascending: false }).limit(12);
-      setPersonas(data ?? []);
-      setSelected((data ?? [])[0] ?? null);
+      const selectCols = "id,nombres,apellidos,nac_fecha,defuncion_fecha,foto_url,notas";
+      const { data } = await supabase.from("personas").select(selectCols).order("updated_at", { ascending: false }).limit(24);
+      let rows = data ?? [];
+      let initial = personaParam ? rows.find((p) => p.id === personaParam) : null;
+      if (personaParam && !initial) {
+        const { data: exact } = await supabase.from("personas").select(selectCols).eq("id", personaParam).maybeSingle();
+        if (exact) {
+          initial = exact;
+          rows = [exact, ...rows.filter((p) => p.id !== exact.id)];
+        }
+      }
+      setPersonas(rows);
+      setSelected(initial ?? rows[0] ?? null);
     })();
-  }, []);
+  }, [personaParam]);
 
   return (
     <div className="space-y-6">
@@ -38,6 +51,11 @@ export default function CuadrosIA() {
         <Card>
           <CardHeader><CardTitle>Persona base</CardTitle></CardHeader>
           <CardContent className="space-y-2">
+            {personas.length === 0 && (
+              <p className="rounded-2xl border border-dashed p-3 text-sm text-muted-foreground">
+                No encontré personas para generar cuadros. Revisa que la ficha exista y que tengas acceso.
+              </p>
+            )}
             {personas.map((p) => (
               <button
                 key={p.id}

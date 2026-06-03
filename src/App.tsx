@@ -32,7 +32,6 @@ const Asistente = lazy(() => import("./pages/Asistente"));
 const Credenciales = lazy(() => import("./pages/Credenciales"));
 const Parecidos = lazy(() => import("./pages/Parecidos"));
 const ADN = lazy(() => import("./pages/ADN"));
-const OrigenAncestral = lazy(() => import("./pages/OrigenAncestral"));
 const CuadrosIA = lazy(() => import("./pages/CuadrosIA"));
 const Coincidencias = lazy(() => import("./pages/Coincidencias"));
 const Pistas = lazy(() => import("./pages/Pistas"));
@@ -105,7 +104,7 @@ const App = () => (
                   <Route path="/buscar" element={<Buscar />} />
                   <Route path="/coincidencias" element={<Coincidencias />} />
                   <Route path="/adn" element={<ADN />} />
-                  <Route path="/origen-ancestral" element={<OrigenAncestral />} />
+                  <Route path="/origen-ancestral" element={<Navigate to="/adn" replace />} />
                   <Route path="/cuadros-ia" element={<CuadrosIA />} />
                   <Route path="/estimacion-etnica" element={<Navigate to="/adn" replace />} />
                   <Route path="/importar" element={<Importar />} />
