@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, GitMerge, Trash2, ArrowLeftRight, Clock, Hash, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
+import { personaCode } from "@/lib/personaCode";
 import { fusionarPersonas } from "@/lib/mergePersonas";
 import { getRecent } from "@/lib/recent";
+import { filterPeopleForQuery } from "@/lib/personSearch";
 
 function PersonaPicker({ label, value, onChange, personas, exclude }: {
   label: string; value: any; onChange: (p: any) => void; personas: any[]; exclude?: string;
@@ -22,14 +23,7 @@ function PersonaPicker({ label, value, onChange, personas, exclude }: {
   }, [personas, exclude]);
   const filtered = useMemo(() => {
     if (!q.trim()) return [];
-    const lower = q.toLowerCase();
-    const codeNorm = normalizeCode(q);
-    const looksLikeCode = codeNorm.length >= 3;
-    return personas.filter((p) => {
-      if (p.id === exclude) return false;
-      if (looksLikeCode && matchesCode(q, p.id)) return true;
-      return `${p.nombres} ${p.apellidos}`.toLowerCase().includes(lower);
-    }).slice(0, 8);
+    return filterPeopleForQuery(personas, q, { excludeId: exclude, limit: 30 });
   }, [q, personas, exclude]);
 
   return (

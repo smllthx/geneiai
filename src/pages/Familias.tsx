@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+import { filterPeopleForQuery } from "@/lib/personSearch";
+import { personaCode } from "@/lib/personaCode";
 
 export default function Familias() {
   const { user } = useAuth();
@@ -18,7 +20,9 @@ export default function Familias() {
   const [personas, setPersonas] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [nombre, setNombre] = useState("");
+  const [notas, setNotas] = useState("");
   const [head, setHead] = useState("");
+  const [personQuery, setPersonQuery] = useState("");
 
   const load = async () => {
     const [{ data: f }, { data: p }] = await Promise.all([
@@ -33,12 +37,14 @@ export default function Familias() {
   const crear = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
     const { error } = await supabase.from("familias").insert({
-      user_id: user.id, nombre, head_persona_id: head || null,
+      user_id: user.id, nombre, notas: notas || null, head_persona_id: head || null,
     });
     if (error) return toast.error(error.message);
     toast.success("Familia creada");
-    setOpen(false); setNombre(""); setHead(""); load();
+    setOpen(false); setNombre(""); setNotas(""); setHead(""); setPersonQuery(""); load();
   };
+
+  const filteredPeople = filterPeopleForQuery(personas, personQuery, { limit: 40 });
 
   return (
     <div>
@@ -53,10 +59,12 @@ export default function Familias() {
               <DialogHeader><DialogTitle>Crear familia</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div><Label>Nombre de la familia</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Familia por apellido o rama" /></div>
+                <div><Label>Historia o notas de la familia</Label><Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Origen, migración, rama, casa familiar…" /></div>
                 <div><Label>Cabeza de familia (opcional)</Label>
+                  <Input className="mb-2" value={personQuery} onChange={(e) => setPersonQuery(e.target.value)} placeholder="Buscar persona por nombre o código" />
                   <Select value={head} onValueChange={setHead}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
-                    <SelectContent>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+                    <SelectContent>{filteredPeople.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos} · {personaCode(p.id)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <Button onClick={crear} disabled={!nombre}>Crear</Button>
@@ -101,12 +109,76 @@ export default function Familias() {
                         </Button>
                       </div>
                     )}
+                    <FamilyEditor family={f} personas={personas} onDone={load} />
                   </div>
                 </div>
               </GlassCard>
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function FamilyEditor({ family, personas, onDone }: { family: any; personas: any[]; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [nombre, setNombre] = useState(family.nombre ?? "");
+  const [notas, setNotas] = useState(family.notas ?? "");
+  const [head, setHead] = useState(family.head_persona_id ?? "");
+  const [q, setQ] = useState("");
+  const filtered = filterPeopleForQuery(personas, q, { limit: 40 });
+
+  const save = async () => {
+    const { error } = await supabase.from("familias").update({
+      nombre: nombre.trim(),
+      notas: notas.trim() || null,
+      head_persona_id: head || null,
+    }).eq("id", family.id);
+    if (error) return toast.error(error.message);
+    toast.success("Familia actualizada");
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "familias" } }));
+    setOpen(false);
+    onDone();
+  };
+
+  const remove = async () => {
+    if (!confirm("¿Eliminar esta familia? No elimina personas del árbol.")) return;
+    const { error } = await supabase.from("familias").delete().eq("id", family.id);
+    if (error) return toast.error(error.message);
+    toast.success("Familia eliminada");
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "familias" } }));
+    setOpen(false);
+    onDone();
+  };
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild><Button size="sm" variant="outline">Editar familia</Button></DialogTrigger>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar familia</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Nombre</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+            <div><Label>Historia o notas</Label><Input value={notas} onChange={(e) => setNotas(e.target.value)} /></div>
+            <div><Label>Cabeza de familia</Label>
+              <Input className="mb-2" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar persona por nombre o código" />
+              <Select value={head} onValueChange={setHead}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
+                <SelectContent>{filtered.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos} · {personaCode(p.id)}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button variant="destructive" onClick={remove}>Eliminar familia</Button>
+              <Button onClick={save} disabled={!nombre.trim()}>Guardar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {family.head_persona_id && (
+        <Button asChild size="sm" variant="outline">
+          <Link to={`/personas/${family.head_persona_id}`}>Editar parientes</Link>
+        </Button>
       )}
     </div>
   );

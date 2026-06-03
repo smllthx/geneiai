@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { UserPlus, Search } from "lucide-react";
-import { personaCode, matchesCode } from "@/lib/personaCode";
+import { personaCode } from "@/lib/personaCode";
+import { filterPeopleForQuery } from "@/lib/personSearch";
 
 type Tipo =
   | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
@@ -62,7 +63,7 @@ export default function QuickAddRelative({
     if (!open) return;
     supabase
       .from("personas")
-      .select("id, nombres, apellidos, sexo, nac_fecha, nac_rango_ini")
+      .select("id, nombres, apellidos, variantes_nombre, sexo, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin, defuncion_fecha")
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true })
       .then(({ data }) => setAll(data ?? []));
@@ -77,15 +78,8 @@ export default function QuickAddRelative({
   }, [tipo, picked]);
 
   const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return all
-      .filter((x) => x.id !== personaId)
-      .filter((x) => {
-        const name = `${x.nombres ?? ""} ${x.apellidos ?? ""}`.toLowerCase();
-        return name.includes(q) || matchesCode(query, x.id);
-      })
-      .slice(0, 8);
+    if (!query.trim()) return [];
+    return filterPeopleForQuery(all, query, { excludeId: personaId, limit: 30 });
   }, [all, query, personaId]);
 
   // Cuando se elige una persona existente, autollenamos los campos de crear (por si el usuario cambia de modo)
@@ -150,21 +144,7 @@ export default function QuickAddRelative({
       if (!parienteId) { toast.error("Selecciona o crea una persona"); setBusy(false); return; }
       if (parienteId === personaId) { toast.error("No puedes vincular a la misma persona"); setBusy(false); return; }
 
-      // Guard: evitar relaciones contradictorias entre las mismas dos personas
-      // (p.ej. ya son padre/madre/hijo y se intenta agregar como cónyuge, o viceversa).
-      const { data: existentes } = await supabase
-        .from("relaciones").select("tipo")
-        .or(`and(persona_id.eq.${personaId},pariente_id.eq.${parienteId}),and(persona_id.eq.${parienteId},pariente_id.eq.${personaId})`);
-      const tipos = new Set((existentes ?? []).map((r: any) => r.tipo));
       const dbTipo = dbTipoFor(tipo);
-      const esFamiliar = (t: string) => ["padre", "madre", "hijo"].includes(t);
-      const incompatibles =
-        (dbTipo === "conyuge" && [...tipos].some(esFamiliar)) ||
-        (esFamiliar(dbTipo) && tipos.has("conyuge"));
-      if (incompatibles) {
-        toast.error("Esta persona ya tiene una relación incompatible (padre/madre/hijo o cónyuge). Edita la relación existente primero.");
-        setBusy(false); return;
-      }
 
       // Crea/asegura ambos sentidos de la relación con UPSERT para tolerar
       // re-vinculaciones y evitar que falle silenciosamente si ya existe una
@@ -180,6 +160,58 @@ export default function QuickAddRelative({
         .from("relaciones")
         .upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
       if (eUp) throw eUp;
+
+      // Si se agrega un hijo/a desde una persona que ya tiene cónyuge, unión civil
+      // o conviviente, el niño debe quedar conectado a ambos lados. Esto mantiene
+      // sincronizadas las fichas de cónyuges, padres, hermanos y árbol.
+      if (dbTipo === "hijo") {
+        const { data: partners } = await supabase
+          .from("relaciones")
+          .select("pariente_id, pariente:personas!relaciones_pariente_id_fkey(id,sexo)")
+          .eq("user_id", user.id)
+          .eq("persona_id", personaId)
+          .eq("tipo", "conyuge" as any);
+
+        const parentRows = (partners ?? [])
+          .filter((r: any) => r.pariente_id && r.pariente_id !== parienteId)
+          .flatMap((r: any) => {
+            const parentType = r.pariente?.sexo === "femenino" ? "madre" : "padre";
+            return [
+              { user_id: user.id, persona_id: parienteId, pariente_id: r.pariente_id, tipo: parentType as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const },
+              { user_id: user.id, persona_id: r.pariente_id, pariente_id: parienteId, tipo: "hijo" as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const },
+            ];
+          });
+        if (parentRows.length > 0) {
+          const { error: eParents } = await supabase
+            .from("relaciones")
+            .upsert(parentRows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
+          if (eParents) throw eParents;
+        }
+      }
+
+      // Si se agrega un padre o madre y ya existe el otro progenitor, conecta a
+      // ambos como pareja/parentalidad para que los hermanos y fichas familiares
+      // se reconstruyan desde cualquier vista.
+      if (dbTipo === "padre" || dbTipo === "madre") {
+        const otherType = dbTipo === "padre" ? "madre" : "padre";
+        const { data: otherParent } = await supabase
+          .from("relaciones")
+          .select("pariente_id")
+          .eq("user_id", user.id)
+          .eq("persona_id", personaId)
+          .eq("tipo", otherType as any)
+          .maybeSingle();
+        if (otherParent?.pariente_id && otherParent.pariente_id !== parienteId) {
+          const spouseRows = [
+            { user_id: user.id, persona_id: parienteId, pariente_id: otherParent.pariente_id, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const },
+            { user_id: user.id, persona_id: otherParent.pariente_id, pariente_id: parienteId, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const },
+          ];
+          const { error: eSpouse } = await supabase
+            .from("relaciones")
+            .upsert(spouseRows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
+          if (eSpouse) throw eSpouse;
+        }
+      }
 
       // === Propagación automática de padres al agregar hermano/a ===
       if (dbTipo === "hermano") {
@@ -213,7 +245,7 @@ export default function QuickAddRelative({
       toast.success(`${labels[tipo]} ${mode === "buscar" ? "vinculado/a" : "agregado/a"}`);
       setOpen(false);
       setNombres(""); setApellidos(""); setNacAprox(""); setQuery(""); setPicked(null);
-      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: personaId } }));
+      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: personaId, relatedPersonId: parienteId, table: "relaciones" } }));
       onAdded?.();
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo agregar");

@@ -85,7 +85,17 @@ export default function PersonaDetail() {
   const rtReloadKey = useRealtimeReload(["personas", "relaciones", "eventos", "documentos", "fotos"], user?.id ?? null);
 
   useEffect(() => {
+    if (editMode && !isNew) {
+      document.body.dataset.geneiaiEditing = "1";
+      return () => {
+        if (document.body.dataset.geneiaiEditing === "1") delete document.body.dataset.geneiaiEditing;
+      };
+    }
+  }, [editMode, isNew]);
+
+  useEffect(() => {
     if (!idValid) { setFetching(false); return; }
+    if (!isNew && editMode) return;
     (async () => {
       try {
         setFetching(true); setFetchError(null); setNotFound(false);
@@ -117,7 +127,7 @@ export default function PersonaDetail() {
         setFetchError(e?.message ?? "Error al cargar la persona");
       } finally { setFetching(false); }
     })();
-  }, [id, isNew, idValid, rtReloadKey]);
+  }, [id, isNew, idValid, rtReloadKey, editMode]);
 
 
 
@@ -138,28 +148,12 @@ export default function PersonaDetail() {
       const { error } = await supabase.from("personas").update(payload).eq("id", id!);
       setLoading(false);
       if (error) return toast.error(error.message);
+      autoSaveSignature.current = JSON.stringify(payload);
+      setEditMode(false);
+      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "personas", personId: id } }));
       toast.success("Cambios guardados");
     }
   };
-
-  useEffect(() => {
-    if (isNew || !editMode || !id || fetching || notFound) return;
-    const payload = { ...p };
-    delete payload.id;
-    const signature = JSON.stringify(payload);
-    if (!signature || signature === autoSaveSignature.current) return;
-    const timer = window.setTimeout(async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-      const clean = { ...payload, user_id: user.id };
-      const { error } = await supabase.from("personas").update(clean).eq("id", id);
-      if (!error) {
-        autoSaveSignature.current = signature;
-        toast.success("Ficha autoguardada", { duration: 1200 });
-      }
-    }, 1400);
-    return () => window.clearTimeout(timer);
-  }, [p, editMode, id, isNew, fetching, notFound]);
 
   const eliminar = async () => {
     if (!confirm("¿Eliminar esta persona y sus relaciones?")) return;
@@ -537,7 +531,7 @@ export default function PersonaDetail() {
           <Card className="archivo-card overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 pb-3">
               <CardTitle className="text-base">{isNew ? "Crear persona" : "Editar información"}</CardTitle>
-              {!isNew && <Button size="sm" variant="ghost" onClick={() => setEditMode(false)}>Cerrar edición</Button>}
+              {!isNew && <Button size="sm" variant="ghost" onClick={save} disabled={loading}>{loading ? "Guardando…" : "Guardar y cerrar"}</Button>}
             </CardHeader>
             <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
             <div><Label>Nombres</Label><Input value={p.nombres ?? ""} onChange={(e) => set("nombres", e.target.value)} /></div>
@@ -1182,6 +1176,8 @@ function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, relo
 
 function EventosPanel({ personaId, eventos, reload, disabled }: any) {
   const [draft, setDraft] = useState({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
   const add = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
     const payload: any = { ...draft, user_id: user.id, persona_id: personaId, fecha: draft.fecha || null };
@@ -1191,6 +1187,26 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
     reload();
   };
   const del = async (id: string) => { await supabase.from("eventos").delete().eq("id", id); reload(); };
+  const startEdit = (e: any) => {
+    setEditingId(e.id);
+    setEditDraft({
+      tipo: e.tipo ?? "otro",
+      fecha: e.fecha ?? "",
+      lugar_original: e.lugar_original ?? "",
+      descripcion: e.descripcion ?? "",
+      certeza: e.certeza ?? "probable",
+    });
+  };
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const { error } = await supabase
+      .from("eventos")
+      .update({ ...editDraft, fecha: editDraft.fecha || null })
+      .eq("id", editingId);
+    if (error) return toast.error(error.message);
+    setEditingId(null);
+    reload();
+  };
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero para añadir eventos.</p>;
   return (
     <Card className="archivo-card"><CardContent className="space-y-4 pt-6">
@@ -1206,9 +1222,31 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
         <Button onClick={add}>Añadir evento</Button>
       </div>
       <ul className="divide-y divide-border">{eventos.map((e: any) => (
-        <li key={e.id} className="flex items-center justify-between py-2 text-sm">
-          <span><strong className="capitalize">{e.tipo}</strong> · {e.fecha ?? "s/f"} · {e.lugar_original ?? ""} <em className="text-muted-foreground">{e.descripcion}</em></span>
-          <Button size="sm" variant="ghost" onClick={() => del(e.id)}><Trash2 className="h-4 w-4" /></Button>
+        <li key={e.id} className="py-2 text-sm">
+          {editingId === e.id ? (
+            <div className="grid gap-2 md:grid-cols-5">
+              <Select value={editDraft.tipo} onValueChange={(v) => setEditDraft({ ...editDraft, tipo: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{["nacimiento","bautismo","matrimonio","inmigracion","viaje","residencia","censo","defuncion","entierro","otro"].map((t) =>
+                  <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+              <Input type="date" value={editDraft.fecha} onChange={(ev) => setEditDraft({ ...editDraft, fecha: ev.target.value })} />
+              <Input placeholder="Lugar" value={editDraft.lugar_original} onChange={(ev) => setEditDraft({ ...editDraft, lugar_original: ev.target.value })} />
+              <Input placeholder="Descripción" value={editDraft.descripcion} onChange={(ev) => setEditDraft({ ...editDraft, descripcion: ev.target.value })} />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveEdit}>Guardar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancelar</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <span><strong className="capitalize">{e.tipo}</strong> · {e.fecha ?? "s/f"} · {e.lugar_original ?? ""} <em className="text-muted-foreground">{e.descripcion}</em></span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => startEdit(e)}><Pencil className="h-4 w-4" /></Button>
+                <Button size="sm" variant="ghost" onClick={() => del(e.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
         </li>
       ))}</ul>
     </CardContent></Card>
