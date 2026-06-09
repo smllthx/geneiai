@@ -10,6 +10,7 @@ import { UserPlus, Search } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { inferSexFromName } from "@/lib/personAutoRules";
+import { fetchAllPeople } from "@/lib/peopleData";
 
 type Tipo =
   | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
@@ -62,12 +63,9 @@ export default function QuickAddRelative({
 
   useEffect(() => {
     if (!open) return;
-    supabase
-      .from("personas")
-      .select("id, nombres, apellidos, variantes_nombre, sexo, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin, defuncion_fecha")
-      .order("apellidos", { ascending: true })
-      .order("nombres", { ascending: true })
-      .then(({ data }) => setAll(data ?? []));
+    fetchAllPeople("id, nombres, apellidos, variantes_nombre, sexo, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin, defuncion_fecha")
+      .then(setAll)
+      .catch((e) => toast.error(e.message ?? "No se pudieron cargar todas las personas"));
   }, [open]);
 
   // Mantener el sexo coherente con el tipo elegido (padre→masculino, madre→femenino)

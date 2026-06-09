@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound, GitBranch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
@@ -53,6 +53,102 @@ const UsageBox = ({ label, usage }: { label: string; usage: AiUsagePeriod }) => 
     </p>
   </div>
 );
+
+function TreesAdminCard() {
+  const [trees, setTrees] = useState<any[]>([]);
+  const [activeTree, setActiveTree] = useState<string>("");
+  const [newName, setNewName] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const loadTrees = async () => {
+    setLoading(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+      const [{ data: arboles }, { data: profile }] = await Promise.all([
+        (supabase as any).from("arboles").select("*").order("created_at", { ascending: true }),
+        supabase.from("profiles").select("active_arbol_id").eq("id", user.id).maybeSingle(),
+      ]);
+      setTrees(arboles ?? []);
+      setActiveTree((profile as any)?.active_arbol_id ?? arboles?.[0]?.id ?? "");
+    } catch {
+      setTrees([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadTrees(); }, []);
+
+  const createTree = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return toast.error("Sesión requerida");
+    const name = newName.trim();
+    if (!name) return toast.error("Escribe un nombre para el árbol");
+    const { data, error } = await (supabase as any)
+      .from("arboles")
+      .insert({ user_id: user.id, nombre: name })
+      .select("id")
+      .single();
+    if (error) return toast.error(error.message);
+    await supabase.from("profiles").update({ active_arbol_id: data.id } as any).eq("id", user.id);
+    setNewName("");
+    toast.success("Árbol creado y seleccionado");
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "arboles" } }));
+    loadTrees();
+  };
+
+  const selectTree = async (id: string) => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+    const { error } = await supabase.from("profiles").update({ active_arbol_id: id } as any).eq("id", user.id);
+    if (error) return toast.error(error.message);
+    setActiveTree(id);
+    toast.success("Árbol activo cambiado");
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "arboles" } }));
+  };
+
+  return (
+    <Card className="archivo-card mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 font-serif text-xl">
+          <GitBranch className="h-5 w-5" /> Árboles separados
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Administra más de un árbol dentro de la misma cuenta. Cada árbol puede quedar separado para no mezclar personas, relaciones, eventos y fuentes.
+        </p>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Cargando árboles…</p>
+        ) : trees.length === 0 ? (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            La base aún no tiene la tabla de árboles aplicada. Sube la migración de Supabase para activar esta administración.
+          </p>
+        ) : (
+          <div className="grid gap-2">
+            {trees.map((tree) => (
+              <button
+                key={tree.id}
+                onClick={() => selectTree(tree.id)}
+                className={`rounded-xl border px-3 py-2 text-left transition ${
+                  activeTree === tree.id ? "border-primary bg-primary/15 text-primary" : "border-border bg-card/45 hover:bg-foreground/5"
+                }`}
+              >
+                <div className="font-medium">{tree.nombre}</div>
+                <div className="text-xs text-muted-foreground">{tree.is_default ? "Árbol principal" : "Árbol adicional"}</div>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre del nuevo árbol" />
+          <Button onClick={createTree}><Plus className="h-4 w-4" /> Crear árbol</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Configuracion() {
   const [variantes, setVariantes] = useState<any[]>([]);
@@ -389,6 +485,7 @@ export default function Configuracion() {
       </Card>
 
       <AppCenterConfig />
+      <TreesAdminCard />
       <MenusConfig />
 
       <Card className="archivo-card mb-6">

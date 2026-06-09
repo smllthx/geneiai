@@ -11,6 +11,7 @@ import { personaCode } from "@/lib/personaCode";
 import { fusionarPersonas } from "@/lib/mergePersonas";
 import { getRecent } from "@/lib/recent";
 import { filterPeopleForQuery } from "@/lib/personSearch";
+import { fetchAllPeople } from "@/lib/peopleData";
 
 function PersonaPicker({ label, value, onChange, personas, exclude }: {
   label: string; value: any; onChange: (p: any) => void; personas: any[]; exclude?: string;
@@ -94,8 +95,11 @@ export default function Fusionar() {
   const [merging, setMerging] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase.from("personas").select("*").order("apellidos");
-    setPersonas(data ?? []);
+    try {
+      setPersonas(await fetchAllPeople<any>("*"));
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudieron cargar todas las personas");
+    }
   };
   useEffect(() => { load(); }, []);
 

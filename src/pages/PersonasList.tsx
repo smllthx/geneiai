@@ -6,33 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered, Link2 } from "lucide-react";
+import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered, Link2, RefreshCw } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";
 import { filterPeopleForQuery } from "@/lib/personSearch";
+import { fetchAllPeople } from "@/lib/peopleData";
+
+type LinkFilter = "todas" | "en_arbol" | "sin_vincular";
 
 export default function PersonasList() {
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<any[]>([]);
   const [relaciones, setRelaciones] = useState<any[]>([]);
   const [q, setQ] = useState("");
+  const [linkFilter, setLinkFilter] = useState<LinkFilter>("todas");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data }, { data: rels }] = await Promise.all([
-        supabase.from("personas").select("*").order("apellidos"),
-        supabase.from("relaciones").select("persona_id,pariente_id,tipo"),
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [people, { data: rels }] = await Promise.all([
+        fetchAllPeople<any>("*"),
+        supabase.from("relaciones").select("persona_id,pariente_id,tipo").limit(50000),
       ]);
-      setPersonas(data ?? []);
+      setPersonas(people);
       setRelaciones(rels ?? []);
-    })();
-  }, []);
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudieron cargar todas las personas");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = useMemo(() => {
-    if (!q.trim()) return personas;
-    return filterPeopleForQuery(personas, q, { limit: 500 });
-  }, [personas, q]);
+  useEffect(() => { load(); }, []);
 
   const linkedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -42,6 +49,16 @@ export default function PersonasList() {
     });
     return ids;
   }, [relaciones]);
+
+  const filtered = useMemo(() => {
+    const base = personas.filter((p) => {
+      if (linkFilter === "en_arbol") return linkedIds.has(p.id);
+      if (linkFilter === "sin_vincular") return !linkedIds.has(p.id);
+      return true;
+    });
+    if (!q.trim()) return base;
+    return filterPeopleForQuery(base, q, { limit: 5000 });
+  }, [personas, q, linkFilter, linkedIds]);
 
   const generarSugerenciasApellido = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -101,6 +118,9 @@ export default function PersonasList() {
             >
               <Link2 className="h-4 w-4" /> Sugerir relaciones
             </Button>
+            <Button variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
+            </Button>
             <Button onClick={() => navigate("/personas/nueva")}>
               <Plus className="h-4 w-4" /> Nueva persona
             </Button>
@@ -113,6 +133,23 @@ export default function PersonasList() {
         onChange={(e) => setQ(e.target.value)}
         className="mb-4 max-w-md"
       />
+      <div className="mb-3 flex flex-wrap gap-2">
+        {([
+          ["todas", "Todas"],
+          ["en_arbol", "En árbol"],
+          ["sin_vincular", "Sin vincular"],
+        ] as [LinkFilter, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setLinkFilter(key)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              linkFilter === key ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-foreground/5"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="mb-3 text-xs text-muted-foreground">
         Mostrando {filtered.length} de {personas.length} persona(s). Incluye vinculadas al árbol, importadas, sueltas y pendientes.
       </div>

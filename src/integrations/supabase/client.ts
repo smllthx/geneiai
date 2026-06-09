@@ -76,7 +76,7 @@ supabase.functions.invoke = (async (functionName: string, options?: any) => {
   } else if (normalized.includes("insufficient_quota") || normalized.includes("quota") || normalized.includes("429")) {
     friendly = "No quedan créditos o cuota disponible en OpenAI. Recarga billing en OpenAI o revisa los límites de tu proyecto.";
   } else if (normalized.includes("non-2xx") || normalized.includes("edge function")) {
-    friendly = `La opción IA “${functionName}” no pudo procesar. Revisa API key, créditos de OpenAI y permisos del proyecto.`;
+    friendly = `La opción IA “${functionName}” no pudo procesar. Revisa tu API key de OpenAI, cuota/créditos y permisos del proyecto.`;
   }
 
   (result.error as any).message = friendly;

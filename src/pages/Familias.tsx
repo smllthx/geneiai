@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { personaCode } from "@/lib/personaCode";
+import { fetchAllPeople } from "@/lib/peopleData";
 
 export default function Familias() {
   const { user } = useAuth();
@@ -25,9 +26,9 @@ export default function Familias() {
   const [personQuery, setPersonQuery] = useState("");
 
   const load = async () => {
-    const [{ data: f }, { data: p }] = await Promise.all([
+    const [{ data: f }, p] = await Promise.all([
       supabase.from("familias").select("*").order("created_at", { ascending: false }),
-      supabase.from("personas").select("id,nombres,apellidos").order("apellidos"),
+      fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha"),
     ]);
     setFamilias(f ?? []); setPersonas(p ?? []);
   };
