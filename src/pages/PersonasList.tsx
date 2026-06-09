@@ -11,7 +11,7 @@ import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";
 import { filterPeopleForQuery } from "@/lib/personSearch";
-import { fetchAllPeople } from "@/lib/peopleData";
+import { fetchAllPeople, fetchAllRelations } from "@/lib/peopleData";
 
 type LinkFilter = "todas" | "en_arbol" | "sin_vincular";
 
@@ -26,12 +26,12 @@ export default function PersonasList() {
   const load = async () => {
     setLoading(true);
     try {
-      const [people, { data: rels }] = await Promise.all([
+      const [people, rels] = await Promise.all([
         fetchAllPeople<any>("*"),
-        supabase.from("relaciones").select("persona_id,pariente_id,tipo").limit(50000),
+        fetchAllRelations<any>("persona_id,pariente_id,tipo"),
       ]);
       setPersonas(people);
-      setRelaciones(rels ?? []);
+      setRelaciones(rels);
     } catch (e: any) {
       toast.error(e.message ?? "No se pudieron cargar todas las personas");
     } finally {

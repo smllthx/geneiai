@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { personaCode } from "@/lib/personaCode";
-import { fetchAllPeople } from "@/lib/peopleData";
+import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 export default function Familias() {
   const { user } = useAuth();
@@ -26,9 +26,11 @@ export default function Familias() {
   const [personQuery, setPersonQuery] = useState("");
 
   const load = async () => {
+    const activeTreeId = await getActiveTreeId(user?.id ?? null);
+    const familiasQuery = supabase.from("familias").select("*").order("created_at", { ascending: false });
     const [{ data: f }, p] = await Promise.all([
-      supabase.from("familias").select("*").order("created_at", { ascending: false }),
-      fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha"),
+      activeTreeId ? (familiasQuery as any).or(`arbol_id.eq.${activeTreeId},arbol_id.is.null`) : familiasQuery,
+      fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
     ]);
     setFamilias(f ?? []); setPersonas(p ?? []);
   };
@@ -37,9 +39,10 @@ export default function Familias() {
 
   const crear = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
-    const { error } = await supabase.from("familias").insert({
+    const activeTreeId = await getActiveTreeId(user.id);
+    const { error } = await supabase.from("familias").insert(withTreeScope({
       user_id: user.id, nombre, notas: notas || null, head_persona_id: head || null,
-    });
+    }, activeTreeId));
     if (error) return toast.error(error.message);
     toast.success("Familia creada");
     setOpen(false); setNombre(""); setNotas(""); setHead(""); setPersonQuery(""); load();

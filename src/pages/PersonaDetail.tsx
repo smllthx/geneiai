@@ -41,6 +41,7 @@ import VincularFuente from "@/components/VincularFuente";
 import RecentChanges from "@/components/RecentChanges";
 import NombresMultilingues from "@/components/NombresMultilingues";
 import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
+import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -100,7 +101,8 @@ export default function PersonaDetail() {
     (async () => {
       try {
         setFetching(true); setFetchError(null); setNotFound(false);
-        const { data: ap } = await supabase.from("personas").select("*").order("apellidos");
+        const activeTreeId = await getActiveTreeId(user?.id ?? null);
+        const ap = await fetchAllPeople<any>("*", { treeId: activeTreeId });
         setAllPersonas(ap ?? []);
         if (isNew) { setFetching(false); return; }
         const { data, error } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
@@ -137,11 +139,12 @@ export default function PersonaDetail() {
   const save = async () => {
     setLoading(true);
     const user = (await supabase.auth.getUser()).data.user!;
+    const activeTreeId = await getActiveTreeId(user.id);
     const payload = { ...p, user_id: user.id };
     if (!payload.sexo) payload.sexo = inferSexFromName(payload.nombres);
     delete payload.id;
     if (isNew) {
-      const { data, error } = await supabase.from("personas").insert(payload).select().single();
+      const { data, error } = await supabase.from("personas").insert(withTreeScope(payload, activeTreeId)).select().single();
       setLoading(false);
       if (error) return toast.error(error.message);
       toast.success("Persona creada");
@@ -1077,17 +1080,18 @@ function RelacionesPanel({ personaId, personaSexo, relaciones, allPersonas, relo
   const add = async () => {
     if (!picked) return;
     const user = (await supabase.auth.getUser()).data.user!;
+    const activeTreeId = await getActiveTreeId(user.id);
     const isExtended = !["padre", "madre", "conyuge", "hijo", "hermano"].includes(tipo);
     const dbTipo = isExtended ? "otro" : tipo;
     const notas = isExtended ? `relación genealógica: ${tipo.replace(/_/g, " ")}` : null;
-    const { error } = await supabase.from("relaciones").insert({ user_id: user.id, persona_id: personaId, pariente_id: picked.id, tipo: dbTipo as any, notas });
+    const { error } = await supabase.from("relaciones").insert(withTreeScope({ user_id: user.id, persona_id: personaId, pariente_id: picked.id, tipo: dbTipo as any, notas }, activeTreeId));
     if (error) return toast.error(error.message);
     const inv = tipo === "padre" || tipo === "madre" ? "hijo"
       : tipo === "hijo" ? (personaSexo === "femenino" ? "madre" : "padre")
       : tipo === "conyuge" ? "conyuge"
       : tipo === "hermano" ? "hermano" : null;
     if (inv) {
-      await supabase.from("relaciones").insert({ user_id: user.id, persona_id: picked.id, pariente_id: personaId, tipo: inv as any });
+      await supabase.from("relaciones").insert(withTreeScope({ user_id: user.id, persona_id: picked.id, pariente_id: personaId, tipo: inv as any }, activeTreeId));
     }
     setQuery(""); setPicked(null); reload();
   };
@@ -1183,7 +1187,8 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
   const [editDraft, setEditDraft] = useState({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
   const add = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
-    const payload: any = { ...draft, user_id: user.id, persona_id: personaId, fecha: draft.fecha || null };
+    const activeTreeId = await getActiveTreeId(user.id);
+    const payload: any = withTreeScope({ ...draft, user_id: user.id, persona_id: personaId, fecha: draft.fecha || null }, activeTreeId);
     const { error } = await supabase.from("eventos").insert(payload);
     if (error) return toast.error(error.message);
     setDraft({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });

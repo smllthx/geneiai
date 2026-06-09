@@ -10,7 +10,7 @@ import { UserPlus, Search } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { inferSexFromName } from "@/lib/personAutoRules";
-import { fetchAllPeople } from "@/lib/peopleData";
+import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type Tipo =
   | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
@@ -116,6 +116,7 @@ export default function QuickAddRelative({
     setBusy(true);
     try {
       const user = (await supabase.auth.getUser()).data.user!;
+      const activeTreeId = await getActiveTreeId(user.id);
       let parienteId: string | null = null;
 
       if (mode === "buscar" && picked) {
@@ -126,14 +127,14 @@ export default function QuickAddRelative({
         }
         const { data: nueva, error: e1 } = await supabase
           .from("personas")
-          .insert({
+          .insert(withTreeScope({
             user_id: user.id,
             nombres: nombres.trim(),
             apellidos: apellidos.trim(),
             sexo: sexo || inferSexFromName(nombres) || null,
             nac_fecha_aprox: nacAprox || null,
             certeza: "probable",
-          })
+          }, activeTreeId))
           .select()
           .single();
         if (e1) throw e1;
@@ -158,8 +159,8 @@ export default function QuickAddRelative({
       const inv = inverseFor(tipo, personaSexo);
       const invDbTipo = dbTipoFor(inv);
       const rows = [
-        { user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: dbTipo as any, notas: relationNoteFor(tipo), naturaleza: "biologica" as const, certeza: "probable" as const },
-        { user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: invDbTipo as any, notas: relationNoteFor(inv), naturaleza: "biologica" as const, certeza: "probable" as const },
+        withTreeScope({ user_id: user.id, persona_id: personaId, pariente_id: parienteId, tipo: dbTipo as any, notas: relationNoteFor(tipo), naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
+        withTreeScope({ user_id: user.id, persona_id: parienteId, pariente_id: personaId, tipo: invDbTipo as any, notas: relationNoteFor(inv), naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
       ];
       const { error: eUp } = await supabase
         .from("relaciones")
@@ -182,8 +183,8 @@ export default function QuickAddRelative({
           .flatMap((r: any) => {
             const parentType = r.pariente?.sexo === "femenino" ? "madre" : "padre";
             return [
-              { user_id: user.id, persona_id: parienteId, pariente_id: r.pariente_id, tipo: parentType as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const },
-              { user_id: user.id, persona_id: r.pariente_id, pariente_id: parienteId, tipo: "hijo" as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const },
+              withTreeScope({ user_id: user.id, persona_id: parienteId, pariente_id: r.pariente_id, tipo: parentType as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
+              withTreeScope({ user_id: user.id, persona_id: r.pariente_id, pariente_id: parienteId, tipo: "hijo" as any, notas: "vinculado por cónyuge/unión al agregar hijo", naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
             ];
           });
         if (parentRows.length > 0) {
@@ -208,8 +209,8 @@ export default function QuickAddRelative({
           .maybeSingle();
         if (otherParent?.pariente_id && otherParent.pariente_id !== parienteId) {
           const spouseRows = [
-            { user_id: user.id, persona_id: parienteId, pariente_id: otherParent.pariente_id, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const },
-            { user_id: user.id, persona_id: otherParent.pariente_id, pariente_id: parienteId, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const },
+            withTreeScope({ user_id: user.id, persona_id: parienteId, pariente_id: otherParent.pariente_id, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
+            withTreeScope({ user_id: user.id, persona_id: otherParent.pariente_id, pariente_id: parienteId, tipo: "conyuge" as any, notas: "parentalidad compartida", naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId),
           ];
           const { error: eSpouse } = await supabase
             .from("relaciones")
@@ -231,14 +232,14 @@ export default function QuickAddRelative({
         const upsert = async (hijoId: string, padreId: string, tipoPadre: "padre" | "madre") => {
           const { data: ya } = await supabase.from("relaciones").select("id")
             .eq("persona_id", hijoId).eq("pariente_id", padreId).eq("tipo", tipoPadre as any).maybeSingle();
-          if (!ya) await supabase.from("relaciones").insert({
+          if (!ya) await supabase.from("relaciones").insert(withTreeScope({
             user_id: user.id, persona_id: hijoId, pariente_id: padreId, tipo: tipoPadre as any,
-          });
+          }, activeTreeId));
           const { data: ya2 } = await supabase.from("relaciones").select("id")
             .eq("persona_id", padreId).eq("pariente_id", hijoId).eq("tipo", "hijo" as any).maybeSingle();
-          if (!ya2) await supabase.from("relaciones").insert({
+          if (!ya2) await supabase.from("relaciones").insert(withTreeScope({
             user_id: user.id, persona_id: padreId, pariente_id: hijoId, tipo: "hijo" as any,
-          });
+          }, activeTreeId));
         };
         for (const t of ["padre", "madre"] as const) {
           const a = mapA.get(t), b = mapB.get(t);

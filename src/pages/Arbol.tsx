@@ -20,6 +20,7 @@ import { notify } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
+import { fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 
 type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
@@ -78,9 +79,10 @@ export default function Arbol() {
     (async () => {
       if (!initialTreeLoaded.current) setLoadingTree(true);
       const user = (await supabase.auth.getUser()).data.user;
-      const [{ data: p }, { data: r }, profRes, { data: docs }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url").order("apellidos").limit(10000),
-        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo,notas").limit(20000),
+      const activeTreeId = await getActiveTreeId(user?.id ?? null);
+      const [p, r, profRes, { data: docs }] = await Promise.all([
+        fetchAllPeople<any>("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId }),
+        fetchAllRelations<any>("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId: activeTreeId }),
         user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
         supabase.from("documentos").select("personas_mencionadas").limit(5000),
       ]);
@@ -183,6 +185,7 @@ export default function Arbol() {
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");
     const user = (await supabase.auth.getUser()).data.user!;
+    const activeTreeId = await getActiveTreeId(user.id);
     const source = byId.get(sourceId);
     let pairs: { persona_id: string; pariente_id: string; tipo: RelTipo }[] = [];
     if (tipo === "padre" || tipo === "madre") {
@@ -211,7 +214,7 @@ export default function Arbol() {
     }
     if (tipo === "padre") await supabase.from("personas").update({ sexo: "masculino" }).eq("id", targetId).is("sexo", null);
     if (tipo === "madre") await supabase.from("personas").update({ sexo: "femenino" }).eq("id", targetId).is("sexo", null);
-    const rows = pairs.map((p) => ({ ...p, user_id: user.id, naturaleza: "biologica" as const, certeza: "probable" as const }));
+    const rows = pairs.map((p) => withTreeScope({ ...p, user_id: user.id, naturaleza: "biologica" as const, certeza: "probable" as const }, activeTreeId));
     const { data, error } = await supabase.from("relaciones").upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true }).select("id");
     if (error) return toast.error(error.message);
     const ids = (data ?? []).map((d: any) => d.id);

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
 import { cn } from "@/lib/utils";
 import { inferLivingStatus, inferNationalityFromPlace, inferSexFromName } from "@/lib/personAutoRules";
+import { getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 /**
  * "Agregar persona" — layout inspirado en FamilySearch (limpio, columna única,
@@ -163,7 +164,8 @@ export default function NuevaPersona() {
         notas: p.notas || null,
         certeza: p.certeza,
       };
-      const { data, error } = await supabase.from("personas").insert(payload).select().single();
+      const activeTreeId = await getActiveTreeId(user.id);
+      const { data, error } = await supabase.from("personas").insert(withTreeScope(payload, activeTreeId)).select().single();
       if (error) throw error;
       toast.success("Persona agregada");
       navigate(after === "tree" ? "/arbol" : `/personas/${data.id}`);
