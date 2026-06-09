@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 // SectionHeader removed — replaced by minimal sticky header
@@ -42,7 +42,37 @@ const generationOptionLabel = (generations: number) => {
   return `${generations} gen · hasta ${generationName(lastLevel)}`;
 };
 
-export default function Arbol() {
+class TreeErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="mx-3 rounded-3xl border border-amber-400/30 bg-amber-500/10 p-6 text-center md:mx-6">
+        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-amber-400" />
+        <h2 className="font-display text-xl font-semibold">No se pudo mostrar el árbol</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          La app sigue funcionando. Puedes intentar recargar esta vista o abrir Personas para revisar los datos.
+        </p>
+        <p className="mt-3 rounded-xl bg-background/60 px-3 py-2 font-mono text-xs text-muted-foreground">
+          {this.state.error.message}
+        </p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button onClick={() => this.setState({ error: null })}>
+            <RefreshCw className="h-4 w-4" /> Reintentar árbol
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/personas">Abrir personas</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+}
+
+function ArbolContent() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const centroParam = searchParams.get("centro");
@@ -162,6 +192,7 @@ export default function Arbol() {
   };
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
+  const persona = center ? byId.get(center) : undefined;
 
   // Use unified kinship helpers — same logic everywhere in the app
   const padresDe = (pid: string) => kPadresDe(pid, rels as any, byId);
@@ -235,8 +266,6 @@ export default function Arbol() {
     window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: sourceId } }));
     reload();
   };
-
-  const persona = center ? byId.get(center) : undefined;
 
   // Relation editor (delete or change type)
   const [editRel, setEditRel] = useState<{ a: PersonaLite; b: PersonaLite } | null>(null);
@@ -983,5 +1012,13 @@ export default function Arbol() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function Arbol() {
+  return (
+    <TreeErrorBoundary>
+      <ArbolContent />
+    </TreeErrorBoundary>
   );
 }

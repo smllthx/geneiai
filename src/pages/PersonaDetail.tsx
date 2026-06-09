@@ -456,7 +456,7 @@ export default function PersonaDetail() {
       )}
 
       <Tabs defaultValue="detalles">
-        <TabsList className="-mx-3 flex h-auto w-auto justify-start gap-0 overflow-x-auto rounded-none border-b border-cyan-400/60 bg-zinc-950 p-0 text-white md:mx-0 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="-mx-3 mb-3 flex h-auto w-auto flex-wrap justify-start gap-1 rounded-none border-b border-cyan-400/60 bg-zinc-950 p-2 text-white md:mx-0 md:rounded-2xl md:border">
           {[
             ["detalles", "Detalles"],
             ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
@@ -472,7 +472,7 @@ export default function PersonaDetail() {
             <TabsTrigger
               key={v}
               value={v}
-              className="relative shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-sm font-bold text-white/70 shadow-none transition data-[state=active]:border-cyan-400 data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="relative min-h-10 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/70 shadow-none transition hover:bg-white/10 data-[state=active]:border-cyan-400 data-[state=active]:bg-cyan-400/15 data-[state=active]:text-white data-[state=active]:shadow-none sm:text-sm"
             >
               {l}
             </TabsTrigger>

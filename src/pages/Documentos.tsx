@@ -40,20 +40,28 @@ export default function Documentos() {
   const selectedDoc = useMemo(() => items.find((d) => d.id === docId) ?? null, [items, docId]);
 
   const load = async () => {
-    const treeId = await getActiveTreeId();
-    const docsQuery = supabase.from("documentos").select("*").order("created_at", { ascending: false });
-    const [{ data }, ps] = await Promise.all([
-      applyTreeScope(docsQuery as any, treeId),
-      fetchAllPeople<any>("id,nombres,apellidos", { treeId }),
-    ]);
-    setItems(data ?? []); setPersonas(ps ?? []);
-    // Genera signed URLs para thumbnails
-    const t: Record<string, string> = {};
-    await Promise.all((data ?? []).filter((d) => d.archivo_path).map(async (d) => {
-      const { data: s } = await supabase.storage.from("documentos").createSignedUrl(d.archivo_path, 3600);
-      if (s?.signedUrl) t[d.id] = s.signedUrl;
-    }));
-    setThumbs(t);
+    try {
+      const treeId = await getActiveTreeId();
+      const docsQuery = supabase.from("documentos").select("*").order("created_at", { ascending: false });
+      const [{ data, error }, ps] = await Promise.all([
+        applyTreeScope(docsQuery as any, treeId),
+        fetchAllPeople<any>("id,nombres,apellidos", { treeId }),
+      ]);
+      if (error) throw error;
+      setItems(data ?? []); setPersonas(ps ?? []);
+      // Genera signed URLs para thumbnails
+      const t: Record<string, string> = {};
+      await Promise.all((data ?? []).filter((d) => d.archivo_path).map(async (d) => {
+        const { data: s } = await supabase.storage.from("documentos").createSignedUrl(d.archivo_path, 3600);
+        if (s?.signedUrl) t[d.id] = s.signedUrl;
+      }));
+      setThumbs(t);
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudieron cargar los documentos");
+      setItems([]);
+      setPersonas([]);
+      setThumbs({});
+    }
   };
   useEffect(() => { load(); }, []);
   useEffect(() => {

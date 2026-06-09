@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import CertezaBadge from "@/components/CertezaBadge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { GitBranch, UserRound } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
+import { toast } from "sonner";
+import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 const year = (value?: string | null) => {
   if (!value) return null;
@@ -45,12 +46,19 @@ export default function Apellidos() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("personas")
-        .select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha,nac_lugar,nacionalidad,certeza,viva,foto_url,updated_at")
-        .order("apellidos", { ascending: true })
-        .order("nombres", { ascending: true });
-      setPersonas(data ?? []);
+      try {
+        const treeId = await getActiveTreeId();
+        const data = await fetchAllPeople(
+          "id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha,nac_lugar,nacionalidad,certeza,viva,foto_url,updated_at",
+          { treeId },
+        );
+        setPersonas([...data].sort((a, b) =>
+          `${a.apellidos ?? ""} ${a.nombres ?? ""}`.localeCompare(`${b.apellidos ?? ""} ${b.nombres ?? ""}`, "es"),
+        ));
+      } catch (e: any) {
+        toast.error(e.message ?? "No se pudieron cargar los apellidos");
+        setPersonas([]);
+      }
     })();
   }, []);
 

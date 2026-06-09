@@ -14,13 +14,18 @@ import { filterPeopleForQuery } from "@/lib/personSearch";
 import { fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type LinkFilter = "todas" | "en_arbol" | "sin_vincular";
+const PEOPLE_LIST_STATE_KEY = "geneai:personas-list-state";
 
 export default function PersonasList() {
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<any[]>([]);
   const [relaciones, setRelaciones] = useState<any[]>([]);
-  const [q, setQ] = useState("");
-  const [linkFilter, setLinkFilter] = useState<LinkFilter>("todas");
+  const [q, setQ] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem(PEOPLE_LIST_STATE_KEY) || "{}").q || ""; } catch { return ""; }
+  });
+  const [linkFilter, setLinkFilter] = useState<LinkFilter>(() => {
+    try { return JSON.parse(sessionStorage.getItem(PEOPLE_LIST_STATE_KEY) || "{}").linkFilter || "todas"; } catch { return "todas"; }
+  });
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -40,6 +45,22 @@ export default function PersonasList() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    sessionStorage.setItem(PEOPLE_LIST_STATE_KEY, JSON.stringify({ q, linkFilter }));
+  }, [q, linkFilter]);
+  useEffect(() => {
+    const refreshIfNeeded = () => {
+      if (personas.length === 0 || document.visibilityState === "visible") load();
+    };
+    window.addEventListener("pageshow", refreshIfNeeded);
+    window.addEventListener("focus", refreshIfNeeded);
+    window.addEventListener("genaia:data-changed", refreshIfNeeded);
+    return () => {
+      window.removeEventListener("pageshow", refreshIfNeeded);
+      window.removeEventListener("focus", refreshIfNeeded);
+      window.removeEventListener("genaia:data-changed", refreshIfNeeded);
+    };
+  }, [personas.length]);
 
   const linkedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -154,7 +175,11 @@ export default function PersonasList() {
       <div className="mb-3 text-xs text-muted-foreground">
         Mostrando {filtered.length} de {personas.length} persona(s). Incluye vinculadas al árbol, importadas, sueltas y pendientes.
       </div>
-      {filtered.length === 0 ? (
+      {loading && personas.length === 0 ? (
+        <Card className="archivo-card"><CardContent className="py-12 text-center text-muted-foreground">
+          Cargando personas…
+        </CardContent></Card>
+      ) : filtered.length === 0 ? (
         <Card className="archivo-card"><CardContent className="py-12 text-center text-muted-foreground">
           Sin resultados. Prueba con otro nombre o código.
         </CardContent></Card>

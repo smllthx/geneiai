@@ -39,14 +39,23 @@ export default function Fotos() {
   const [detalle, setDetalle] = useState<FotoRow | null>(null);
 
   const load = async () => {
-    const treeId = await getActiveTreeId();
-    const fotosQuery = supabase.from("fotos").select("*").order("created_at", { ascending: false });
-    const [{ data: f }, p, { data: l }] = await Promise.all([
-      applyTreeScope(fotosQuery as any, treeId),
-      fetchAllPeople<Persona>("id,nombres,apellidos", { treeId }),
-      supabase.from("lugares").select("id,ciudad,pais,lat,lng"),
-    ]);
-    setFotos((f as any) ?? []); setPersonas((p as any) ?? []); setLugares((l as any) ?? []);
+    try {
+      const treeId = await getActiveTreeId();
+      const fotosQuery = supabase.from("fotos").select("*").order("created_at", { ascending: false });
+      const [{ data: f, error: fotosError }, p, { data: l, error: lugaresError }] = await Promise.all([
+        applyTreeScope(fotosQuery as any, treeId),
+        fetchAllPeople<Persona>("id,nombres,apellidos", { treeId }),
+        supabase.from("lugares").select("id,ciudad,pais,lat,lng"),
+      ]);
+      if (fotosError) throw fotosError;
+      if (lugaresError) throw lugaresError;
+      setFotos((f as any) ?? []); setPersonas((p as any) ?? []); setLugares((l as any) ?? []);
+    } catch (e: any) {
+      toast.error(e.message ?? "No se pudieron cargar las fotos");
+      setFotos([]);
+      setPersonas([]);
+      setLugares([]);
+    }
   };
   useEffect(() => { load(); }, []);
 

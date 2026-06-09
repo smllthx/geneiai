@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { personaCode } from "@/lib/personaCode";
-import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 export default function Familias() {
   const { user } = useAuth();
   const [familias, setFamilias] = useState<any[]>([]);
   const [personas, setPersonas] = useState<any[]>([]);
+  const [relaciones, setRelaciones] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [nombre, setNombre] = useState("");
   const [notas, setNotas] = useState("");
@@ -28,11 +29,12 @@ export default function Familias() {
   const load = async () => {
     const activeTreeId = await getActiveTreeId(user?.id ?? null);
     const familiasQuery = supabase.from("familias").select("*").order("created_at", { ascending: false });
-    const [{ data: f }, p] = await Promise.all([
+    const [{ data: f }, p, r] = await Promise.all([
       activeTreeId ? (familiasQuery as any).or(`arbol_id.eq.${activeTreeId},arbol_id.is.null`) : familiasQuery,
       fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
+      fetchAllRelations<any>("id,persona_id,pariente_id,tipo", { treeId: activeTreeId }),
     ]);
-    setFamilias(f ?? []); setPersonas(p ?? []);
+    setFamilias(f ?? []); setPersonas(p ?? []); setRelaciones(r ?? []);
   };
   const reloadKey = useRealtimeReload(["familias", "personas", "relaciones"], user?.id ?? null);
   useEffect(() => { load(); }, [reloadKey]);
@@ -49,6 +51,49 @@ export default function Familias() {
   };
 
   const filteredPeople = filterPeopleForQuery(personas, personQuery, { limit: 40 });
+  const familiasDerivadas = useMemo(() => {
+    if (familias.length > 0) return [];
+    const byId = new Map(personas.map((p) => [p.id, p]));
+    const childrenByParent = new Map<string, Set<string>>();
+    const spouses = new Set<string>();
+    for (const rel of relaciones) {
+      if (rel.tipo === "padre" || rel.tipo === "madre") {
+        if (!childrenByParent.has(rel.pariente_id)) childrenByParent.set(rel.pariente_id, new Set());
+        childrenByParent.get(rel.pariente_id)!.add(rel.persona_id);
+      }
+      if (rel.tipo === "conyuge") spouses.add([rel.persona_id, rel.pariente_id].sort().join(":"));
+    }
+    const derived: any[] = [];
+    spouses.forEach((pair) => {
+      const [a, b] = pair.split(":");
+      const pa = byId.get(a);
+      const pb = byId.get(b);
+      if (!pa || !pb) return;
+      const hijos = new Set([...(childrenByParent.get(a) ?? []), ...(childrenByParent.get(b) ?? [])]);
+      derived.push({
+        id: `derived-${pair}`,
+        nombre: `${pa.apellidos || pa.nombres} / ${pb.apellidos || pb.nombres}`,
+        notas: `${hijos.size} hijo(s) detectado(s) desde relaciones del árbol.`,
+        head_persona_id: a,
+        derived: true,
+      });
+    });
+    if (derived.length === 0) {
+      childrenByParent.forEach((hijos, parentId) => {
+        const parent = byId.get(parentId);
+        if (!parent) return;
+        derived.push({
+          id: `derived-${parentId}`,
+          nombre: `Familia de ${parent.nombres} ${parent.apellidos}`,
+          notas: `${hijos.size} descendiente(s) detectado(s).`,
+          head_persona_id: parentId,
+          derived: true,
+        });
+      });
+    }
+    return derived.slice(0, 60);
+  }, [familias.length, personas, relaciones]);
+  const visibleFamilias = familias.length > 0 ? familias : familiasDerivadas;
 
   return (
     <div>
@@ -78,7 +123,7 @@ export default function Familias() {
         }
       />
 
-      {familias.length === 0 ? (
+      {visibleFamilias.length === 0 ? (
         <EmptyState
           icon={<Heart className="h-5 w-5" />}
           title="Aún no hay familias"
@@ -86,7 +131,7 @@ export default function Familias() {
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {familias.map((f) => {
+          {visibleFamilias.map((f) => {
             const head = personas.find((p) => p.id === f.head_persona_id);
             return (
               <GlassCard key={f.id} interactive>
@@ -100,6 +145,7 @@ export default function Familias() {
                       </Link>
                     )}
                     {f.notas && <p className="mt-2 text-sm">{f.notas}</p>}
+                    {f.derived && <p className="mt-1 text-[11px] text-muted-foreground">Generada automáticamente desde relaciones existentes.</p>}
                     {head && (
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
                         <Button asChild size="sm" variant="outline">
@@ -113,7 +159,7 @@ export default function Familias() {
                         </Button>
                       </div>
                     )}
-                    <FamilyEditor family={f} personas={personas} onDone={load} />
+                    {!f.derived && <FamilyEditor family={f} personas={personas} onDone={load} />}
                   </div>
                 </div>
               </GlassCard>
