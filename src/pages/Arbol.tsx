@@ -20,7 +20,7 @@ import { notify } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
-import { fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 
 type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
@@ -115,11 +115,13 @@ export default function Arbol() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const activeTreeId = await getActiveTreeId(authUser?.id ?? null);
+      const query = supabase
         .from("research_tasks")
         .select("id,descripcion,estado,tipo,person_id,created_at")
         .order("created_at", { ascending: false })
         .limit(50);
+      const { data } = await applyTreeScope(query as any, activeTreeId);
       setTasks(data ?? []);
     })();
   }, [reloadKey]);
@@ -480,13 +482,14 @@ export default function Arbol() {
       toast.success(`${issues.length} problema(s) — ${errors} crítico(s), ${warns} aviso(s)`);
       const user = (await supabase.auth.getUser()).data.user;
       if (user) {
+        const activeTreeId = await getActiveTreeId(user.id);
         // Persist as research_tasks so they appear in Tareas + Notificaciones
         const rows = issues.slice(0, 50).map((i) => ({
           user_id: user.id,
           person_id: i.persona_id,
           tipo: "otro" as const,
           descripcion: `[${i.severity.toUpperCase()}] ${i.message} (${i.rule})`,
-        }));
+        })).map((row) => withTreeScope(row, activeTreeId));
         await supabase.from("research_tasks").insert(rows);
         notify("Verificación de coherencia", { body: `${issues.length} problemas registrados como tareas`, url: "/arbol" });
       }
@@ -498,6 +501,7 @@ export default function Arbol() {
     const pid = persona.id;
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
+    const activeTreeId = await getActiveTreeId(user.id);
     const issues = checkCoherence(personas as any, rels as any).filter((i) => i.persona_id === pid || i.related_id === pid);
     const agentJobs = [
       { titulo: "Resumen local", descripcion: `Revisar datos vitales de ${persona.nombres} ${persona.apellidos}` },
@@ -508,12 +512,12 @@ export default function Arbol() {
     setAgentProgress({ total: agentJobs.length, done: 0, ok: 0, running: true, errors: [] });
     const t = toast.loading("Desplegando agentes en paralelo…");
     try {
-      await supabase.from("research_tasks").insert(agentJobs.map((job) => ({
+      await supabase.from("research_tasks").insert(agentJobs.map((job) => withTreeScope({
         user_id: user.id,
         person_id: pid,
         tipo: "otro" as const,
         descripcion: `Agente local: ${job.titulo} — ${job.descripcion}`,
-      })));
+      }, activeTreeId)));
       const results = await Promise.allSettled(agentJobs.map(async () => {
         setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1), ok: p.ok + 1 }));
         return true;

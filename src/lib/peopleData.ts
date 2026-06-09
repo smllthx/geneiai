@@ -14,7 +14,7 @@ export async function getActiveTreeId(userId?: string | null) {
   return ((data as any)?.active_arbol_id ?? null) as string | null;
 }
 
-function applyTreeScope<T extends { or: (filters: string) => T }>(
+export function applyTreeScope<T extends { or: (filters: string) => T }>(
   query: T,
   treeId?: string | null,
   includeUnscoped = true,
@@ -71,4 +71,10 @@ export async function fetchAllRelations<T = any>(
 
 export function withTreeScope<T extends Record<string, any>>(row: T, treeId?: string | null): T {
   return treeId ? ({ ...row, arbol_id: treeId } as T) : row;
+}
+
+export async function getActiveTreeScopedIds() {
+  const treeId = await getActiveTreeId();
+  const personas = await fetchAllPeople<{ id: string }>("id", { treeId });
+  return { treeId, personIds: new Set(personas.map((p) => p.id)) };
 }

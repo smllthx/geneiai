@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { generateInferences, nivelCerteza } from "@/lib/inferences/engine";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 const LABEL_CERT: any = { alta: "Certeza alta", media: "Certeza media", baja: "Certeza baja" };
 
@@ -18,25 +19,31 @@ export default function Inferencias() {
   const [recalc, setRecalc] = useState(false);
 
   const load = async () => {
-    const { data: ps } = await supabase.from("personas").select("id,nombres,apellidos");
+    const treeId = await getActiveTreeId();
+    const ps = await fetchAllPeople("id,nombres,apellidos", { treeId });
+    const scopedIds = new Set(ps.map((p) => p.id));
     setPersonas(Object.fromEntries((ps ?? []).map((p) => [p.id, p])));
     const { data } = await supabase.from("generated_inferences").select("*").order("confidence_score", { ascending: false });
-    setItems(data ?? []);
+    setItems((data ?? []).filter((row) => scopedIds.has(row.person_id)));
   };
   useEffect(() => { load(); }, []);
 
   const recalcAll = async () => {
     setRecalc(true);
     const user = (await supabase.auth.getUser()).data.user!;
-    const [{ data: pers }, { data: rels }, { data: evs }, { data: ds }, { data: ls }] = await Promise.all([
-      supabase.from("personas").select("*"),
-      supabase.from("relaciones").select("*"),
+    const treeId = await getActiveTreeId(user.id);
+    const [pers, rels, { data: evs }, { data: ds }, { data: ls }] = await Promise.all([
+      fetchAllPeople("*", { treeId }),
+      fetchAllRelations("*", { treeId }),
       supabase.from("eventos").select("*"),
-      supabase.from("documentos").select("*"),
+      applyTreeScope(supabase.from("documentos").select("*") as any, treeId),
       supabase.from("lugares").select("*"),
     ]);
+    const scopedIds = new Set((pers ?? []).map((p: any) => p.id));
     const all = generateInferences({ personas: pers ?? [], relaciones: rels ?? [], eventos: evs ?? [], documentos: ds ?? [], lugares: ls ?? [] });
-    await supabase.from("generated_inferences").delete().eq("status", "pending");
+    const { data: oldPending } = await supabase.from("generated_inferences").select("id,person_id").eq("status", "pending");
+    const oldIds = (oldPending ?? []).filter((row) => scopedIds.has(row.person_id)).map((row) => row.id);
+    if (oldIds.length) await supabase.from("generated_inferences").delete().in("id", oldIds);
     if (all.length > 0) await supabase.from("generated_inferences").insert(all.map((i) => ({ ...i, user_id: user.id })));
     toast.success(`${all.length} inferencias generadas`);
     setRecalc(false); load();
@@ -68,11 +75,12 @@ export default function Inferencias() {
       rango_matrimonio: "buscar_matrimonio", rango_nacimiento: "buscar_nacimiento",
       vivo_hasta: "buscar_defuncion", rango_migracion: "buscar_pasajeros",
     };
-    await supabase.from("research_tasks").insert({
+    const treeId = await getActiveTreeId(user.id);
+    await supabase.from("research_tasks").insert(withTreeScope({
       user_id: user.id, person_id: i.person_id, inference_id: i.id,
       tipo: tipoMap[i.inference_type] ?? "otro",
       descripcion: i.explanation,
-    });
+    }, treeId));
     toast.success("Tarea creada");
   };
 

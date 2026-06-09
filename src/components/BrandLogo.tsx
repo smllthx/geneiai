@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-tree.png";
 
 /**
  * GENEAI brand logo.
@@ -9,21 +9,47 @@ export default function BrandLogo({
   className,
   size = 44,
   interactive = false,
+  showText = false,
+  textPosition = "right",
+  subtitle,
 }: {
   className?: string;
   size?: number;
   interactive?: boolean;
+  showText?: boolean;
+  textPosition?: "right" | "bottom";
+  subtitle?: string;
 }) {
-  const inner = (
-    <img
-      src={logo}
-      alt="GENEAI"
-      width={size}
-      height={size}
-      className="block object-contain"
+  const image = (
+    <span
+      className="inline-flex shrink-0 items-center justify-center overflow-hidden"
       style={{ width: size, height: size }}
-      draggable={false}
-    />
+    >
+      <img
+        src={logo}
+        alt="GENEAI"
+        width={size}
+        height={size}
+        className="block scale-[1.18] object-contain"
+        style={{ width: size, height: size }}
+        draggable={false}
+      />
+    </span>
+  );
+
+  const inner = (
+    <span className={cn(
+      "inline-flex shrink-0 items-center",
+      showText && textPosition === "bottom" ? "flex-col gap-1.5 text-center" : "gap-3",
+    )}>
+      {image}
+      {showText && (
+        <span className="min-w-0 leading-none">
+          <span className="block font-display text-xl font-semibold tracking-tight text-foreground">GENEAI</span>
+          {subtitle && <span className="mt-1 block text-[11px] leading-tight text-muted-foreground">{subtitle}</span>}
+        </span>
+      )}
+    </span>
   );
 
   if (!interactive) {

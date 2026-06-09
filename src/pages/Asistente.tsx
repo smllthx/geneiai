@@ -7,6 +7,7 @@ import { Bot, Send, Sparkles, Loader2, User, Wand2, ListChecks, Check, X, ArrowU
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { isCreditOrAiError, localAssistantReply } from "@/lib/offlineAi";
+import { applyTreeScope, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type ToolEvent = { name: string; args?: any; result?: any };
 type Msg = { role: "user" | "assistant"; content: string; tools?: ToolEvent[] };
@@ -51,8 +52,10 @@ export default function Asistente() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const loadSugerencias = async () => {
-    const { data } = await supabase.from("sugerencias").select("*")
+    const treeId = await getActiveTreeId();
+    const query = supabase.from("sugerencias").select("*")
       .eq("estado", "pendiente").order("created_at", { ascending: false }).limit(20);
+    const { data } = await applyTreeScope(query as any, treeId);
     setSugerencias((data ?? []) as Sugerencia[]);
   };
   useEffect(() => { loadSugerencias(); }, []);
@@ -109,11 +112,12 @@ export default function Asistente() {
       if (s.tipo === "nueva_persona") {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("no auth");
+        const activeTreeId = await getActiveTreeId(user.id);
         const p = s.payload ?? {};
-        await supabase.from("personas").insert({
+        await supabase.from("personas").insert(withTreeScope({
           user_id: user.id, nombres: p.nombres ?? "Sin nombre", apellidos: p.apellidos ?? "",
           sexo: p.sexo ?? null, nac_fecha: p.nac_fecha ?? null, ocupacion: p.ocupacion ?? null, notas: p.notas ?? null,
-        });
+        }, activeTreeId));
       } else if (s.tipo === "actualizar_persona" && s.persona_id) {
         await supabase.from("personas").update(s.payload ?? {}).eq("id", s.persona_id);
       }

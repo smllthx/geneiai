@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Check, X, FileText, Loader2, Sparkles, Search, Users, ChevronDown } from "lucide-react";
+import { applyTreeScope, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type Sugerencia = {
   id: string;
@@ -35,13 +36,15 @@ export default function Sugerencias() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const treeId = await getActiveTreeId();
+    const query = supabase
       .from("sugerencias")
       .select("*")
       .in("tipo", ["persona", "actualizacion_persona", "fuente"])
       .eq("estado", "pendiente")
       .order("created_at", { ascending: false })
       .limit(2000);
+    const { data } = await applyTreeScope(query as any, treeId);
     setItems((data ?? []) as Sugerencia[]);
     setLoading(false);
   };
@@ -67,6 +70,7 @@ export default function Sugerencias() {
   const aceptar = async (s: Sugerencia) => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión no encontrada");
+    const activeTreeId = await getActiveTreeId(user.id);
     const p = s.payload ?? {};
 
     // Sugerencia de actualización: aplica campos nuevos sobre la persona existente
@@ -107,7 +111,7 @@ export default function Sugerencias() {
       viva: p.defuncion_fecha ? "no" : "desconocido",
       certeza: "probable",
     };
-    const { error } = await supabase.from("personas").insert(insert);
+    const { error } = await supabase.from("personas").insert(withTreeScope(insert, activeTreeId));
     if (error) return toast.error(error.message);
     await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
     setItems((xs) => xs.filter((x) => x.id !== s.id));

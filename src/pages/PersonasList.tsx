@@ -11,7 +11,7 @@ import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";
 import { filterPeopleForQuery } from "@/lib/personSearch";
-import { fetchAllPeople, fetchAllRelations } from "@/lib/peopleData";
+import { fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type LinkFilter = "todas" | "en_arbol" | "sin_vincular";
 
@@ -63,12 +63,13 @@ export default function PersonasList() {
   const generarSugerenciasApellido = async () => {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
+    const activeTreeId = await getActiveTreeId(user.id);
     const existingPairs = new Set(
       relaciones.map((r) => [r.persona_id, r.pariente_id].sort().join(":")),
     );
     const candidates = suggestSurnameRelationships(personas, existingPairs);
     if (!candidates.length) return toast.info("No encontré nuevas relaciones probables por apellido.");
-    const rows = candidates.map((s) => ({
+    const rows = candidates.map((s) => withTreeScope({
       user_id: user.id,
       persona_id: s.personA.id,
       tipo: "relacion_por_apellido",
@@ -82,7 +83,7 @@ export default function PersonasList() {
         shared_surname: s.sharedSurname,
         suggested_actions: ["hermano", "padre", "madre", "hijo", "otro"],
       },
-    }));
+    }, activeTreeId));
     const { error } = await supabase.from("sugerencias").insert(rows);
     if (error) return toast.error(error.message);
     toast.success(`${rows.length} sugerencia(s) creadas por apellidos`, {

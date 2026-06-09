@@ -201,11 +201,7 @@ export default function AppLayout() {
         <div className="glass-strong flex h-full flex-col rounded-3xl">
           <div className="px-5 pt-5 pb-3">
             <div className="flex items-center gap-3">
-              <BrandLogo size={52} />
-              <div className="min-w-0">
-                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENEAI</h1>
-                <p className="mt-1 text-[11px] text-muted-foreground">Archivo familiar privado</p>
-              </div>
+              <BrandLogo size={68} showText subtitle="Archivo familiar privado" />
               <div className="ml-auto flex items-center gap-1">
                 <NotificationBell />
                 <button
@@ -269,11 +265,7 @@ export default function AppLayout() {
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
-                <BrandLogo size={44} />
-                <div className="min-w-0">
-                  <p className="font-display text-lg font-semibold leading-none">GENEAI</p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
-                </div>
+                <BrandLogo size={58} showText subtitle={user?.email ?? "Archivo familiar privado"} />
               </div>
               <NavItems groupKey="mobile" items={allMobileNav} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
@@ -285,8 +277,7 @@ export default function AppLayout() {
             </SheetContent>
           </Sheet>
           <NavLink to="/inicio" className="flex items-center gap-2">
-            <BrandLogo size={34} />
-            <span className="font-display text-lg font-semibold">GENEAI</span>
+            <BrandLogo size={42} showText />
           </NavLink>
           <NotificationBell />
         </div>

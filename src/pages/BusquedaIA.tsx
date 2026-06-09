@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Sparkles, User, Globe2, Search, Link2, Loader2, ExternalLink, Check, X, Lightbulb } from "lucide-react";
+import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 type Hallazgo = {
   titulo: string; fuente?: string; url: string; resumen: string;
@@ -28,14 +29,20 @@ export default function BusquedaIA() {
   const [historial, setHistorial] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("personas").select("id, nombres, apellidos").order("apellidos").then(({ data }) => {
-      setPersonas(data ?? []); if (data?.[0]) setPid(data[0].id);
-    });
+    (async () => {
+      const treeId = await getActiveTreeId();
+      const data = await fetchAllPeople("id,nombres,apellidos", { treeId });
+      setPersonas(data ?? []);
+      if (data?.[0]) setPid(data[0].id);
+    })();
     cargarHistorial();
   }, []);
 
   const cargarHistorial = async () => {
-    const { data } = await supabase.from("sugerencias").select("id, titulo, descripcion, origen, url_externa, confianza, estado, persona_id, payload, created_at").eq("tipo", "hallazgo_ia").order("created_at", { ascending: false }).limit(30);
+    const treeId = await getActiveTreeId();
+    const query = supabase.from("sugerencias").select("id, titulo, descripcion, origen, url_externa, confianza, estado, persona_id, payload, created_at")
+      .eq("tipo", "hallazgo_ia").order("created_at", { ascending: false }).limit(30);
+    const { data } = await applyTreeScope(query as any, treeId);
     setHistorial(data ?? []);
   };
 

@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X } from "lucide-react";
+import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 const TIPOS = ["acta_civil","partida_parroquial","pasaporte","lista_pasajeros","censo","foto","certificado","lapida","carta","familysearch","myheritage","relato_familiar","periodico","cementerio","otro"];
 const ESTADOS = ["pendiente","transcrito","verificado","dudoso"];
@@ -39,9 +40,11 @@ export default function Documentos() {
   const selectedDoc = useMemo(() => items.find((d) => d.id === docId) ?? null, [items, docId]);
 
   const load = async () => {
-    const [{ data }, { data: ps }] = await Promise.all([
-      supabase.from("documentos").select("*").order("created_at", { ascending: false }),
-      supabase.from("personas").select("id,nombres,apellidos").order("apellidos"),
+    const treeId = await getActiveTreeId();
+    const docsQuery = supabase.from("documentos").select("*").order("created_at", { ascending: false });
+    const [{ data }, ps] = await Promise.all([
+      applyTreeScope(docsQuery as any, treeId),
+      fetchAllPeople<any>("id,nombres,apellidos", { treeId }),
     ]);
     setItems(data ?? []); setPersonas(ps ?? []);
     // Genera signed URLs para thumbnails
@@ -76,6 +79,7 @@ export default function Documentos() {
   const add = async () => {
     if (!draft.titulo) return toast.error("Falta título");
     const user = (await supabase.auth.getUser()).data.user!;
+    const treeId = await getActiveTreeId(user.id);
     let archivo_path: string | null = null;
     if (file) {
       const path = `${user.id}/${Date.now()}-${file.name}`;
@@ -83,7 +87,7 @@ export default function Documentos() {
       if (error) return toast.error(error.message);
       archivo_path = path;
     }
-    const { error } = await supabase.from("documentos").insert({
+    const { error } = await supabase.from("documentos").insert(withTreeScope({
       ...draft,
       fecha: draft.fecha || null,
       url: draft.url || null,
@@ -93,7 +97,7 @@ export default function Documentos() {
       transcripcion: draft.transcripcion || null,
       archivo_path,
       user_id: user.id,
-    });
+    }, treeId));
     if (error) return toast.error(error.message);
     toast.success("Documento creado");
     setDraft({ titulo: "", tipo: "otro", fecha: "", estado: "pendiente", transcripcion: "", cita: "", repositorio: "", url: "", resumen: "", personas_mencionadas: [] });

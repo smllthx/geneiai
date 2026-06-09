@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
 import { toast } from "sonner";
+import { applyTreeScope, getActiveTreeScopedIds } from "@/lib/peopleData";
 
 type Notificacion = { id: string; titulo: string; mensaje: string | null; url: string | null; leida: boolean | null; created_at: string };
 type Sugerencia = { id: string; persona_id: string | null; titulo: string; descripcion: string | null; tipo: string | null; origen: string | null; confianza: number | null };
@@ -23,13 +24,17 @@ export default function NotificationBell() {
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
   const load = async () => {
-    const [{ data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
+    const [{ treeId, personIds }, { data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
+      getActiveTreeScopedIds(),
       supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
-      supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30),
+      applyTreeScope(supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30) as any, treeId),
       supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
-      supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30),
+      applyTreeScope(supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30) as any, treeId),
     ]);
-    setItems(n ?? []); setSugs(s ?? []); setInfs(i ?? []); setTasks(t ?? []);
+    setItems(n ?? []);
+    setSugs(s ?? []);
+    setInfs((i ?? []).filter((row: any) => !row.person_id || personIds.has(row.person_id)));
+    setTasks(t ?? []);
   };
 
   useEffect(() => {

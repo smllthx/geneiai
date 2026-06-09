@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Search, Lightbulb, Brain, Users } from "lucide-react";
+import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -16,27 +17,32 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [p, l, d, c, h, i, r] = await Promise.all([
-        supabase.from("personas").select("apellidos", { count: "exact" }),
+      const treeId = await getActiveTreeId();
+      const people = await fetchAllPeople("id,nombres,apellidos,updated_at", { treeId });
+      const personIds = new Set(people.map((p) => p.id));
+      const [l, d] = await Promise.all([
         supabase.from("lugares").select("id", { count: "exact", head: true }),
-        supabase.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-        supabase.from("coincidencias").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-        supabase.from("hipotesis").select("id", { count: "exact", head: true }).eq("estado", "abierta"),
-        supabase.from("generated_inferences").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("personas").select("id,nombres,apellidos,updated_at").order("updated_at", { ascending: false }).limit(6),
+        applyTreeScope(supabase.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente") as any, treeId),
       ]);
       const apellidoSet = new Map<string, number>();
-      (p.data ?? []).forEach((row) => {
+      people.forEach((row) => {
         const a = row.apellidos?.split(/\s+/)[0]; if (!a) return;
         apellidoSet.set(a, (apellidoSet.get(a) ?? 0) + 1);
       });
       const top = [...apellidoSet.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([a]) => a);
+      const [{ data: coincidencias }, { data: hipotesis }, { data: inferencias }] = await Promise.all([
+        supabase.from("coincidencias").select("id,persona_id,persona_a_id,persona_b_id").eq("estado", "pendiente"),
+        supabase.from("hipotesis").select("id,personas").eq("estado", "abierta"),
+        supabase.from("generated_inferences").select("id,person_id").eq("status", "pending"),
+      ]);
       setStats({
-        personas: p.count ?? 0, apellidos: top, lugares: l.count ?? 0,
-        docsPendientes: d.count ?? 0, coincidencias: c.count ?? 0,
-        hipotesis: h.count ?? 0, inferencias: i.count ?? 0,
+        personas: people.length, apellidos: top, lugares: l.count ?? 0,
+        docsPendientes: d.count ?? 0,
+        coincidencias: (coincidencias ?? []).filter((row: any) => [row.persona_id, row.persona_a_id, row.persona_b_id].some((id) => id && personIds.has(id))).length,
+        hipotesis: (hipotesis ?? []).filter((row: any) => !row.personas?.length || row.personas.some((id: string) => personIds.has(id))).length,
+        inferencias: (inferencias ?? []).filter((row: any) => personIds.has(row.person_id)).length,
       });
-      setRecientes(r.data ?? []);
+      setRecientes([...people].sort((a: any, b: any) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime()).slice(0, 6));
     })();
   }, []);
 

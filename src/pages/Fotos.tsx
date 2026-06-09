@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { localPhotoAnalysis } from "@/lib/offlineAi";
+import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
 type FotoRow = {
   id: string; url: string; storage_path: string | null;
@@ -38,9 +39,11 @@ export default function Fotos() {
   const [detalle, setDetalle] = useState<FotoRow | null>(null);
 
   const load = async () => {
-    const [{ data: f }, { data: p }, { data: l }] = await Promise.all([
-      supabase.from("fotos").select("*").order("created_at", { ascending: false }),
-      supabase.from("personas").select("id,nombres,apellidos").order("apellidos"),
+    const treeId = await getActiveTreeId();
+    const fotosQuery = supabase.from("fotos").select("*").order("created_at", { ascending: false });
+    const [{ data: f }, p, { data: l }] = await Promise.all([
+      applyTreeScope(fotosQuery as any, treeId),
+      fetchAllPeople<Persona>("id,nombres,apellidos", { treeId }),
       supabase.from("lugares").select("id,ciudad,pais,lat,lng"),
     ]);
     setFotos((f as any) ?? []); setPersonas((p as any) ?? []); setLugares((l as any) ?? []);
@@ -56,11 +59,12 @@ export default function Fotos() {
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
       if (upErr) throw upErr;
+      const treeId = await getActiveTreeId(user.id);
       const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
-      const { data: inserted, error: insErr } = await supabase.from("fotos").insert({
+      const { data: inserted, error: insErr } = await supabase.from("fotos").insert(withTreeScope({
         user_id: user.id, url: publicUrl, storage_path: path,
         titulo, descripcion: desc, fecha_aprox: fechaAprox,
-      }).select().single();
+      }, treeId)).select().single();
       if (insErr) throw insErr;
       toast.success("Foto subida");
       setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setOpen(false);

@@ -7,6 +7,7 @@ import MigrationMap from "@/components/MigrationMap";
 import FamilyTimeline from "@/components/FamilyTimeline";
 import PersonaName from "@/components/PersonaName";
 import { getRecent } from "@/lib/recent";
+import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
 import {
   Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight,
 } from "lucide-react";
@@ -25,51 +26,55 @@ export default function Inicio() {
 
   useEffect(() => {
     (async () => {
-      const [p, l, f, d, c, h, i, r, a, allPersonas, allRels, fotos] = await Promise.all([
-        supabase.from("personas").select("apellidos", { count: "exact" }),
+      const treeId = await getActiveTreeId();
+      const allPersonas = await fetchAllPeople<any>("id,nombres,apellidos,foto_url,updated_at", { treeId });
+      const personIds = new Set(allPersonas.map((p) => p.id));
+      const [l, f, d, c, h, i, a, allRels, fotos] = await Promise.all([
         supabase.from("lugares").select("id", { count: "exact", head: true }),
-        supabase.from("fotos").select("id", { count: "exact", head: true }),
-        supabase.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-        supabase.from("coincidencias").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
-        supabase.from("hipotesis").select("id", { count: "exact", head: true }).eq("estado", "abierta"),
-        supabase.from("generated_inferences").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("personas").select("id,nombres,apellidos,foto_url,updated_at").order("updated_at", { ascending: false }).limit(8),
+        applyTreeScope(supabase.from("fotos").select("id,personas_ids", { count: "exact" }) as any, treeId),
+        applyTreeScope(supabase.from("documentos").select("id,personas_mencionadas", { count: "exact" }).eq("estado", "pendiente") as any, treeId),
+        supabase.from("coincidencias").select("id,ref_a,ref_b,estado").eq("estado", "pendiente"),
+        supabase.from("hipotesis").select("id,personas,estado").eq("estado", "abierta"),
+        supabase.from("generated_inferences").select("id,person_id,status").eq("status", "pending"),
         supabase.from("actividad").select("*").order("created_at", { ascending: false }).limit(6),
-        supabase.from("personas").select("id,nombres,apellidos,foto_url"),
-        supabase.from("relaciones").select("persona_id,tipo"),
-        supabase.from("fotos").select("personas_ids"),
+        fetchAllRelations<any>("persona_id,tipo", { treeId }),
+        applyTreeScope(supabase.from("fotos").select("personas_ids") as any, treeId),
       ]);
       const ap = new Map<string, number>();
-      (p.data ?? []).forEach((row) => {
+      allPersonas.forEach((row) => {
         const x = row.apellidos?.split(/\s+/)[0]; if (!x) return;
         ap.set(x, (ap.get(x) ?? 0) + 1);
       });
+      const activeCoincidencias = (c.data ?? []).filter((row: any) => personIds.has(row.ref_a) || personIds.has(row.ref_b));
+      const activeHipotesis = (h.data ?? []).filter((row: any) => (row.personas ?? []).some((id: string) => personIds.has(id)));
+      const activeInferencias = (i.data ?? []).filter((row: any) => personIds.has(row.person_id));
       setStats({
-        personas: p.count ?? 0, lugares: l.count ?? 0, fotos: f.count ?? 0,
-        docsPendientes: d.count ?? 0, coincidencias: c.count ?? 0,
-        hipotesis: h.count ?? 0, inferencias: i.count ?? 0,
+        personas: allPersonas.length, lugares: l.count ?? 0, fotos: f.count ?? 0,
+        docsPendientes: d.count ?? 0, coincidencias: activeCoincidencias.length,
+        hipotesis: activeHipotesis.length, inferencias: activeInferencias.length,
         apellidos: [...ap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([x]) => x),
       });
-      setRecientes(r.data ?? []); setActividad(a.data ?? []);
+      const recentByUpdated = [...allPersonas].sort((x, y) => String(y.updated_at ?? "").localeCompare(String(x.updated_at ?? ""))).slice(0, 8);
+      setRecientes(recentByUpdated); setActividad(a.data ?? []);
 
       // Personas sin padres
       const conPadres = new Set(
-        (allRels.data ?? [])
+        (allRels ?? [])
           .filter((rl: any) => rl.tipo === "padre" || rl.tipo === "madre")
           .map((rl: any) => rl.persona_id)
       );
-      setSinPadres((allPersonas.data ?? []).filter((per: any) => !conPadres.has(per.id)).slice(0, 6));
+      setSinPadres(allPersonas.filter((per: any) => !conPadres.has(per.id)).slice(0, 6));
 
       // Personas sin fotos
       const conFotos = new Set<string>();
       (fotos.data ?? []).forEach((fr: any) => (fr.personas_ids ?? []).forEach((id: string) => conFotos.add(id)));
-      setSinFotos((allPersonas.data ?? []).filter((per: any) => !per.foto_url && !conFotos.has(per.id)).slice(0, 6));
+      setSinFotos(allPersonas.filter((per: any) => !per.foto_url && !conFotos.has(per.id)).slice(0, 6));
 
       // Vistas recientes (localStorage)
       const recentEntries = getRecent();
       const recentIds = recentEntries.map((r) => r.id);
       if (recentIds.length) {
-        const map = new Map((allPersonas.data ?? []).map((x: any) => [x.id, x]));
+        const map = new Map(allPersonas.map((x: any) => [x.id, x]));
         setVistasRecientes(recentIds.map((rid) => map.get(rid)).filter(Boolean).slice(0, 8));
         const editedIds = recentEntries.filter((r) => r.action === "edited").map((r) => r.id);
         if (editedIds.length) {

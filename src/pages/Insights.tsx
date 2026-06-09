@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Sparkles, AlertTriangle, BookOpen, Lightbulb, RefreshCw, Loader2, Globe2, ExternalLink, Brain } from "lucide-react";
+import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 type Contra = {
   id: string; tipo: string; severidad: string; titulo: string; descripcion: string | null;
@@ -32,17 +33,19 @@ export default function Insights() {
   const [pidExt, setPidExt] = useState<string>("");
 
   const cargar = async () => {
-    const [{ data: c }, { data: h }, { data: p }, { data: s }] = await Promise.all([
+    const treeId = await getActiveTreeId();
+    const scopedPeople = await fetchAllPeople("id,nombres,apellidos", { treeId });
+    const personIds = new Set(scopedPeople.map((p) => p.id));
+    const [{ data: c }, { data: h }, { data: s }] = await Promise.all([
       supabase.from("contradicciones").select("*").eq("estado", "abierta").order("severidad").order("created_at", { ascending: false }),
       supabase.from("hipotesis").select("id, titulo, descripcion, probabilidad, estado, argumentos_favor, argumentos_contra, proxima_accion, personas").order("updated_at", { ascending: false }).limit(80),
-      supabase.from("personas").select("id, nombres, apellidos").order("apellidos").limit(2000),
-      supabase.from("sugerencias").select("id, titulo, descripcion, origen, url_externa, created_at, persona_id").eq("tipo", "fuente_externa").order("created_at", { ascending: false }).limit(80),
+      applyTreeScope(supabase.from("sugerencias").select("id, titulo, descripcion, origen, url_externa, created_at, persona_id").eq("tipo", "fuente_externa").order("created_at", { ascending: false }).limit(80) as any, treeId),
     ]);
-    setContra((c ?? []) as any);
-    setHipo((h ?? []) as any);
-    setPersonas(p ?? []);
-    setExternas((s ?? []) as any);
-    if (!pidExt && p?.[0]) setPidExt(p[0].id);
+    setContra(((c ?? []) as any[]).filter((row) => (row.personas ?? []).some((id: string) => personIds.has(id))));
+    setHipo(((h ?? []) as any[]).filter((row) => !row.personas?.length || row.personas.some((id: string) => personIds.has(id))));
+    setPersonas(scopedPeople ?? []);
+    setExternas(((s ?? []) as any[]).filter((row) => !row.persona_id || personIds.has(row.persona_id)));
+    if (!pidExt && scopedPeople?.[0]) setPidExt(scopedPeople[0].id);
   };
   useEffect(() => { cargar(); }, []);
 
@@ -61,7 +64,8 @@ export default function Insights() {
     setGenHip(true);
     const t = toast.loading("IA generando hipótesis avanzadas…");
     try {
-      const { data, error } = await supabase.functions.invoke("generar-hipotesis-avanzadas");
+      const treeId = await getActiveTreeId();
+      const { data, error } = await supabase.functions.invoke("generar-hipotesis-avanzadas", { body: { arbol_id: treeId } });
       if (error) throw error;
       toast.dismiss(t); toast.success(`+${data?.creadas ?? 0} hipótesis nuevas`);
       setTab("hipotesis"); await cargar();
@@ -74,7 +78,8 @@ export default function Insights() {
     setGenExt(true);
     const t = toast.loading("Generando búsquedas en MyHeritage, FamilySearch y cementerios…");
     try {
-      const { data, error } = await supabase.functions.invoke("buscar-myheritage-cementerios", { body: { persona_id: pidExt } });
+      const treeId = await getActiveTreeId();
+      const { data, error } = await supabase.functions.invoke("buscar-myheritage-cementerios", { body: { persona_id: pidExt, arbol_id: treeId } });
       if (error) throw error;
       toast.dismiss(t); toast.success(`+${data?.creadas ?? 0} enlaces dirigidos`);
       setTab("externas"); await cargar();
