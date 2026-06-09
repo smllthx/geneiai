@@ -56,11 +56,11 @@ export const registerDevicePasskey = async (userLabel: string) => {
   const credential = await navigator.credentials.create({
     publicKey: {
       challenge: randomBytes(),
-      rp: { name: "GENEIAI" },
+      rp: { name: "GENEAI" },
       user: {
         id: randomBytes(16),
-        name: userLabel || "GENEIAI",
-        displayName: userLabel || "GENEIAI",
+        name: userLabel || "GENEAI",
+        displayName: userLabel || "GENEAI",
       },
       pubKeyCredParams: [
         { type: "public-key", alg: -7 },

@@ -208,7 +208,7 @@ export default function Configuracion() {
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return toast.error("Sesión requerida");
-      await registerDevicePasskey(user.email || "GENEIAI");
+      await registerDevicePasskey(user.email || "GENEAI");
       setDevicePasskeyEnabled(true);
       toast.success("Face ID / Touch ID activado en este dispositivo.");
     } catch (error: any) {
@@ -308,7 +308,7 @@ export default function Configuracion() {
             <Button variant="outline" onClick={suggestCentralPerson}><UserRound className="h-4 w-4" /> Sugerir persona central</Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Estos datos ayudan a GENEIAI a identificar tu persona central del árbol y a mantener vías de recuperación de cuenta.
+            Estos datos ayudan a GENEAI a identificar tu persona central del árbol y a mantener vías de recuperación de cuenta.
           </p>
         </CardContent>
       </Card>
@@ -394,7 +394,7 @@ export default function Configuracion() {
       <Card className="archivo-card mb-6">
         <CardHeader><CardTitle className="font-serif text-xl">Accesos del dispositivo</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>GENEIAI adapta controles para móvil, iPad y escritorio. En Mac quedan activos estos accesos rápidos:</p>
+          <p>GENEAI adapta controles para móvil, iPad y escritorio. En Mac quedan activos estos accesos rápidos:</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {["⌘/Ctrl + 1 Inicio", "⌘/Ctrl + 2 Árbol", "⌘/Ctrl + 3 Personas", "⌘/Ctrl + 4 Tareas", "⌘/Ctrl + 5 Asistente", "⌘/Ctrl + N Nueva persona"].map((item) => (
               <div key={item} className="rounded-xl border border-border/70 bg-card/45 px-3 py-2 text-xs font-medium text-foreground">{item}</div>
@@ -409,7 +409,7 @@ export default function Configuracion() {
         <CardHeader><CardTitle className="flex items-center gap-2 font-serif text-xl"><ShieldCheck className="h-5 w-5" /> Llave iCloud / Face ID / Touch ID</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Activa una passkey del dispositivo para desbloquear GENEIAI. En iPhone usa Face ID; en Mac compatible usa Touch ID; Safari puede guardarla en el llavero/iCloud Keychain.
+            Activa una passkey del dispositivo para desbloquear GENEAI. En iPhone usa Face ID; en Mac compatible usa Touch ID; Safari puede guardarla en el llavero/iCloud Keychain.
           </p>
           {!devicePasskeySupported ? (
             <p className="text-sm text-muted-foreground">Este navegador no soporta passkeys para esta app.</p>

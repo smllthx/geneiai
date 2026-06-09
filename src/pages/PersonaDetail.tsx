@@ -283,7 +283,7 @@ export default function PersonaDetail() {
   const yNac = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
   const yDef = yearOf(p.defuncion_fecha) ?? null;
   const lifespan = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? (p.viva === "si" ? "vive" : "?")}` : "";
-  const metaTitle = isNew ? "Nueva persona · GENEIAI" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GENEIAI`;
+  const metaTitle = isNew ? "Nueva persona · GENEAI" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GENEAI`;
   const metaDesc = isNew
     ? "Registra una nueva persona en tu árbol genealógico privado."
     : `Ficha genealógica de ${fullName}${lifespan ? `, ${lifespan}` : ""}${p.nacionalidad ? `, ${p.nacionalidad}` : ""}.`.slice(0, 160);

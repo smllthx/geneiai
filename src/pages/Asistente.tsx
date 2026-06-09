@@ -43,7 +43,7 @@ const QUICK = [
 export default function Asistente() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Soy el **Asistente ChatGPT de GENEIAI**. Puedo crear personas, conectar relaciones, lanzar investigaciones, buscar en la web, verificar coherencia y navegar pantallas. Pedime lo que necesites." },
+    { role: "assistant", content: "Soy el **Asistente ChatGPT de GENEAI**. Puedo crear personas, conectar relaciones, lanzar investigaciones, buscar en la web, verificar coherencia y navegar pantallas. Pedime lo que necesites." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

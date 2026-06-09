@@ -83,7 +83,7 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
         ? [
             descripcion || null,
             `Evento compartido con: ${selectedNames.join(", ") || `${taggedIds.length} persona(s)`}.`,
-            `Grupo de evento GENEIAI: ${grupo}`,
+            `Grupo de evento GENEAI: ${grupo}`,
           ].filter(Boolean).join("\n")
         : (descripcion || null);
       const rows = [personaId, ...taggedIds].map((pid) => ({

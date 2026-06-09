@@ -47,7 +47,7 @@ self.addEventListener("fetch", (event) => {
 
 // Web Push
 self.addEventListener("push", (event) => {
-  let payload = { title: "GENEIAI", body: "Nueva actividad", url: "/" };
+  let payload = { title: "GENEAI", body: "Nueva actividad", url: "/" };
   try { if (event.data) payload = { ...payload, ...event.data.json() }; } catch {}
   event.waitUntil(self.registration.showNotification(payload.title, {
     body: payload.body,

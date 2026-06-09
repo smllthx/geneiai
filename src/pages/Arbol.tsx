@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2 } from "lucide-react";
+import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeInsights from "@/components/TreeInsights";
 import { toast } from "sonner";
@@ -67,6 +67,7 @@ export default function Arbol() {
   const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
   const initialTreeLoaded = useRef(false);
+  const treeScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { user: authUser } = useAuth();
   const rtKey = useRealtimeReload(["personas", "relaciones", "eventos"], authUser?.id ?? null);
@@ -165,6 +166,19 @@ export default function Arbol() {
   const hermanosDe = (pid: string) => kHermanosDe(pid, rels as any, byId);
 
   const reload = () => setReloadKey((k) => k + 1);
+  const refreshTree = () => {
+    reload();
+    toast.success("Árbol actualizado");
+  };
+
+  useEffect(() => {
+    const el = treeScrollRef.current;
+    if (!el) return;
+    const id = window.setTimeout(() => {
+      el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [persona?.id, vista, generaciones, reloadKey, panel]);
 
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");
@@ -576,6 +590,9 @@ export default function Arbol() {
           <span className="font-medium">{persona ? `${persona.nombres} ${persona.apellidos}` : "configúralo en Configuración"}</span>
           <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
         </div>
+        <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} aria-label="Actualizar árbol" title="Actualizar árbol">
+          <RefreshCw className="h-4 w-4" />
+        </Button>
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
           <SelectTrigger className="h-9 w-[186px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -801,7 +818,7 @@ export default function Arbol() {
       ) : !persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
-        <div className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
             <div className="mb-3 flex justify-center">
               <PartnershipStrip p={persona} compact />
@@ -814,7 +831,7 @@ export default function Arbol() {
           </p>
         </div>
       ) : vista === "dinastica" ? (
-        <div className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
           <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
             <div className="mb-4 flex justify-center">
               <PartnershipStrip p={persona} compact />
@@ -823,7 +840,7 @@ export default function Arbol() {
           </div>
         </div>
       ) : vista === "lineas" ? (
-        <div className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
           <div
             className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
             style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}
@@ -849,7 +866,7 @@ export default function Arbol() {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
           <div
             className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
             style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}

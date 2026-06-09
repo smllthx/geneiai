@@ -13,7 +13,7 @@ import { inferLivingStatus, inferNationalityFromPlace, inferSexFromName } from "
 
 /**
  * "Agregar persona" — layout inspirado en FamilySearch (limpio, columna única,
- * inputs con subrayado, segmentos tipo pill) pero con TODOS los campos de GENEAIA.
+ * inputs con subrayado, segmentos tipo pill) pero con TODOS los campos de GENEAI.
  */
 
 type Sexo = "masculino" | "femenino" | "otro" | "";
@@ -177,7 +177,7 @@ export default function NuevaPersona() {
   return (
     <div className="min-h-[100dvh] bg-background">
       <Helmet>
-        <title>Agregar persona · GENEAIA</title>
+        <title>Agregar persona · GENEAI</title>
         <meta name="description" content="Agrega una nueva persona a tu árbol genealógico." />
       </Helmet>
 
@@ -252,7 +252,7 @@ export default function NuevaPersona() {
             ]}
           />
           <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
-            GENEAIA protege la privacidad: los parientes vivos que agregues solo son visibles para ti.
+            GENEAI protege la privacidad: los parientes vivos que agregues solo son visibles para ti.
           </p>
         </div>
 

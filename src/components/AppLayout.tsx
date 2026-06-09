@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -129,6 +129,11 @@ export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const handleLogout = async () => { await signOut(); navigate("/login"); };
+  const refreshVisibleData = () => {
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "manual" } }));
+    window.dispatchEvent(new Event("genaia:recent-changed"));
+    toast.success("Datos actualizados");
+  };
   const allMobileNav = [...primaryNavBase, ...investigationNav, ...utilityNav];
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
@@ -198,7 +203,7 @@ export default function AppLayout() {
             <div className="flex items-center gap-3">
               <BrandLogo size={52} />
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENEIAI</h1>
+                <h1 className="font-display text-xl font-semibold leading-none tracking-tight">GENEAI</h1>
                 <p className="mt-1 text-[11px] text-muted-foreground">Archivo familiar privado</p>
               </div>
               <div className="ml-auto flex items-center gap-1">
@@ -221,6 +226,9 @@ export default function AppLayout() {
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
             <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
+            <Button variant="ghost" size="sm" className="mb-1 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
+              <RefreshCw className="h-4 w-4" /> Actualizar datos
+            </Button>
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
               <LogOut className="h-4 w-4" /> Cerrar sesión
             </Button>
@@ -232,7 +240,7 @@ export default function AppLayout() {
       <button
         onClick={() => setSidebarCollapsed(false)}
         aria-label="Mostrar menú"
-        title="Mostrar menú GENEIAI"
+        title="Mostrar menú GENEAI"
         className={cn(
           "fixed left-0 top-1/2 z-40 hidden -translate-y-1/2 items-center justify-center rounded-r-2xl border border-l-0 border-border bg-card/90 px-1.5 py-3 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-card hover:text-foreground hover:px-2 md:flex",
           sidebarCollapsed ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
@@ -259,15 +267,18 @@ export default function AppLayout() {
               className="w-[86vw] max-w-sm overflow-y-auto p-3"
               style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
             >
-              <SheetTitle className="sr-only">Menú principal de GENEIAI</SheetTitle>
+              <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={44} />
                 <div className="min-w-0">
-                  <p className="font-display text-lg font-semibold leading-none">GENEIAI</p>
+                  <p className="font-display text-lg font-semibold leading-none">GENEAI</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
               <NavItems groupKey="mobile" items={allMobileNav} />
+              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
+                <RefreshCw className="h-4 w-4" /> Actualizar datos
+              </Button>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" /> Cerrar sesión
               </Button>
@@ -275,7 +286,7 @@ export default function AppLayout() {
           </Sheet>
           <NavLink to="/inicio" className="flex items-center gap-2">
             <BrandLogo size={34} />
-            <span className="font-display text-lg font-semibold">GENEIAI</span>
+            <span className="font-display text-lg font-semibold">GENEAI</span>
           </NavLink>
           <NotificationBell />
         </div>
