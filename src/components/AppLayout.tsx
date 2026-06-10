@@ -19,8 +19,11 @@ import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import GlobalDataSync from "@/components/GlobalDataSync";
 import OriginBackgroundSync from "@/components/OriginBackgroundSync";
+import NetworkStatusModal from "@/components/NetworkStatusModal";
+import OfflineContextKeeper from "@/components/OfflineContextKeeper";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
+import { prefetchRoute } from "@/lib/routePrefetch";
 import { toast } from "sonner";
 
 
@@ -90,6 +93,8 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
         >
           <NavLink
             to={to}
+            onMouseEnter={() => prefetchRoute(to)}
+            onFocus={() => prefetchRoute(to)}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
@@ -299,6 +304,8 @@ export default function AppLayout() {
       <MobileBottomNav />
       <AdaptiveViewport />
       <AppUpdateNotifier />
+      <NetworkStatusModal />
+      <OfflineContextKeeper />
       <GlobalDataSync />
       <OriginBackgroundSync />
       <KeyboardAwareScroller />

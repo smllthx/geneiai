@@ -433,3 +433,24 @@ body.tree-fullscreen main { padding: 0 !important; }
   max-height: calc(100vh - 6rem) !important;
   overflow: auto;
 }
+
+/* Native-feeling page polish without heavy animation libraries */
+main > div {
+  animation: geneai-page-in 160ms ease-out;
+}
+
+button, a, input, textarea, select, [role="button"], [role="tab"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 3px;
+}
+
+@keyframes geneai-page-in {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
