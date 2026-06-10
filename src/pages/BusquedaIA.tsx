@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Sparkles, User, Globe2, Search, Link2, Loader2, ExternalLink, Check, X, Lightbulb } from "lucide-react";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 type Hallazgo = {
   titulo: string; fuente?: string; url: string; resumen: string;
-  personas?: string[]; fechas?: string[]; lugares?: string[];
-  motivo?: string; confianza: "alta" | "media" | "baja";
+  personas?: unknown[]; fechas?: unknown[]; lugares?: unknown[];
+  motivo?: unknown; confianza: "alta" | "media" | "baja";
   id?: string;
 };
 
@@ -92,9 +93,10 @@ export default function BusquedaIA() {
   const confColor = (c: string) => c === "alta" ? "default" : c === "media" ? "secondary" : "outline";
 
   const lista = useMemo(() => (hallazgos.length ? hallazgos : historial.map((h) => ({
-    id: h.id, titulo: h.titulo, fuente: h.origen, url: h.url_externa, resumen: h.descripcion ?? "",
+    id: h.id, titulo: toDisplayText(h.titulo), fuente: toDisplayText(h.origen), url: h.url_externa, resumen: toDisplayText(h.descripcion ?? ""),
     personas: h.payload?.personas, fechas: h.payload?.fechas, lugares: h.payload?.lugares,
-    motivo: h.payload?.motivo, confianza: h.confianza >= 75 ? "alta" : h.confianza >= 50 ? "media" : "baja",
+    motivo: toDisplayText(h.payload?.motivo ?? h.payload?.reason ?? h.payload?.explicacion ?? ""),
+    confianza: h.confianza >= 75 ? "alta" : h.confianza >= 50 ? "media" : "baja",
     estado: h.estado, persona_id: h.persona_id,
   }))) as any[], [hallazgos, historial]);
 
@@ -167,7 +169,9 @@ export default function BusquedaIA() {
         <EmptyState icon={<Sparkles className="h-5 w-5" />} title="Sin hallazgos aún" description="Lanza una búsqueda para ver resultados." />
       ) : (
         <div className="space-y-2">
-          {lista.map((h, i) => (
+          {lista.map((h, i) => {
+            const motivo = toDisplayText(h.motivo);
+            return (
             <GlassCard key={h.id ?? i} className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -176,13 +180,13 @@ export default function BusquedaIA() {
                     {h.fuente && <span className="text-xs text-muted-foreground">{h.fuente}</span>}
                     {h.estado && h.estado !== "pendiente" && <Badge variant="outline" className="text-[10px]">{h.estado}</Badge>}
                   </div>
-                  <h3 className="mt-1 font-semibold">{h.titulo}</h3>
-                  {h.resumen && <p className="mt-1 text-sm text-muted-foreground">{h.resumen}</p>}
-                  {h.motivo && <p className="mt-1 text-xs"><b>Posible relación:</b> {h.motivo}</p>}
+                  <h3 className="mt-1 font-semibold">{toDisplayText(h.titulo)}</h3>
+                  {toDisplayText(h.resumen) && <p className="mt-1 text-sm text-muted-foreground">{toDisplayText(h.resumen)}</p>}
+                  {motivo && <p className="mt-1 text-xs"><b>Posible relación:</b> {motivo}</p>}
                   <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
-                    {(h.personas ?? []).slice(0, 6).map((n: string, k: number) => <span key={k} className="rounded bg-primary/10 px-1.5 py-0.5">{n}</span>)}
-                    {(h.fechas ?? []).slice(0, 4).map((d: string, k: number) => <span key={k} className="rounded bg-muted px-1.5 py-0.5">{d}</span>)}
-                    {(h.lugares ?? []).slice(0, 4).map((l: string, k: number) => <span key={k} className="rounded bg-accent/40 px-1.5 py-0.5">{l}</span>)}
+                    {(h.personas ?? []).slice(0, 6).map((n: unknown, k: number) => <span key={k} className="rounded bg-primary/10 px-1.5 py-0.5">{toDisplayText(n)}</span>)}
+                    {(h.fechas ?? []).slice(0, 4).map((d: unknown, k: number) => <span key={k} className="rounded bg-muted px-1.5 py-0.5">{toDisplayText(d)}</span>)}
+                    {(h.lugares ?? []).slice(0, 4).map((l: unknown, k: number) => <span key={k} className="rounded bg-accent/40 px-1.5 py-0.5">{toDisplayText(l)}</span>)}
                   </div>
                 </div>
               </div>
@@ -200,7 +204,7 @@ export default function BusquedaIA() {
                 </div>
               </div>
             </GlassCard>
-          ))}
+          )})}
         </div>
       )}
     </div>

@@ -44,6 +44,7 @@ import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
 import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
+import { toDisplayText } from "@/lib/safeText";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -794,7 +795,7 @@ export default function PersonaDetail() {
                       <span className="archivo-chip">Score {c.score}/100 · {c.estado}</span>
                     </div>
                     {Array.isArray(c.razones) && c.razones.length > 0 && (
-                      <p className="mt-1 text-xs text-muted-foreground">{c.razones.join(" · ")}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{toDisplayText(c.razones)}</p>
                     )}
                   </li>
                 );

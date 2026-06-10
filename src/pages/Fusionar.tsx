@@ -12,6 +12,7 @@ import { fusionarPersonas } from "@/lib/mergePersonas";
 import { getRecent } from "@/lib/recent";
 import { filterPeopleForQuery } from "@/lib/personSearch";
 import { fetchAllPeople } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 function PersonaPicker({ label, value, onChange, personas, exclude }: {
   label: string; value: any; onChange: (p: any) => void; personas: any[]; exclude?: string;
@@ -183,7 +184,7 @@ export default function Fusionar() {
           const a = personas.find((p) => p.id === d.ref_a);
           const b = personas.find((p) => p.id === d.ref_b);
           if (!a || !b) return null;
-          const motivo = Array.isArray(d.razones) && d.razones[0]?.motivo;
+          const motivo = toDisplayText(Array.isArray(d.razones) ? (d.razones[0]?.motivo ?? d.razones[0]) : d.razones);
           return (
             <Card key={d.id} className="archivo-card">
               <CardContent className="py-3">

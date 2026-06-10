@@ -5,6 +5,7 @@ import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Sparkles, GitMerge, X, Check, Users } from "lucide-react";
 import { toast } from "sonner";
+import { toDisplayTextList } from "@/lib/safeText";
 
 export default function Coincidencias() {
   const [items, setItems] = useState<any[]>([]);
@@ -110,7 +111,7 @@ export default function Coincidencias() {
                   ) : <div key={i} className="text-xs text-muted-foreground">Persona eliminada</div>)}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {(c.razones as string[]).map((r, i) => (
+                  {toDisplayTextList(c.razones).map((r, i) => (
                     <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-foreground/5">{r}</span>
                   ))}
                 </div>
