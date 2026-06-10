@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw,
+  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -39,6 +39,7 @@ const investigationNav = [
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/importadas-pendientes", label: "Importadas pendientes", icon: Link2 },
   { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },
+  { to: "/tareas-ia", label: "Tareas IA", icon: ClipboardCheck },
   { to: "/adn", label: "ADN y origen", icon: Dna },
   { to: "/cuadros-ia", label: "Cuadros IA", icon: ImageIcon },
   { to: "/fuentes", label: "Fuentes", icon: BookOpen },

@@ -42,6 +42,8 @@ import RecentChanges from "@/components/RecentChanges";
 import NombresMultilingues from "@/components/NombresMultilingues";
 import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
+import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -803,6 +805,7 @@ export default function PersonaDetail() {
 
         <TabsContent value="investigacion">
           <div className="space-y-4">
+            {!isNew && <AISuggestionsPanel personId={id!} />}
             <div>
               <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Búsquedas externas sugeridas</h3>
               <BusquedasSugeridas persona={p} disabled={isNew} />
@@ -909,6 +912,7 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="notas">
+          {!isNew && <div className="mb-4"><AIBiographyPanel personId={id!} currentNotes={p.notas} /></div>}
           <Card className="archivo-card">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="font-serif text-lg">Biografía y notas</CardTitle>

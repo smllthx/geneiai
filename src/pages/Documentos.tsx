@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X, Sparkles } from "lucide-react";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { extractDocumentAI } from "@/lib/aiApi";
 
 const TIPOS = ["acta_civil","partida_parroquial","pasaporte","lista_pasajeros","censo","foto","certificado","lapida","carta","familysearch","myheritage","relato_familiar","periodico","cementerio","otro"];
 const ESTADOS = ["pendiente","transcrito","verificado","dudoso"];
@@ -143,6 +144,20 @@ export default function Documentos() {
       if (error) throw error;
       toast.dismiss(t); toast.success("Transcripción IA solicitada"); load();
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
+  };
+
+  const extraerDatosIA = async (id: string) => {
+    const t = toast.loading("Extrayendo nombres, fechas y lugares…");
+    try {
+      const result = await extractDocumentAI({ document_id: id });
+      toast.dismiss(t);
+      toast.success(`${result.data?.names?.length ?? 0} nombre(s), ${result.data?.dates?.length ?? 0} fecha(s), ${result.data?.locations?.length ?? 0} lugar(es) extraídos`);
+      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "document_ai_data" } }));
+      load();
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "No se pudo extraer datos");
+    }
   };
 
   const filtered = useMemo(() => {
@@ -293,6 +308,7 @@ export default function Documentos() {
                   </Button>
                 )}
                 <Button variant="outline" onClick={() => transcribir(editDoc.id)}><ScanLine className="h-4 w-4" /> Transcribir con IA</Button>
+                <Button variant="outline" onClick={() => extraerDatosIA(editDoc.id)}><Sparkles className="h-4 w-4" /> Extraer datos IA</Button>
                 <Button onClick={saveEditDoc}><Save className="h-4 w-4" /> Guardar fuente</Button>
                 <Button variant="ghost" onClick={() => navigate("/documentos")}>Cerrar</Button>
               </div>
@@ -386,6 +402,9 @@ export default function Documentos() {
                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => transcribir(d.id)}>
                     <ScanLine className="h-3 w-3" /> IA
                   </Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => extraerDatosIA(d.id)}>
+                    <Sparkles className="h-3 w-3" /> Datos
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => del(d.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardContent>
@@ -417,6 +436,7 @@ export default function Documentos() {
               </div>
               <div className="flex flex-col gap-1">
                 <Button size="sm" variant="outline" onClick={() => transcribir(d.id)}><ScanLine className="h-3.5 w-3.5" /> IA</Button>
+                <Button size="sm" variant="outline" onClick={() => extraerDatosIA(d.id)}><Sparkles className="h-3.5 w-3.5" /> Datos</Button>
                 <Button size="sm" variant="ghost" onClick={() => del(d.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent></Card>

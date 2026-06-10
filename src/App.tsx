@@ -45,6 +45,7 @@ const Fuentes = lazy(() => import("./pages/Fuentes"));
 const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
 const Fusionar = lazy(() => import("./pages/Fusionar"));
 const Sugerencias = lazy(() => import("./pages/Sugerencias"));
+const TareasIA = lazy(() => import("./pages/TareasIA"));
 const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
 const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
 const Calendario = lazy(() => import("./pages/Calendario"));
@@ -120,6 +121,7 @@ const App = () => (
                   <Route path="/busqueda-ia" element={<Navigate to="/investigacion?tab=busqueda" replace />} />
                   <Route path="/fusionar" element={<Fusionar />} />
                   <Route path="/sugerencias" element={<Sugerencias />} />
+                  <Route path="/tareas-ia" element={<TareasIA />} />
                   <Route path="/persona/:slug" element={<PersonaSlugRedirect />} />
                   <Route path="/lugares" element={<Lugares />} />
                   <Route path="/linea-de-tiempo" element={<LineaDeTiempo />} />
