@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import MigrationMap from "@/components/MigrationMap";
 import FamilyTimeline from "@/components/FamilyTimeline";
 import PersonaName from "@/components/PersonaName";
+import GenealogistaIA from "@/components/GenealogistaIA";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
 import {
-  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight,
+  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight, Lightbulb,
 } from "lucide-react";
 
 export default function Inicio() {
@@ -115,28 +116,21 @@ export default function Inicio() {
       />
 
       <div className="mb-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <GlassCard className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Asistente de investigación IA</p>
-              <h2 className="mt-1 font-display text-2xl font-semibold">Prioridades inteligentes</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {stats.docsPendientes + stats.coincidencias + stats.hipotesis + stats.inferencias} elemento(s) esperando revisión entre documentos, coincidencias, hipótesis e inferencias.
-              </p>
-            </div>
-            <Sparkles className="h-6 w-6 text-primary" />
-          </div>
-          <div className="mt-4 grid gap-2 md:grid-cols-2">
-            <button onClick={() => navigate("/investigacion?tab=insights")} className="rounded-2xl border p-3 text-left hover:bg-foreground/5">
-              <p className="font-medium">Revisar contradicciones e insights</p>
-              <p className="text-xs text-muted-foreground">Detecta problemas, huecos y oportunidades.</p>
-            </button>
-            <button onClick={() => navigate("/investigacion?tab=hub")} className="rounded-2xl border p-3 text-left hover:bg-foreground/5">
-              <p className="font-medium">Buscar antepasado</p>
-              <p className="text-xs text-muted-foreground">Registros, texto, imágenes, catálogo y más.</p>
-            </button>
-          </div>
-        </GlassCard>
+        <GenealogistaIA
+          context="dashboard"
+          title="Prioridades inteligentes"
+          subtitle={`${stats.docsPendientes + stats.coincidencias + stats.hipotesis + stats.inferencias} elemento(s) esperando revisión entre documentos, coincidencias, hipótesis e inferencias.`}
+          metrics={[
+            { label: "Documentos", value: stats.docsPendientes, tone: stats.docsPendientes ? "warn" : "ok" },
+            { label: "Coincidencias", value: stats.coincidencias, tone: stats.coincidencias ? "warn" : "ok" },
+            { label: "Hipótesis", value: stats.hipotesis, tone: stats.hipotesis ? "info" : "neutral" },
+          ]}
+          actions={[
+            { label: "Revisar contradicciones", description: "Huecos, conflictos y próximos pasos.", to: "/investigacion?tab=insights", icon: <Sparkles className="h-4 w-4" />, kind: "primary" },
+            { label: "Buscar antepasado", description: "Registros, texto, imágenes y catálogo.", to: "/investigacion?tab=hub", icon: <Search className="h-4 w-4" /> },
+            { label: "Tareas IA", description: "Pendientes de confirmación humana.", to: "/tareas-ia", icon: <Lightbulb className="h-4 w-4" /> },
+          ]}
+        />
 
         <GlassCard className="p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Buscar antepasado</p>

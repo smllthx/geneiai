@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
+import GenealogistaIA from "@/components/GenealogistaIA";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -202,6 +203,41 @@ export default function Documentos() {
             <ScanLine className="h-4 w-4" /> Extraer personas → Sugerencias
           </Button>
         }
+      />
+
+      <GenealogistaIA
+        context="documento"
+        title="Genealogista IA documental"
+        subtitle={selectedDoc ? `Documento activo: ${selectedDoc.titulo}. Extrae evidencia y crea sugerencias para revisión.` : "Selecciona un documento para transcribir, extraer nombres, fechas, lugares y sugerir vínculos familiares."}
+        metrics={[
+          { label: "Total", value: items.length, tone: "neutral" },
+          { label: "Pendientes", value: items.filter((d) => d.estado === "pendiente").length, tone: items.some((d) => d.estado === "pendiente") ? "warn" : "ok" },
+          { label: "Vinculados", value: items.filter((d) => (d.personas_mencionadas ?? []).length > 0).length, tone: "info" },
+        ]}
+        actions={[
+          {
+            label: "Transcribir documento",
+            description: "Lee el archivo y guarda texto revisable.",
+            icon: <ScanLine className="h-4 w-4" />,
+            disabled: !selectedDoc,
+            onClick: () => selectedDoc && transcribir(selectedDoc.id),
+            kind: "primary",
+          },
+          {
+            label: "Extraer evidencia",
+            description: "Nombres, fechas, lugares y posibles relaciones.",
+            icon: <Sparkles className="h-4 w-4" />,
+            disabled: !selectedDoc,
+            onClick: () => selectedDoc && extraerDatosIA(selectedDoc.id),
+          },
+          {
+            label: "Revisar sugerencias",
+            description: "Confirmar antes de modificar el árbol.",
+            icon: <UserPlus className="h-4 w-4" />,
+            to: "/sugerencias",
+          },
+        ]}
+        className="mb-4"
       />
 
       {/* Barra de filtros */}

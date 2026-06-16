@@ -38,7 +38,7 @@ const primaryNavBase = [
   { to: "/calendario", label: "Calendario", icon: Calendar },
 ];
 const investigationNav = [
-  { to: "/asistente", label: "Asistente ChatGPT", icon: Bot },
+  { to: "/asistente", label: "Genealogista IA", icon: Bot },
   { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/importadas-pendientes", label: "Importadas pendientes", icon: Link2 },
   { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },

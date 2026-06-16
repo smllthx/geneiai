@@ -45,6 +45,8 @@ import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
 import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
 import { toDisplayText } from "@/lib/safeText";
+import GenealogistaIA from "@/components/GenealogistaIA";
+import EvidenceCenter from "@/components/EvidenceCenter";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -416,6 +418,52 @@ export default function PersonaDetail() {
       {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
 
       {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
+
+      {!isNew && (
+        <GenealogistaIA
+          context="persona"
+          title="Genealogista IA de la ficha"
+          personName={fullName}
+          subtitle="Analiza la ficha, documentos, relaciones y eventos. Propone hipótesis y evidencia, pero los cambios quedan pendientes de confirmación."
+          metrics={[
+            { label: "Fuentes", value: docs.length, tone: docs.length ? "ok" : "warn" },
+            { label: "Hipótesis", value: hipos.length, tone: hipos.length ? "info" : "neutral" },
+            { label: "Coincidencias", value: coincidencias.length, tone: coincidencias.length ? "warn" : "ok" },
+          ]}
+          actions={[
+            { label: "Buscar evidencia", description: "Internet, registros y fuentes probables.", onClick: buscarMasConIa, icon: <Search className="h-4 w-4" />, kind: "primary" },
+            { label: "Generar biografía", description: "Texto editable desde datos confirmados.", onClick: generarBiografia, icon: <Sparkles className="h-4 w-4" /> },
+            { label: "Detectar inconsistencias", description: "Fechas, relaciones y datos incompletos.", onClick: lanzarInsightsSegundoPlano, icon: <AlertTriangle className="h-4 w-4" />, kind: "warning" },
+          ]}
+          className="mb-4"
+        />
+      )}
+
+      {!isNew && (
+        <EvidenceCenter
+          className="mb-4"
+          sourceCount={docs.length}
+          eventCount={eventos.length}
+          hypothesisCount={hipos.length}
+          items={[
+            ...docs.slice(0, 4).map((d) => ({
+              id: d.id,
+              title: d.titulo ?? "Documento sin título",
+              detail: d.resumen ?? d.transcripcion ?? d.cita ?? "Documento vinculado a esta persona.",
+              status: d.estado ?? "probable",
+              source: d.repositorio ?? d.tipo,
+              to: `/documentos/${d.id}`,
+            })),
+            ...eventos.slice(0, 2).map((ev) => ({
+              id: ev.id,
+              title: ev.tipo ? `${ev.tipo}` : "Evento vital",
+              detail: [fmtDate(ev.fecha), lugaresById.get(ev.lugar_id)?.nombre, ev.descripcion].filter(Boolean).join(" · "),
+              status: ev.certeza ?? "probable",
+              source: "Ficha genealógica",
+            })),
+          ]}
+        />
+      )}
 
       {!isNew && (
         <Card className="archivo-card mb-4 overflow-hidden">

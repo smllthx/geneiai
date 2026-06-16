@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeInsights from "@/components/TreeInsights";
+import GenealogistaIA from "@/components/GenealogistaIA";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -702,6 +703,29 @@ function ArbolContent() {
       )}
 
       {persona && <TreeInsights personaId={persona.id} personaNombre={`${persona.nombres} ${persona.apellidos}`} />}
+
+      {persona && (
+        <div className="px-3 md:px-6">
+          <GenealogistaIA
+            context="arbol"
+            title="Genealogista IA del árbol"
+            personName={`${persona.nombres} ${persona.apellidos}`}
+            subtitle="Revisa ramas débiles, coherencia, duplicados y tareas del árbol activo. Los vínculos sugeridos deben confirmarse antes de guardarse."
+            metrics={[
+              { label: "Personas", value: personas.length, tone: "neutral" },
+              { label: "Relaciones", value: rels.length, tone: rels.length ? "ok" : "warn" },
+              { label: "Tareas", value: tasks.filter((t) => t.estado !== "completada").length, tone: tasks.some((t) => t.estado !== "completada") ? "warn" : "ok" },
+            ]}
+            actions={[
+              { label: "Verificar coherencia", description: "Fechas imposibles y parentescos dudosos.", onClick: verificarCoherencia, icon: <ShieldCheck className="h-4 w-4" />, kind: "primary" },
+              { label: "Lanzar agentes", description: "Crea tareas por ramas y personas incompletas.", onClick: agentesEnParalelo, icon: <Rocket className="h-4 w-4" /> },
+              { label: "Actualizar árbol", description: "Recarga relaciones y personas del árbol activo.", onClick: refreshTree, icon: <RefreshCw className="h-4 w-4" /> },
+            ]}
+            compact
+            className="mb-4"
+          />
+        </div>
+      )}
 
       {/* Floating tools panel — agrupa todo lo demás */}
       <Sheet>

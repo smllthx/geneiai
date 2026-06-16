@@ -4,8 +4,8 @@ import { Sparkles, X, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const QUICK = [
-  { label: "Investigar a alguien", to: "/agente" },
-  { label: "Lanzar agentes en paralelo", to: "/agentes-paralelo" },
+  { label: "Investigar a alguien", to: "/investigacion?tab=agente" },
+  { label: "Lanzar agentes en paralelo", to: "/investigacion?tab=paralelo" },
   { label: "Importar árbol", to: "/importar" },
   { label: "Auto-configurar la app", to: "/configurar-app" },
   { label: "Ver coincidencias", to: "/coincidencias" },
@@ -45,7 +45,7 @@ export default function SiriAssistant() {
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="siri-orb h-6 w-6 rounded-full" />
-                <span className="font-display text-sm font-semibold">Asistente</span>
+                <span className="font-display text-sm font-semibold">Genealogista IA</span>
               </div>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />

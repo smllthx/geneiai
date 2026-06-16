@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SectionHeader } from "@/components/glass";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import GenealogistaIA from "@/components/GenealogistaIA";
 
 const Agente = lazy(() => import("./Agente"));
 const AgentesParalelo = lazy(() => import("./AgentesParalelo"));
@@ -37,6 +38,13 @@ export default function Investigacion() {
         eyebrow="Centro de investigación"
         title="Investigación familiar"
         subtitle="ChatGPT, búsquedas externas, pistas, hipótesis, agentes e inferencias en un solo lugar."
+      />
+      <GenealogistaIA
+        context="investigacion"
+        title="Genealogista IA"
+        subtitle="Escribe, busca, revisa y confirma. La IA puede proponer relaciones, duplicados, eventos y fuentes; la app no aplica cambios importantes sin tu validación."
+        compact
+        className="mb-4"
       />
       <Tabs value={current} onValueChange={(v) => setParams({ tab: v })}>
         <TabsList className="mb-4 flex h-auto flex-wrap">
