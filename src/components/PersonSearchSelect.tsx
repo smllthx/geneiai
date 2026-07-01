@@ -3,8 +3,10 @@ import { Search, UserRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  comparePeopleAlphabetically,
   filterPeopleForQuery,
   personFullName,
+  personIndexLetter,
   personSearchSubtitle,
   type SearchablePerson,
 } from "@/lib/personSearch";
@@ -33,9 +35,19 @@ export default function PersonSearchSelect<T extends SearchablePerson>({
 }: Props<T>) {
   const [query, setQuery] = useState("");
   const results = useMemo(
-    () => filterPeopleForQuery(people, query, { excludeId, limit }),
+    () => filterPeopleForQuery(people, query, { excludeId, limit }).slice().sort(comparePeopleAlphabetically),
     [people, query, excludeId, limit],
   );
+  const groupedResults = useMemo(() => {
+    const map = new Map<string, T[]>();
+    for (const person of results) {
+      const letter = personIndexLetter(person);
+      const current = map.get(letter) ?? [];
+      current.push(person);
+      map.set(letter, current);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, "es", { numeric: true }));
+  }, [results]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -66,21 +78,29 @@ export default function PersonSearchSelect<T extends SearchablePerson>({
           {results.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</p>
           ) : (
-            results.map((person) => (
-              <button
-                key={person.id}
-                type="button"
-                onClick={() => onChange(person)}
-                className="flex w-full items-center gap-3 border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:outline-none"
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <UserRound className="h-4 w-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-foreground">{personFullName(person)}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{personSearchSubtitle(person)}</span>
-                </span>
-              </button>
+            groupedResults.map(([letter, group]) => (
+              <section key={letter} className="border-b border-border/60 last:border-b-0">
+                <div className="sticky top-0 z-10 flex h-8 items-center gap-2 bg-background/90 px-3 text-xs font-bold text-primary backdrop-blur">
+                  <span className="grid h-5 w-5 place-items-center rounded-md bg-primary/12">{letter}</span>
+                  <span className="font-medium text-muted-foreground">{group.length}</span>
+                </div>
+                {group.map((person) => (
+                  <button
+                    key={person.id}
+                    type="button"
+                    onClick={() => onChange(person)}
+                    className="flex w-full items-center gap-3 border-t border-border/60 px-3 py-2 text-left first:border-t-0 hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:outline-none"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                      <UserRound className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-foreground">{personFullName(person)}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{personSearchSubtitle(person)}</span>
+                    </span>
+                  </button>
+                ))}
+              </section>
             ))
           )}
         </div>

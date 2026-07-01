@@ -38,7 +38,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
     setLoading(true);
     try {
       const data = await fetchAllPeople<UniversalPerson>(
-        "id,nombres,apellidos,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,defuncion_fecha_aprox,def_rango_ini,def_rango_fin,nacionalidad,arbol_id,foto_url",
+        "id,nombres,apellidos,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,defuncion_fecha_aprox,nacionalidad,arbol_id,foto_url",
         { treeId: null },
       );
       setPeople(data.slice().sort(comparePeopleAlphabetically));

@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import LugarSelect, { useLugares } from "@/components/LugarSelect";
-import { filterPeopleForQuery } from "@/lib/personSearch";
-import { personaCode } from "@/lib/personaCode";
+import PersonSearchSelect from "@/components/PersonSearchSelect";
 
 type EventoTipo =
   | "nacimiento" | "bautismo" | "matrimonio" | "defuncion" | "entierro"
@@ -42,7 +41,6 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
   const [descripcion, setDescripcion] = useState("");
   const [certeza, setCerteza] = useState<string>("probable");
   const [personas, setPersonas] = useState<any[]>([]);
-  const [personaQuery, setPersonaQuery] = useState("");
   const [taggedIds, setTaggedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [lugares, setLugares] = useLugares();
@@ -51,7 +49,7 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
     if (!open) return;
     supabase
       .from("personas")
-      .select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,defuncion_fecha_aprox,def_rango_ini,def_rango_fin,variantes_nombre,notas")
+      .select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,defuncion_fecha_aprox,variantes_nombre,notas")
       .order("apellidos", { ascending: true })
       .limit(2000)
       .then(({ data }) => setPersonas(data ?? []));
@@ -61,14 +59,10 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
     () => taggedIds.map((pid) => personas.find((p) => p.id === pid)).filter(Boolean),
     [taggedIds, personas],
   );
-  const personResults = useMemo(
-    () => filterPeopleForQuery(personas, personaQuery, { excludeId: personaId, limit: 8 }).filter((p) => !taggedIds.includes(p.id)),
-    [personas, personaQuery, personaId, taggedIds],
-  );
 
   const reset = () => {
     setStep("tipo"); setTipo("residencia"); setFecha(""); setFechaAprox("");
-    setLugarId(null); setDescripcion(""); setCerteza("probable"); setPersonaQuery(""); setTaggedIds([]);
+    setLugarId(null); setDescripcion(""); setCerteza("probable"); setTaggedIds([]);
   };
 
   const pick = (t: EventoTipo) => { setTipo(t); setStep("datos"); };
@@ -165,28 +159,18 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
                   ))}
                 </div>
               )}
-              <Input
-                value={personaQuery}
-                onChange={(e) => setPersonaQuery(e.target.value)}
-                placeholder="Buscar persona por nombre, apellido o código"
+              <PersonSearchSelect
+                people={personas.filter((p) => !taggedIds.includes(p.id))}
+                value={null}
+                onChange={(person) => {
+                  if (!person || person.id === personaId) return;
+                  setTaggedIds((ids) => ids.includes(person.id) ? ids : [...ids, person.id]);
+                }}
+                excludeId={personaId}
+                limit={80}
+                placeholder="Buscar persona por apellido, nombre, código o fecha"
+                emptyText="No encontré personas para vincular al hecho."
               />
-              {personaQuery.trim() && (
-                <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-border">
-                  {personResults.length === 0 ? (
-                    <div className="p-2 text-xs text-muted-foreground">No encontré personas.</div>
-                  ) : personResults.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { setTaggedIds((ids) => [...ids, p.id]); setPersonaQuery(""); }}
-                      className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-accent/20"
-                    >
-                      <span className="font-medium">{p.nombres} {p.apellidos}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{personaCode(p.id)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             <div>
               <Label>Certeza</Label>

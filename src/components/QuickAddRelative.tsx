@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, Search } from "lucide-react";
-import { personaCode } from "@/lib/personaCode";
-import { filterPeopleForQuery } from "@/lib/personSearch";
+import { UserPlus } from "lucide-react";
 import { inferSexFromName } from "@/lib/personAutoRules";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import PersonSearchSelect from "@/components/PersonSearchSelect";
 
 type Tipo =
   | "padre" | "madre" | "conyuge" | "hijo" | "hermano"
@@ -49,7 +48,6 @@ export default function QuickAddRelative({
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<Tipo>(defaultTipo);
   const [mode, setMode] = useState<"buscar" | "crear">("buscar");
-  const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<any | null>(null);
   const [all, setAll] = useState<any[]>([]);
 
@@ -75,11 +73,6 @@ export default function QuickAddRelative({
     if (tipo === "padre") setSexo("masculino");
     else if (tipo === "madre") setSexo("femenino");
   }, [tipo, picked]);
-
-  const matches = useMemo(() => {
-    if (!query.trim()) return [];
-    return filterPeopleForQuery(all, query, { excludeId: personaId, limit: 30 });
-  }, [all, query, personaId]);
 
   // Cuando se elige una persona existente, autollenamos los campos de crear (por si el usuario cambia de modo)
   useEffect(() => {
@@ -250,7 +243,7 @@ export default function QuickAddRelative({
 
       toast.success(`${labels[tipo]} ${mode === "buscar" ? "vinculado/a" : "agregado/a"}`);
       setOpen(false);
-      setNombres(""); setApellidos(""); setNacAprox(""); setQuery(""); setPicked(null);
+      setNombres(""); setApellidos(""); setNacAprox(""); setPicked(null);
       window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: personaId, relatedPersonId: parienteId, table: "relaciones" } }));
       onAdded?.();
     } catch (e: any) {
@@ -304,32 +297,16 @@ export default function QuickAddRelative({
 
           {mode === "buscar" ? (
             <div className="grid gap-2">
-              <Label>Buscar por nombre o código (ej. GDVB-TS5)</Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input value={query} onChange={(e) => { setQuery(e.target.value); setPicked(null); }}
-                  placeholder="Escribe al menos 2 letras…" className="pl-7" autoFocus />
-              </div>
-              {picked ? (
-                <div className="rounded-lg border border-primary/40 bg-primary/5 p-2 text-sm">
-                  <div className="font-medium">{picked.nombres} {picked.apellidos}</div>
-                  <div className="text-xs text-muted-foreground">{personaCode(picked.id)}</div>
-                </div>
-              ) : matches.length > 0 ? (
-                <ul className="max-h-56 overflow-auto rounded-lg border bg-popover text-sm">
-                  {matches.map((m) => (
-                    <li key={m.id}>
-                      <button type="button" onClick={() => setPicked(m)}
-                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-accent">
-                        <span className="truncate">{m.nombres} {m.apellidos}</span>
-                        <span className="font-mono text-[10px] text-muted-foreground">{personaCode(m.id)}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : query.length >= 2 ? (
-                <p className="text-xs text-muted-foreground">Sin coincidencias. Cambia a "Crear nueva".</p>
-              ) : null}
+              <Label>Buscar persona existente en todo el índice</Label>
+              <PersonSearchSelect
+                people={all}
+                value={picked}
+                onChange={setPicked}
+                excludeId={personaId}
+                limit={120}
+                placeholder="Buscar por apellido, nombre, código o fecha"
+                emptyText="Sin coincidencias. Cambia a Crear nueva si la persona no existe."
+              />
             </div>
           ) : (
             <>
