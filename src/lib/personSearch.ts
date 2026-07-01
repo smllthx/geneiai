@@ -17,7 +17,6 @@ export type SearchablePerson = {
   nac_rango_ini?: number | null;
   nac_rango_fin?: number | null;
   defuncion_fecha?: string | null;
-  defuncion_fecha_aprox?: string | null;
   notas?: string | null;
 };
 
@@ -37,7 +36,6 @@ export function personSearchText(person: SearchablePerson) {
     person.nac_rango_ini,
     person.nac_rango_fin,
     person.defuncion_fecha,
-    person.defuncion_fecha_aprox,
     personaCode(person.id),
     person.id,
   ]
@@ -69,7 +67,7 @@ export function comparePeopleAlphabetically(a: SearchablePerson, b: SearchablePe
 
 export function personSearchSubtitle(person: SearchablePerson) {
   const born = person.nac_fecha ?? person.nac_fecha_aprox ?? person.nac_rango_ini;
-  const died = person.defuncion_fecha ?? person.defuncion_fecha_aprox;
+  const died = person.defuncion_fecha;
   const life = born || died ? `${born ?? "?"}–${died ?? ""}` : "Fechas sin registrar";
   const code = person.codigo || personaCode(person.id);
   return `${life} · ${code}`;

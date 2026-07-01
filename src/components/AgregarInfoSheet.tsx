@@ -49,7 +49,7 @@ export default function AgregarInfoSheet({ personaId, onAdded, trigger }: {
     if (!open) return;
     supabase
       .from("personas")
-      .select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,defuncion_fecha_aprox,variantes_nombre,notas")
+      .select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,variantes_nombre,notas")
       .order("apellidos", { ascending: true })
       .limit(2000)
       .then(({ data }) => setPersonas(data ?? []));
