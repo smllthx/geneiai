@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
-  PanelRightOpen,
+  PanelRightOpen, ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -23,6 +23,7 @@ import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import NetworkStatusModal from "@/components/NetworkStatusModal";
 import OfflineContextKeeper from "@/components/OfflineContextKeeper";
 import AppWindowLayer from "@/components/AppWindowLayer";
+import UniversalPersonSearch from "@/components/UniversalPersonSearch";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
 import { prefetchRoute } from "@/lib/routePrefetch";
@@ -165,6 +166,10 @@ export default function AppLayout() {
   const location = useLocation();
   const isWindowFrame = new URLSearchParams(location.search).get("window") === "1";
   const handleLogout = async () => { await signOut(); navigate("/login"); };
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/inicio");
+  };
   const refreshVisibleData = () => {
     window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "manual" } }));
     window.dispatchEvent(new Event("genaia:recent-changed"));
@@ -251,6 +256,9 @@ export default function AppLayout() {
               </div>
             </div>
           </div>
+          <div className="px-3 pb-3">
+            <UniversalPersonSearch />
+          </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2">
             <NavItems groupKey="primary" items={primaryNavBase} />
             <NavGroup groupKey="investigation" label="Investigación" items={investigationNav} />
@@ -312,10 +320,16 @@ export default function AppLayout() {
               </Button>
             </SheetContent>
           </Sheet>
+          <Button variant="ghost" size="icon" className="rounded-xl" onClick={goBack} aria-label="Volver atrás">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <NavLink to="/inicio" className="flex items-center gap-2">
             <BrandLogo size={42} showText />
           </NavLink>
-          <NotificationBell />
+          <div className="flex items-center gap-1">
+            <UniversalPersonSearch compact />
+            <NotificationBell />
+          </div>
         </div>
         <main
           className="min-w-0 flex-1 pb-28 md:px-8 md:pt-6 md:pb-8"
@@ -325,6 +339,12 @@ export default function AppLayout() {
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 5rem)",
           }}
         >
+          <div className="mb-4 hidden items-center gap-2 md:flex">
+            <Button variant="ghost" size="sm" className="rounded-xl" onClick={goBack}>
+              <ArrowLeft className="h-4 w-4" /> Volver
+            </Button>
+            <UniversalPersonSearch className="max-w-52" />
+          </div>
           <Outlet />
         </main>
       </div>

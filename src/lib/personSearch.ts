@@ -53,9 +53,21 @@ export function personFullName(person: SearchablePerson) {
   return [person.nombres, person.apellidos].filter(Boolean).join(" ").trim() || "Persona sin nombre";
 }
 
+export function personIndexKey(person: SearchablePerson) {
+  const surname = String(person.apellidos ?? "").trim();
+  const names = String(person.nombres ?? "").trim();
+  return `${surname || names} ${surname ? names : ""} ${person.nac_fecha ?? person.nac_rango_ini ?? ""}`.trim();
+}
+
+export function personIndexLetter(person: SearchablePerson) {
+  const key = norm(person.apellidos || person.nombres || "#");
+  const first = key.charAt(0).toUpperCase();
+  return /[A-Z0-9]/.test(first) ? first : "#";
+}
+
 export function comparePeopleAlphabetically(a: SearchablePerson, b: SearchablePerson) {
-  const ak = `${a.apellidos ?? ""} ${a.nombres ?? ""} ${a.nac_fecha ?? ""}`.trim();
-  const bk = `${b.apellidos ?? ""} ${b.nombres ?? ""} ${b.nac_fecha ?? ""}`.trim();
+  const ak = personIndexKey(a);
+  const bk = personIndexKey(b);
   return ak.localeCompare(bk, "es", { sensitivity: "base", numeric: true });
 }
 

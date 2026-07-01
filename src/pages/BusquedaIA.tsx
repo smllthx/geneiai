@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ type Hallazgo = {
 };
 
 export default function BusquedaIA() {
+  const [params] = useSearchParams();
   const [tab, setTab] = useState<"persona" | "manual" | "url">("persona");
   const [personas, setPersonas] = useState<any[]>([]);
   const [pid, setPid] = useState<string>("");
@@ -34,10 +35,21 @@ export default function BusquedaIA() {
       const treeId = await getActiveTreeId();
       const data = await fetchAllPeople("id,nombres,apellidos", { treeId });
       setPersonas(data ?? []);
-      if (data?.[0]) setPid(data[0].id);
+      const personaParam = params.get("persona");
+      const queryParam = params.get("q") || sessionStorage.getItem("geneai:ai-search-query") || "";
+      if (personaParam && data?.some((person: any) => person.id === personaParam)) {
+        setTab("persona");
+        setPid(personaParam);
+      } else if (queryParam) {
+        setTab("manual");
+        setManual((current) => ({ ...current, palabras: queryParam }));
+        if (data?.[0]) setPid(data[0].id);
+      } else if (data?.[0]) {
+        setPid(data[0].id);
+      }
     })();
     cargarHistorial();
-  }, []);
+  }, [params]);
 
   const cargarHistorial = async () => {
     const treeId = await getActiveTreeId();
