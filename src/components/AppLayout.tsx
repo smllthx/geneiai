@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
-  PanelRightOpen, ArrowLeft,
+  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -25,7 +25,7 @@ import OfflineContextKeeper from "@/components/OfflineContextKeeper";
 import AppWindowLayer from "@/components/AppWindowLayer";
 import UniversalPersonSearch from "@/components/UniversalPersonSearch";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
-import { filterByHidden } from "@/lib/navConfig";
+import { filterByHidden, toggleHidden } from "@/lib/navConfig";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { toast } from "sonner";
 
@@ -62,8 +62,10 @@ const utilityNav = [
 type NavItem = { to: string; label: string; icon: any };
 
 function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
+  const navigate = useNavigate();
   const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, filterByHidden(groupKey, items)));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [options, setOptions] = useState<{ item: NavItem; x: number; y: number } | null>(null);
 
   useEffect(() => {
     const refresh = () => setOrdered(loadOrder(groupKey, filterByHidden(groupKey, items)));
@@ -91,6 +93,25 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
     );
   };
 
+  const openOptions = (item: NavItem, event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setOptions({
+      item,
+      x: Math.min(rect.right + 8, window.innerWidth - 288),
+      y: Math.min(rect.top, window.innerHeight - 245),
+    });
+  };
+
+  const openMenuSettings = () => {
+    window.dispatchEvent(
+      new CustomEvent("geneai:open-window", {
+        detail: { id: "/configuracion#menus", title: "Menús de la app", path: "/configuracion" },
+      }),
+    );
+  };
+
   return (
     <div className="space-y-1">
       {ordered.map((item, idx) => {
@@ -107,8 +128,10 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
           <div className="flex items-center gap-1">
             <NavLink
               to={to}
+              onDoubleClick={(event) => openOptions(item, event)}
               onMouseEnter={() => prefetchRoute(to)}
               onFocus={() => prefetchRoute(to)}
+              title="Doble clic para opciones de esta función"
               className={({ isActive }) =>
                 cn(
                   "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
@@ -138,6 +161,64 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
         </div>
         );
       })}
+      {options && (
+        <div className="fixed inset-0 z-[95]" onClick={() => setOptions(null)}>
+          <div
+            className="glass-strong fixed w-72 rounded-2xl border border-white/20 p-2 shadow-2xl"
+            style={{ left: options.x, top: options.y }}
+            onClick={(event) => event.stopPropagation()}
+            role="menu"
+            aria-label={`Opciones de ${options.item.label}`}
+          >
+            <div className="px-3 py-2">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Opciones rápidas</p>
+              <p className="truncate text-sm font-semibold">{options.item.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Doble clic abre este panel nativo.</p>
+            </div>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
+              onClick={() => {
+                navigate(options.item.to);
+                setOptions(null);
+              }}
+            >
+              <MousePointerClick className="h-4 w-4 text-primary" /> Abrir aquí
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
+              onClick={() => {
+                openWindow(options.item);
+                setOptions(null);
+              }}
+            >
+              <PanelRightOpen className="h-4 w-4 text-primary" /> Abrir en ventana
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
+              onClick={() => {
+                toggleHidden(groupKey, options.item.to);
+                toast.success(`${options.item.label} se ocultó del menú`);
+                setOptions(null);
+              }}
+            >
+              <EyeOff className="h-4 w-4 text-muted-foreground" /> Ocultar del menú
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
+              onClick={() => {
+                openMenuSettings();
+                setOptions(null);
+              }}
+            >
+              <Settings2 className="h-4 w-4 text-primary" /> Configurar todos los menús
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -150,6 +231,15 @@ function NavGroup({ groupKey, label, items }: { groupKey: string; label: string;
     <div className="mt-3">
       <button
         onClick={() => setOpen((o) => !o)}
+        onDoubleClick={(event) => {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("geneai:open-window", {
+              detail: { id: `/configuracion#${groupKey}`, title: `Configurar ${label}`, path: "/configuracion" },
+            }),
+          );
+        }}
+        title="Doble clic para configurar esta sección"
         className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <span>{label}</span>
