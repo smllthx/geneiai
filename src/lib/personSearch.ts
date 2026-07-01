@@ -5,8 +5,13 @@ export type SearchablePerson = {
   id: string;
   nombres?: string | null;
   apellidos?: string | null;
+  codigo?: string | null;
   variantes_nombre?: string[] | null;
   sexo?: string | null;
+  nacionalidad?: string | null;
+  lugar?: string | null;
+  nac_lugar?: string | null;
+  defuncion_lugar?: string | null;
   nac_fecha?: string | null;
   nac_fecha_aprox?: string | null;
   nac_rango_ini?: number | null;
@@ -23,7 +28,12 @@ export function personSearchText(person: SearchablePerson) {
     person.nombres,
     person.apellidos,
     ...(Array.isArray(person.variantes_nombre) ? person.variantes_nombre : []),
+    person.codigo,
     person.sexo,
+    person.nacionalidad,
+    person.lugar,
+    person.nac_lugar,
+    person.defuncion_lugar,
     person.nac_fecha,
     person.nac_fecha_aprox,
     person.nac_rango_ini,
@@ -39,6 +49,24 @@ export function personSearchText(person: SearchablePerson) {
     .join(" ");
 }
 
+export function personFullName(person: SearchablePerson) {
+  return [person.nombres, person.apellidos].filter(Boolean).join(" ").trim() || "Persona sin nombre";
+}
+
+export function comparePeopleAlphabetically(a: SearchablePerson, b: SearchablePerson) {
+  const ak = `${a.apellidos ?? ""} ${a.nombres ?? ""} ${a.nac_fecha ?? ""}`.trim();
+  const bk = `${b.apellidos ?? ""} ${b.nombres ?? ""} ${b.nac_fecha ?? ""}`.trim();
+  return ak.localeCompare(bk, "es", { sensitivity: "base", numeric: true });
+}
+
+export function personSearchSubtitle(person: SearchablePerson) {
+  const born = person.nac_fecha ?? person.nac_fecha_aprox ?? person.nac_rango_ini;
+  const died = person.defuncion_fecha ?? person.defuncion_fecha_aprox ?? person.def_rango_ini;
+  const life = born || died ? `${born ?? "?"}–${died ?? ""}` : "Fechas sin registrar";
+  const code = person.codigo || personaCode(person.id);
+  return `${life} · ${code}`;
+}
+
 export function filterPeopleForQuery<T extends SearchablePerson>(
   people: T[],
   query: string,
@@ -51,7 +79,7 @@ export function filterPeopleForQuery<T extends SearchablePerson>(
   if (!q) {
     return pool
       .slice()
-      .sort((a, b) => `${a.apellidos ?? ""} ${a.nombres ?? ""}`.localeCompare(`${b.apellidos ?? ""} ${b.nombres ?? ""}`))
+      .sort(comparePeopleAlphabetically)
       .slice(0, limit);
   }
 
@@ -70,7 +98,7 @@ export function filterPeopleForQuery<T extends SearchablePerson>(
   return [...byId.values()]
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      return `${a.item.apellidos ?? ""} ${a.item.nombres ?? ""}`.localeCompare(`${b.item.apellidos ?? ""} ${b.item.nombres ?? ""}`);
+      return comparePeopleAlphabetically(a.item, b.item);
     })
     .slice(0, limit)
     .map((r) => r.item);

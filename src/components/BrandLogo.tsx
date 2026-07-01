@@ -22,7 +22,7 @@ export default function BrandLogo({
 }) {
   const image = (
     <span
-      className="inline-flex shrink-0 items-center justify-center overflow-hidden"
+      className="inline-flex shrink-0 items-center justify-center"
       style={{ width: size, height: size }}
     >
       <img
@@ -30,8 +30,7 @@ export default function BrandLogo({
         alt="GENEAI"
         width={size}
         height={size}
-        className="block scale-[1.18] object-contain"
-        style={{ width: size, height: size }}
+        className="block h-full w-full object-contain drop-shadow-[0_10px_24px_rgba(34,211,238,0.18)]"
         draggable={false}
       />
     </span>

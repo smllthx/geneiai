@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { friendlyAiErrorMessage } from "@/lib/aiErrors";
 
 async function authHeaders() {
   const { data } = await supabase.auth.getSession();
@@ -17,7 +18,11 @@ async function post<T>(url: string, body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error ?? "La IA no pudo procesar la solicitud");
+  if (!res.ok) throw new Error(friendlyAiErrorMessage(json.error ?? json.message ?? res.statusText));
+  if ((json as any)?.error) {
+    (json as any).details = (json as any).details ?? (json as any).error;
+    (json as any).error = friendlyAiErrorMessage((json as any).error);
+  }
   return json as T;
 }
 

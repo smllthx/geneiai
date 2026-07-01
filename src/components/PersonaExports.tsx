@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "lucide-react";
+import { Baby, FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { runExport, type ExportKind } from "@/lib/personaExports";
 import { supabase } from "@/integrations/supabase/client";
 
 const ITEMS: { kind: ExportKind; label: string; icon: any; desc: string }[] = [
+  { kind: "certificado-nacimiento", label: "Certificado de nacimiento", icon: Baby, desc: "PDF genealógico desde la ficha" },
   { kind: "cuadro", label: "PDF del Cuadro genealógico", icon: Network, desc: "Pedigrí horizontal en cascada" },
   { kind: "familia", label: "Familia en PDF", icon: FileText, desc: "Informe familiar completo" },
   { kind: "familia-fuentes", label: "Familia con fuentes en PDF", icon: ScrollText, desc: "Informe con citas y referencias" },

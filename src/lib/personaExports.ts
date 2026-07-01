@@ -11,16 +11,38 @@ const lifespan = (p: any) => {
   if (!yN && !yD) return "";
   return ` (${yN ?? "?"}–${yD ?? (p?.viva === "si" ? "Vive" : "?")})`;
 };
+const formatDate = (d?: string | null) => {
+  if (!d) return "";
+  try {
+    return new Date(d).toLocaleDateString("es", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return d;
+  }
+};
 
 async function loadContext(personaId: string) {
-  const [{ data: personas }, { data: rels }, { data: eventos }, { data: docs }] = await Promise.all([
+  const [{ data: personas }, { data: rels }, { data: eventos }, { data: docs }, { data: lugares }] = await Promise.all([
     supabase.from("personas").select("*"),
     supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
     supabase.from("eventos").select("*").eq("persona_id", personaId).order("fecha"),
     supabase.from("documentos").select("*"),
+    supabase.from("lugares").select("*"),
   ]);
   const byId = new Map((personas ?? []).map((p: any) => [p.id, p]));
-  return { personas: personas ?? [], rels: rels ?? [], byId, eventos: eventos ?? [], docs: docs ?? [], persona: byId.get(personaId) };
+  const lugaresById = new Map((lugares ?? []).map((l: any) => [l.id, l]));
+  return { personas: personas ?? [], rels: rels ?? [], byId, lugaresById, eventos: eventos ?? [], docs: docs ?? [], persona: byId.get(personaId) };
+}
+
+function lugarTexto(lugaresById: Map<string, any>, id?: string | null, fallback?: string | null) {
+  const lugar = id ? lugaresById.get(id) : null;
+  return lugar
+    ? [lugar.nombre, lugar.ciudad, lugar.provincia, lugar.region, lugar.pais].filter(Boolean).join(", ")
+    : fallback ?? "";
 }
 
 function header(doc: jsPDF, title: string, persona: any) {
@@ -43,7 +65,7 @@ function footer(doc: jsPDF) {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text(`GeneaAgents · ${new Date().toLocaleDateString("es")}`, 40, doc.internal.pageSize.getHeight() - 20);
+    doc.text(`GENEAI · ${new Date().toLocaleDateString("es")}`, 40, doc.internal.pageSize.getHeight() - 20);
     doc.text(`${i} / ${pages}`, doc.internal.pageSize.getWidth() - 60, doc.internal.pageSize.getHeight() - 20);
   }
 }
@@ -355,7 +377,77 @@ export async function exportRetratoPDF(personaId: string) {
   doc.save(`retrato-${personaCode(persona.id)}.pdf`);
 }
 
-export type ExportKind = "cuadro" | "familia" | "familia-fuentes" | "abanico" | "retrato";
+export async function exportCertificadoNacimientoPDF(personaId: string) {
+  const { rels, byId, lugaresById, docs, persona } = await loadContext(personaId);
+  if (!persona) throw new Error("Persona no encontrada");
+
+  const padres = padresDe(personaId, rels as any, byId).all;
+  const padre = padres.find((x: any) => x.sexo === "masculino");
+  const madre = padres.find((x: any) => x.sexo === "femenino");
+  const nacimiento = formatDate(persona.nac_fecha) || persona.nac_fecha_aprox || "Dato no registrado";
+  const lugarNacimiento = lugarTexto(lugaresById, persona.nac_lugar_id, persona.nac_lugar) || "Dato no registrado";
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFillColor(7, 16, 26);
+  doc.rect(0, 0, pageW, 120, "F");
+  doc.setTextColor(255);
+  doc.setFont("times", "bold");
+  doc.setFontSize(22);
+  doc.text("Certificado genealógico de nacimiento", pageW / 2, 48, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Documento generado por GENEAI desde la ficha genealógica registrada", pageW / 2, 72, { align: "center" });
+  doc.setFontSize(8);
+  doc.text("No sustituye un acta civil, parroquial ni documento oficial emitido por una autoridad.", pageW / 2, 92, { align: "center" });
+
+  doc.setTextColor(20);
+  doc.setDrawColor(18, 184, 214);
+  doc.setLineWidth(1.2);
+  doc.roundedRect(48, 150, pageW - 96, 430, 14, 14, "S");
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(18);
+  doc.text(fullName(persona), pageW / 2, 190, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`ID GENEAI: ${personaCode(persona.id)}`, pageW / 2, 208, { align: "center" });
+
+  const row = (label: string, value: string, y: number) => {
+    doc.setTextColor(96);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(label.toUpperCase(), 78, y);
+    doc.setTextColor(20);
+    doc.setFont("times", "bold");
+    doc.setFontSize(14);
+    const lines = doc.splitTextToSize(value || "Dato no registrado", pageW - 156);
+    doc.text(lines, 78, y + 20);
+    doc.setDrawColor(230);
+    doc.line(78, y + 52, pageW - 78, y + 52);
+  };
+
+  row("Fecha de nacimiento", nacimiento, 250);
+  row("Lugar de nacimiento", lugarNacimiento, 320);
+  row("Padre registrado", padre ? `${fullName(padre)}${lifespan(padre)}` : "Dato no registrado", 390);
+  row("Madre registrada", madre ? `${fullName(madre)}${lifespan(madre)}` : "Dato no registrado", 460);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(95);
+  const note = [
+    `Emitido el ${new Date().toLocaleDateString("es")} a partir de los datos guardados en GENEAI.`,
+    `Fuentes/documentos vinculados a la persona: ${docs.length}.`,
+    "Revise siempre la fuente original antes de usar este certificado como evidencia genealógica.",
+  ];
+  doc.text(doc.splitTextToSize(note.join(" "), pageW - 120), 60, 625);
+
+  footer(doc);
+  doc.save(`certificado-nacimiento-${personaCode(persona.id)}.pdf`);
+}
+
+export type ExportKind = "cuadro" | "familia" | "familia-fuentes" | "abanico" | "retrato" | "certificado-nacimiento";
 
 export async function runExport(kind: ExportKind, personaId: string) {
   switch (kind) {
@@ -364,5 +456,6 @@ export async function runExport(kind: ExportKind, personaId: string) {
     case "familia-fuentes": return exportFamiliaPDF(personaId, true);
     case "abanico": return exportAbanicoPDF(personaId);
     case "retrato": return exportRetratoPDF(personaId);
+    case "certificado-nacimiento": return exportCertificadoNacimientoPDF(personaId);
   }
 }

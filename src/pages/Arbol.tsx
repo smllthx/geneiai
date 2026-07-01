@@ -208,14 +208,26 @@ function ArbolContent() {
     toast.success("Árbol actualizado");
   };
 
-  useEffect(() => {
+  const centerTreeViewport = () => {
     const el = treeScrollRef.current;
     if (!el) return;
-    const id = window.setTimeout(() => {
-      el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
-    }, 80);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
+      });
+    });
+  };
+
+  useEffect(() => {
+    const id = window.setTimeout(centerTreeViewport, 120);
     return () => window.clearTimeout(id);
   }, [persona?.id, vista, generaciones, reloadKey, panel]);
+
+  useEffect(() => {
+    const handleResize = () => centerTreeViewport();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");
@@ -754,7 +766,7 @@ function ArbolContent() {
                 <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} aria-label="Alejar"><ZoomOut className="h-4 w-4" /></Button>
                 <div className="flex-1 text-center text-xs tabular-nums text-muted-foreground">{Math.round(zoom * 100)}%</div>
                 <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.min(1.6, z + 0.1))} aria-label="Acercar"><ZoomIn className="h-4 w-4" /></Button>
-                <Button variant="outline" size="icon" onClick={() => setZoom(1)} aria-label="Centrar"><Crosshair className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" onClick={() => { setZoom(1); centerTreeViewport(); }} aria-label="Centrar"><Crosshair className="h-4 w-4" /></Button>
               </div>
               <Button variant={fullscreen ? "default" : "outline"} size="sm" className="mt-2 w-full justify-start" onClick={() => setFullscreen((v) => !v)}>
                 {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -883,8 +895,8 @@ function ArbolContent() {
       ) : !persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
-        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
-          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, width: "max-content" }}>
+        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top px-4 transition-transform md:px-6" style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}>
             <div className="mb-3 flex justify-center">
               <PartnershipStrip p={persona} compact />
             </div>
@@ -896,8 +908,8 @@ function ArbolContent() {
           </p>
         </div>
       ) : vista === "dinastica" ? (
-        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
-          <div className="mx-auto origin-top transition-transform" style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}>
+        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
+          <div className="mx-auto origin-top px-4 transition-transform md:px-6" style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}>
             <div className="mb-4 flex justify-center">
               <PartnershipStrip p={persona} compact />
             </div>
@@ -905,10 +917,10 @@ function ArbolContent() {
           </div>
         </div>
       ) : vista === "lineas" ? (
-        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
           <div
-            className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
-            style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}
+            className="mx-auto flex flex-col items-center gap-5 origin-top px-4 transition-transform md:px-6"
+            style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}
           >
             {(() => {
               const { padre, madre } = padresDe(persona.id);
@@ -931,10 +943,10 @@ function ArbolContent() {
           </div>
         </div>
       ) : (
-        <div ref={treeScrollRef} className="overflow-x-auto pb-24 md:pb-8">
+        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
           <div
-            className="mx-auto flex flex-col items-center gap-5 origin-top transition-transform"
-            style={{ transform: `scale(${zoom})`, minWidth: "max-content" }}
+            className="mx-auto flex flex-col items-center gap-5 origin-top px-4 transition-transform md:px-6"
+            style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}
           >
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Ascendencia paterna y materna

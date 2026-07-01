@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { recordAiUsage } from '../../lib/aiUsage';
+import { friendlyAiErrorMessage } from '../../lib/aiErrors';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -45,7 +46,14 @@ supabase.functions.invoke = (async (functionName: string, options?: any) => {
     recordAiUsage(functionName, options?.body, !result.error);
   } catch {}
 
-  if (!result.error) return result;
+  if (!result.error) {
+    const dataError = (result.data as any)?.error;
+    if (dataError) {
+      (result.data as any).details = (result.data as any).details ?? dataError;
+      (result.data as any).error = friendlyAiErrorMessage(dataError, functionName);
+    }
+    return result;
+  }
 
   let detail = "";
   const context = (result.error as any).context;
@@ -66,18 +74,7 @@ supabase.functions.invoke = (async (functionName: string, options?: any) => {
   }
 
   const rawMessage = detail || result.error.message || "Error de IA";
-  const normalized = rawMessage.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  let friendly = rawMessage;
-
-  if (normalized.includes("openai no configurado") || normalized.includes("api key")) {
-    friendly = "Falta activar ChatGPT: abre Configuración → IA, guarda tu API key de OpenAI y reinicia para aplicar el cambio.";
-  } else if (normalized.includes("invalid_api_key") || normalized.includes("incorrect api key") || normalized.includes("401")) {
-    friendly = "La API key de OpenAI no fue aceptada. Revisa que empiece con sk- y vuelve a guardarla en Configuración → IA.";
-  } else if (normalized.includes("insufficient_quota") || normalized.includes("quota") || normalized.includes("429")) {
-    friendly = "No quedan créditos o cuota disponible en OpenAI. Recarga billing en OpenAI o revisa los límites de tu proyecto.";
-  } else if (normalized.includes("non-2xx") || normalized.includes("edge function")) {
-    friendly = `La opción IA “${functionName}” no pudo procesar. Revisa tu API key de OpenAI, cuota/créditos y permisos del proyecto.`;
-  }
+  const friendly = friendlyAiErrorMessage(rawMessage, functionName);
 
   (result.error as any).message = friendly;
   (result.error as any).details = rawMessage;

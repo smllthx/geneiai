@@ -646,7 +646,12 @@ export default function PersonaDetail() {
 
         <TabsContent value="conyuges">
           <MatrimonioResumen
-            titulo={`Matrimonio${fam.conyuges[0] ? ` con ${(fam.conyuges[0] as any).nombres ?? ""} ${(fam.conyuges[0] as any).apellidos ?? ""}`.trim() : ""}`}
+            titulo={[
+              "Matrimonio",
+              fam.conyuges[0]
+                ? `con ${[(fam.conyuges[0] as any).nombres, (fam.conyuges[0] as any).apellidos].filter(Boolean).join(" ")}`
+                : "",
+            ].filter(Boolean).join(" ")}
             fecha={p?.matrimonio_fecha ?? (fam.conyuges[0] as any)?.matrimonio_fecha}
             lugarId={p?.matrimonio_lugar_id ?? (fam.conyuges[0] as any)?.matrimonio_lugar_id}
             lugaresMap={lugaresById}

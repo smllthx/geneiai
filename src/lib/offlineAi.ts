@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { checkCoherence } from "@/lib/coherence";
+import { isAiProviderOrCreditError } from "@/lib/aiErrors";
 
 const y = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export const isCreditOrAiError = (e: any) => {
-  const msg = norm(`${e?.message ?? e?.error?.message ?? e?.details ?? e ?? ""}`);
-  return msg.includes("openai no configurado") || msg.includes("api key") || msg.includes("chatgpt") || msg.includes("credito") || msg.includes("creditos") || msg.includes("cuota") || msg.includes("quota") || msg.includes("402") || msg.includes("429") || msg.includes("non-2xx") || msg.includes("edge function");
+  return isAiProviderOrCreditError(e);
 };
 
 export function localPersonaInsight(persona: any) {
