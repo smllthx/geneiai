@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
+  PanelRightOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -21,6 +22,7 @@ import GlobalDataSync from "@/components/GlobalDataSync";
 import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import NetworkStatusModal from "@/components/NetworkStatusModal";
 import OfflineContextKeeper from "@/components/OfflineContextKeeper";
+import AppWindowLayer from "@/components/AppWindowLayer";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden } from "@/lib/navConfig";
 import { prefetchRoute } from "@/lib/routePrefetch";
@@ -80,9 +82,19 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
     setDragIdx(null);
   };
 
+  const openWindow = (item: NavItem) => {
+    window.dispatchEvent(
+      new CustomEvent("geneai:open-window", {
+        detail: { id: item.to, title: item.label, path: item.to },
+      }),
+    );
+  };
+
   return (
     <div className="space-y-1">
-      {ordered.map(({ to, label, icon: Icon }, idx) => (
+      {ordered.map((item, idx) => {
+        const { to, label, icon: Icon } = item;
+        return (
         <div
           key={to}
           draggable
@@ -91,24 +103,40 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
           onDrop={() => onDrop(idx)}
           className="group/row relative"
         >
-          <NavLink
-            to={to}
-            onMouseEnter={() => prefetchRoute(to)}
-            onFocus={() => prefetchRoute(to)}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
-                isActive
-                  ? "bg-primary/12 font-semibold text-foreground"
-                  : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
-              )
-            }
-          >
-            <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />
-            <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
-          </NavLink>
+          <div className="flex items-center gap-1">
+            <NavLink
+              to={to}
+              onMouseEnter={() => prefetchRoute(to)}
+              onFocus={() => prefetchRoute(to)}
+              className={({ isActive }) =>
+                cn(
+                  "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
+                  isActive
+                    ? "bg-primary/12 font-semibold text-foreground"
+                    : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
+                )
+              }
+            >
+              <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />
+              <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
+            </NavLink>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openWindow(item);
+              }}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-muted-foreground opacity-100 transition hover:bg-foreground/8 hover:text-primary md:opacity-0 md:group-hover/row:opacity-100"
+              title={`Abrir ${label} en ventana`}
+              aria-label={`Abrir ${label} en una ventana dentro de la app`}
+            >
+              <PanelRightOpen className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -134,6 +162,8 @@ function NavGroup({ groupKey, label, items }: { groupKey: string; label: string;
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isWindowFrame = new URLSearchParams(location.search).get("window") === "1";
   const handleLogout = async () => { await signOut(); navigate("/login"); };
   const refreshVisibleData = () => {
     window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "manual" } }));
@@ -309,6 +339,7 @@ export default function AppLayout() {
       <GlobalDataSync />
       <OriginBackgroundSync />
       <KeyboardAwareScroller />
+      {!isWindowFrame && <AppWindowLayer />}
     </div>
   );
 }

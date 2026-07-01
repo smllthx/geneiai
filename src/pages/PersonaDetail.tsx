@@ -45,7 +45,6 @@ import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
 import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
-import { toDisplayText } from "@/lib/safeText";
 import GenealogistaIA from "@/components/GenealogistaIA";
 import EvidenceCenter from "@/components/EvidenceCenter";
 
@@ -1244,16 +1243,37 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
   const [draft, setDraft] = useState({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
+  const eventTypes = ["nacimiento","bautismo","matrimonio","inmigracion","viaje","residencia","censo","defuncion","entierro","otro"];
+  const notifyEventChange = () => {
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "eventos", personaId } }));
+    window.dispatchEvent(new Event("genaia:recent-changed"));
+  };
   const add = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
     const activeTreeId = await getActiveTreeId(user.id);
-    const payload: any = withTreeScope({ ...draft, user_id: user.id, persona_id: personaId, fecha: draft.fecha || null }, activeTreeId);
+    const payload: any = withTreeScope({
+      ...draft,
+      user_id: user.id,
+      persona_id: personaId,
+      fecha: draft.fecha || null,
+      lugar_original: draft.lugar_original || null,
+      descripcion: draft.descripcion || null,
+    }, activeTreeId);
     const { error } = await supabase.from("eventos").insert(payload);
     if (error) return toast.error(error.message);
     setDraft({ tipo: "nacimiento", fecha: "", lugar_original: "", descripcion: "", certeza: "probable" });
+    toast.success("Acontecimiento agregado");
+    notifyEventChange();
     reload();
   };
-  const del = async (id: string) => { await supabase.from("eventos").delete().eq("id", id); reload(); };
+  const del = async (id: string) => {
+    if (!confirm("¿Eliminar este acontecimiento de vida?")) return;
+    const { error } = await supabase.from("eventos").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Acontecimiento eliminado");
+    notifyEventChange();
+    reload();
+  };
   const startEdit = (e: any) => {
     setEditingId(e.id);
     setEditDraft({
@@ -1268,19 +1288,32 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
     if (!editingId) return;
     const { error } = await supabase
       .from("eventos")
-      .update({ ...editDraft, fecha: editDraft.fecha || null })
+      .update({
+        ...editDraft,
+        fecha: editDraft.fecha || null,
+        lugar_original: editDraft.lugar_original || null,
+        descripcion: editDraft.descripcion || null,
+      })
       .eq("id", editingId);
     if (error) return toast.error(error.message);
     setEditingId(null);
+    toast.success("Acontecimiento actualizado");
+    notifyEventChange();
     reload();
   };
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero para añadir eventos.</p>;
   return (
     <Card className="archivo-card"><CardContent className="space-y-4 pt-6">
+      <div>
+        <h3 className="text-base font-semibold">Acontecimientos de vida</h3>
+        <p className="text-sm text-muted-foreground">
+          Agrega, edita o elimina hechos como inmigración, residencia, censo, matrimonio o entierro.
+        </p>
+      </div>
       <div className="grid gap-2 md:grid-cols-5">
         <Select value={draft.tipo} onValueChange={(v) => setDraft({ ...draft, tipo: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{["nacimiento","bautismo","matrimonio","inmigracion","viaje","residencia","censo","defuncion","entierro","otro"].map((t) =>
+          <SelectContent>{eventTypes.map((t) =>
             <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
         </Select>
         <Input type="date" value={draft.fecha} onChange={(e) => setDraft({ ...draft, fecha: e.target.value })} />
@@ -1294,7 +1327,7 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
             <div className="grid gap-2 md:grid-cols-5">
               <Select value={editDraft.tipo} onValueChange={(v) => setEditDraft({ ...editDraft, tipo: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["nacimiento","bautismo","matrimonio","inmigracion","viaje","residencia","censo","defuncion","entierro","otro"].map((t) =>
+                <SelectContent>{eventTypes.map((t) =>
                   <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
               <Input type="date" value={editDraft.fecha} onChange={(ev) => setEditDraft({ ...editDraft, fecha: ev.target.value })} />
