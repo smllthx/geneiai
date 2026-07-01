@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { personaCode } from "@/lib/personaCode";
+import { toDisplayText } from "@/lib/safeText";
 
 const fmt = (value?: string | null) => {
   if (!value) return "Dato no registrado";
@@ -242,7 +243,7 @@ function TimelineTab({ persona, eventos }: any) {
               <div key={event.id} className="rounded-xl border border-slate-200 p-3">
                 <p className="text-sm font-semibold text-slate-950">{fmt(event.fecha)} · {event.tipo}</p>
                 <p className="text-xs text-slate-500">{age !== null && age >= 0 ? `Edad ${age}` : "Edad no calculable"} · {event.lugar_original || "Lugar no registrado"}</p>
-                {event.descripcion && <p className="mt-2 text-sm text-slate-700">{event.descripcion}</p>}
+                {toDisplayText(event.descripcion) && <p className="mt-2 text-sm text-slate-700">{toDisplayText(event.descripcion)}</p>}
               </div>
             );
           })}

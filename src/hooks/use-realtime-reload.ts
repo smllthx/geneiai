@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
  *   const reloadKey = useRealtimeReload(["personas","relaciones"], userId);
  *   useEffect(() => { load(); }, [reloadKey]);
  */
-export function useRealtimeReload(tables: string[], userId?: string | null, debounceMs = 300) {
+export function useRealtimeReload(tables: string[], userId?: string | null, debounceMs = 1000) {
   const [reloadKey, setReloadKey] = useState(0);
   const timer = useRef<number | null>(null);
 

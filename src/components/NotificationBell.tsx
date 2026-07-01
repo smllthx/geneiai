@@ -8,11 +8,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
 import { toast } from "sonner";
 import { applyTreeScope, getActiveTreeScopedIds } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 type Notificacion = { id: string; titulo: string; mensaje: string | null; url: string | null; leida: boolean | null; created_at: string };
-type Sugerencia = { id: string; persona_id: string | null; titulo: string; descripcion: string | null; tipo: string | null; origen: string | null; confianza: number | null };
+type Sugerencia = { id: string; persona_id: string | null; titulo: string; descripcion: unknown; tipo: string | null; origen: string | null; confianza: number | null };
 type Inferencia = { id: string; person_id: string | null; inferred_field: string; inferred_value: string; explanation: string | null; confidence_score: number | null };
-type ResearchTask = { id: string; person_id: string | null; tipo: string; estado: string; descripcion: string | null; created_at: string };
+type ResearchTask = { id: string; person_id: string | null; tipo: string; estado: string; descripcion: unknown; created_at: string };
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
@@ -138,7 +139,7 @@ export default function NotificationBell() {
                   <p className="font-medium">{s.titulo}</p>
                   <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{s.confianza}%</span>
                 </div>
-                {s.descripcion && <p className="text-xs text-muted-foreground">{s.descripcion}</p>}
+                {toDisplayText(s.descripcion) && <p className="text-xs text-muted-foreground">{toDisplayText(s.descripcion)}</p>}
                 <p className="mt-0.5 text-[10px] text-muted-foreground/70">{s.tipo} · {s.origen ?? "ia"}</p>
               </Link>
             ))}
@@ -165,7 +166,7 @@ export default function NotificationBell() {
                   <p className="font-medium capitalize">{t.tipo}</p>
                   <span className="shrink-0 rounded-full bg-accent/30 px-1.5 text-[10px]">{t.estado}</span>
                 </div>
-                {t.descripcion && <p className="text-xs text-muted-foreground line-clamp-2">{t.descripcion}</p>}
+                {toDisplayText(t.descripcion) && <p className="text-xs text-muted-foreground line-clamp-2">{toDisplayText(t.descripcion)}</p>}
                 <p className="mt-0.5 text-[10px] text-muted-foreground/70">{new Date(t.created_at).toLocaleString("es")}</p>
               </Link>
             ))}

@@ -1,99 +1,152 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
+import { normalizePlace } from "@/lib/placeNormalizer";
 
-const MAX_GEN = 10;
+const MAX_GEN = 8;
 const FUENTE_TAG = "Cálculo por árbol";
 
-export type EthnicidadCalc = { region: string; porcentaje: number; cobertura: number };
+export type EthnicidadCalc = {
+  region: string;
+  porcentaje: number;
+  cobertura: number;
+  confianza: number;
+  antepasados: number;
+};
 
-/**
- * Calcula composición étnica recorriendo ancestros desde un proband.
- * Cada padre = 50%, abuelo = 25%, etc. El origen se toma de:
- *   1) nacionalidad
- *   2) país del lugar de nacimiento
- *   3) "Desconocido"
- * Si solo uno de los dos padres es conocido, su mitad se duplica para
- * mantener el 100% (evita inflar "Desconocido").
- */
+type PersonaOrigin = {
+  id: string;
+  nombres?: string | null;
+  apellidos?: string | null;
+  sexo?: string | null;
+  nacionalidad?: string | null;
+  nac_lugar_id?: string | null;
+};
+
+type Rel = { persona_id: string; pariente_id: string; tipo: string };
+type Lugar = { id: string; pais?: string | null; region?: string | null; provincia?: string | null; ciudad?: string | null };
+
+type OriginResolution = {
+  label: string;
+  country: string | null;
+  region: string | null;
+  confidence: number;
+  source: string;
+};
+
+const fullName = (p?: PersonaOrigin | null) => [p?.nombres, p?.apellidos].filter(Boolean).join(" ") || "Persona sin nombre";
+
+const relIsParent = (tipo: string) => ["padre", "madre", "parent", "progenitor"].includes(tipo);
+
+function parentIds(pid: string, rels: Rel[], people: Map<string, PersonaOrigin>): string[] {
+  const found: { id: string; score: number }[] = [];
+  for (const r of rels) {
+    if (r.persona_id === pid && relIsParent(String(r.tipo).toLowerCase())) {
+      const parent = people.get(r.pariente_id);
+      found.push({ id: r.pariente_id, score: parent?.sexo === "femenino" ? 2 : 1 });
+    }
+    if (r.pariente_id === pid && String(r.tipo).toLowerCase() === "hijo") {
+      const parent = people.get(r.persona_id);
+      found.push({ id: r.persona_id, score: parent?.sexo === "femenino" ? 2 : 1 });
+    }
+  }
+  return Array.from(new Map(found.sort((a, b) => a.score - b.score).map((x) => [x.id, x.id])).values()).slice(0, 2);
+}
+
+function resolveOrigin(person: PersonaOrigin, lugares: Map<string, Lugar>): OriginResolution {
+  const lugar = person.nac_lugar_id ? lugares.get(person.nac_lugar_id) : undefined;
+  const rawPlace = [lugar?.ciudad, lugar?.provincia, lugar?.region, lugar?.pais].filter(Boolean).join(", ");
+  const normalized = normalizePlace({
+    raw: rawPlace,
+    country: lugar?.pais,
+    region: lugar?.region ?? lugar?.provincia,
+    nationality: person.nacionalidad,
+    source: person.nacionalidad ? "manual" : "field",
+  });
+  if (!normalized.country) {
+    return {
+      label: "Desconocido",
+      country: null,
+      region: null,
+      confidence: 0,
+      source: "unknown",
+    };
+  }
+  return {
+    label: [normalized.country, normalized.region].filter(Boolean).join(" · "),
+    country: normalized.country,
+    region: normalized.region,
+    confidence: normalized.confidence,
+    source: normalized.source,
+  };
+}
+
 export async function calcularEtnicidadPorArbol(probandId: string) {
-  const [{ data: personas }, { data: rels }, { data: lugares }] = await Promise.all([
-    supabase.from("personas").select("id,nombres,apellidos,nacionalidad,nac_lugar_id"),
-    supabase.from("relaciones").select("persona_id,pariente_id,tipo"),
-    supabase.from("lugares").select("id,pais"),
+  const activeTreeId = await getActiveTreeId();
+  const [{ data: lugares }, personas, rels] = await Promise.all([
+    supabase.from("lugares").select("id,ciudad,provincia,region,pais").limit(20000),
+    fetchAllPeople<PersonaOrigin>("id,nombres,apellidos,sexo,nacionalidad,nac_lugar_id", { treeId: activeTreeId }),
+    fetchAllRelations<Rel>("persona_id,pariente_id,tipo", { treeId: activeTreeId }),
   ]);
 
-  const byId = new Map<string, any>((personas ?? []).map((p: any) => [p.id, p]));
-  const lugarPais = new Map<string, string>((lugares ?? []).map((l: any) => [l.id, l.pais ?? ""]));
+  const people = new Map<string, PersonaOrigin>((personas ?? []).map((p) => [p.id, p]));
+  const placeById = new Map<string, Lugar>((lugares ?? []).map((l: Lugar) => [l.id, l]));
+  const totals = new Map<string, EthnicidadCalc & { weightedConfidence: number; names: Set<string> }>();
+  let knownWeight = 0;
+  let totalVisitedWeight = 0;
 
-  const padresDe = (pid: string): { padre?: string; madre?: string } => {
-    const ids: any[] = [];
-    for (const r of rels ?? []) {
-      if (r.persona_id === pid && (r.tipo === "padre" || r.tipo === "madre")) ids.push({ id: r.pariente_id, tipo: r.tipo });
-      if (r.pariente_id === pid && r.tipo === "hijo") ids.push({ id: r.persona_id, tipo: "padre?" });
-    }
-    let padre: string | undefined;
-    let madre: string | undefined;
-    for (const x of ids) {
-      const p = byId.get(x.id);
-      if (!p) continue;
-      if (x.tipo === "padre") padre ??= p.id;
-      else if (x.tipo === "madre") madre ??= p.id;
-      else if (p.sexo === "masculino") padre ??= p.id;
-      else if (p.sexo === "femenino") madre ??= p.id;
-      else (padre ? madre ??= p.id : (padre = p.id));
-    }
-    return { padre, madre };
+  const addOrigin = (person: PersonaOrigin, generation: number, weight: number) => {
+    const origin = resolveOrigin(person, placeById);
+    totalVisitedWeight += weight;
+    if (origin.country) knownWeight += weight;
+    const key = origin.country ? `${origin.country}|${origin.region ?? ""}` : "Desconocido|";
+    const current = totals.get(key) ?? {
+      region: origin.label,
+      porcentaje: 0,
+      cobertura: 0,
+      confianza: 0,
+      antepasados: 0,
+      weightedConfidence: 0,
+      names: new Set<string>(),
+    };
+    current.porcentaje += weight * 100;
+    current.weightedConfidence += origin.confidence * weight;
+    current.antepasados += 1;
+    current.names.add(`${fullName(person)} (${generation}.ª gen)`);
+    totals.set(key, current);
   };
 
-  const origenDe = (pid: string): string | null => {
-    const p = byId.get(pid);
-    if (!p) return null;
-    const nac = (p.nacionalidad ?? "").trim();
-    if (nac) return nac;
-    const pais = (lugarPais.get(p.nac_lugar_id ?? "") ?? "").trim();
-    if (pais) return pais;
-    return null;
-  };
-
-  const acc = new Map<string, number>();
-  let cobertura = 0;
-
-  const visitar = (id: string | undefined, peso: number, gen: number, seen: Set<string>) => {
-    if (!id || peso <= 0 || gen > MAX_GEN || seen.has(id)) return;
-    seen.add(id);
-    const { padre, madre } = padresDe(id);
-    if (!padre && !madre) {
-      // hoja: atribuir a su origen
-      const o = origenDe(id);
-      if (o) { acc.set(o, (acc.get(o) ?? 0) + peso); cobertura += peso; }
-      return;
+  const visit = (id: string, generation: number, seen: Set<string>) => {
+    if (generation > MAX_GEN || seen.has(id)) return;
+    const person = people.get(id);
+    if (!person) return;
+    const weight = 1 / Math.pow(2, generation);
+    addOrigin(person, generation, weight);
+    const nextSeen = new Set(seen);
+    nextSeen.add(id);
+    for (const parentId of parentIds(id, rels ?? [], people)) {
+      visit(parentId, generation + 1, nextSeen);
     }
-    // distribuir peso entre padres conocidos (para mantener 100%)
-    const conocidos = [padre, madre].filter(Boolean) as string[];
-    const cuota = peso / conocidos.length;
-    for (const pid of conocidos) visitar(pid, cuota, gen + 1, new Set(seen));
   };
 
-  // Empezamos atribuyendo origen del proband también, pero solo si no tiene padres
-  const { padre, madre } = padresDe(probandId);
-  if (!padre && !madre) {
-    const o = origenDe(probandId);
-    if (o) { acc.set(o, 1); cobertura = 1; }
-  } else {
-    const conocidos = [padre, madre].filter(Boolean) as string[];
-    const cuota = 1 / conocidos.length;
-    for (const pid of conocidos) visitar(pid, cuota, 1, new Set([probandId]));
+  for (const parentId of parentIds(probandId, rels ?? [], people)) {
+    visit(parentId, 1, new Set([probandId]));
   }
 
-  // Normalizar a 100% sobre lo cubierto
-  const total = [...acc.values()].reduce((s, v) => s + v, 0);
-  const items: EthnicidadCalc[] = [];
-  if (total > 0) {
-    for (const [region, peso] of acc.entries()) {
-      items.push({ region, porcentaje: (peso / total) * 100, cobertura });
-    }
+  if (totalVisitedWeight === 0) {
+    const fallback = people.get(probandId);
+    if (fallback) addOrigin(fallback, 0, 1);
   }
-  items.sort((a, b) => b.porcentaje - a.porcentaje);
-  return { items, cobertura };
+
+  const coverageBase = totalVisitedWeight || 1;
+  const items = Array.from(totals.values()).map((item) => ({
+    region: item.region,
+    porcentaje: coverageBase > 0 ? (item.porcentaje / (coverageBase * 100)) * 100 : 0,
+    cobertura: knownWeight / coverageBase,
+    confianza: item.porcentaje > 0 ? item.weightedConfidence / (item.porcentaje / 100) : 0,
+    antepasados: item.antepasados,
+  })).sort((a, b) => b.porcentaje - a.porcentaje);
+
+  return { items, cobertura: knownWeight / coverageBase };
 }
 
 export async function guardarEtnicidadArbol(probandId: string) {
@@ -102,7 +155,6 @@ export async function guardarEtnicidadArbol(probandId: string) {
   const { items, cobertura } = await calcularEtnicidadPorArbol(probandId);
   if (items.length === 0) return { insertados: 0, cobertura };
 
-  // Borrar cálculo previo por árbol del mismo usuario
   await supabase.from("dna_estimates").delete().eq("user_id", user.id).eq("fuente", FUENTE_TAG);
 
   const rows = items.map((i) => ({
@@ -110,7 +162,7 @@ export async function guardarEtnicidadArbol(probandId: string) {
     region: i.region,
     porcentaje: Number(i.porcentaje.toFixed(2)),
     fuente: FUENTE_TAG,
-    rama: null,
+    rama: `confianza ${Math.round(i.confianza * 100)}% · ${i.antepasados} antepasado(s)`,
   }));
   const { error } = await supabase.from("dna_estimates").insert(rows);
   if (error) throw error;

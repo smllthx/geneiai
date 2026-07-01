@@ -8,17 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Sparkles, AlertTriangle, BookOpen, Lightbulb, RefreshCw, Loader2, Globe2, ExternalLink, Brain } from "lucide-react";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 type Contra = {
-  id: string; tipo: string; severidad: string; titulo: string; descripcion: string | null;
+  id: string; tipo: string; severidad: string; titulo: string; descripcion: unknown;
   personas: string[]; estado: string; created_at: string;
 };
 type Hip = {
-  id: string; titulo: string; descripcion: string | null; probabilidad: number | null; estado: string;
-  argumentos_favor?: string | null; argumentos_contra?: string | null; proxima_accion?: string | null;
+  id: string; titulo: string; descripcion: unknown; probabilidad: number | null; estado: string;
+  argumentos_favor?: unknown; argumentos_contra?: unknown; proxima_accion?: unknown;
   personas?: string[] | null;
 };
-type Sug = { id: string; titulo: string; descripcion: string | null; origen: string | null; url_externa: string | null; created_at: string; persona_id: string | null };
+type Sug = { id: string; titulo: string; descripcion: unknown; origen: string | null; url_externa: string | null; created_at: string; persona_id: string | null };
 
 export default function Insights() {
   const [tab, setTab] = useState<"contradicciones" | "hipotesis" | "biografias" | "externas">("contradicciones");
@@ -150,7 +151,7 @@ export default function Insights() {
                       <span className="text-xs text-muted-foreground">{c.tipo}</span>
                     </div>
                     <div className="mt-1 font-medium">{c.titulo}</div>
-                    {c.descripcion && <div className="text-sm text-muted-foreground">{c.descripcion}</div>}
+                    {toDisplayText(c.descripcion) && <div className="text-sm text-muted-foreground">{toDisplayText(c.descripcion)}</div>}
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {c.personas.map((pid) => (
                         <Link key={pid} to={`/personas/${pid}`} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary hover:bg-primary/20">
@@ -186,14 +187,14 @@ export default function Insights() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">{h.titulo}</div>
-                      {h.descripcion && <div className="mt-1 text-sm text-muted-foreground">{h.descripcion}</div>}
+                      {toDisplayText(h.descripcion) && <div className="mt-1 text-sm text-muted-foreground">{toDisplayText(h.descripcion)}</div>}
                       {(h.argumentos_favor || h.argumentos_contra) && (
                         <div className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
-                          {h.argumentos_favor && <div className="rounded bg-emerald-500/10 p-2 text-emerald-900 dark:text-emerald-200"><b>A favor:</b> {h.argumentos_favor}</div>}
-                          {h.argumentos_contra && <div className="rounded bg-rose-500/10 p-2 text-rose-900 dark:text-rose-200"><b>En contra:</b> {h.argumentos_contra}</div>}
+                          {toDisplayText(h.argumentos_favor) && <div className="rounded bg-emerald-500/10 p-2 text-emerald-900 dark:text-emerald-200"><b>A favor:</b> {toDisplayText(h.argumentos_favor)}</div>}
+                          {toDisplayText(h.argumentos_contra) && <div className="rounded bg-rose-500/10 p-2 text-rose-900 dark:text-rose-200"><b>En contra:</b> {toDisplayText(h.argumentos_contra)}</div>}
                         </div>
                       )}
-                      {h.proxima_accion && <div className="mt-2 text-xs"><b>Próxima acción:</b> {h.proxima_accion}</div>}
+                      {toDisplayText(h.proxima_accion) && <div className="mt-2 text-xs"><b>Próxima acción:</b> {toDisplayText(h.proxima_accion)}</div>}
                       {h.personas && h.personas.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {h.personas.slice(0, 6).map((pid) => (

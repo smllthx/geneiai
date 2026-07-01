@@ -8,6 +8,7 @@ import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { notify } from "@/lib/notifications";
+import { toDisplayText } from "@/lib/safeText";
 
 export default function InvestigacionExterna() {
   const [personas, setPersonas] = useState<any[]>([]);
@@ -93,8 +94,8 @@ export default function InvestigacionExterna() {
                       <Card key={i}>
                         <CardHeader className="pb-1"><CardTitle className="text-sm">{h.titulo} <span className="ml-2 text-xs font-normal text-muted-foreground">({h.probabilidad}%)</span></CardTitle></CardHeader>
                         <CardContent className="space-y-1 text-xs">
-                          <p>{h.descripcion}</p>
-                          {h.proxima_accion && <p className="text-muted-foreground"><strong>Próximo paso:</strong> {h.proxima_accion}</p>}
+                          <p>{toDisplayText(h.descripcion)}</p>
+                          {toDisplayText(h.proxima_accion) && <p className="text-muted-foreground"><strong>Próximo paso:</strong> {toDisplayText(h.proxima_accion)}</p>}
                         </CardContent>
                       </Card>
                     ))}
@@ -114,7 +115,7 @@ export default function InvestigacionExterna() {
                         <CardHeader className="pb-1"><CardTitle className="text-sm">{s.titulo} <span className="ml-2 text-xs font-normal text-muted-foreground">({s.confianza}%)</span></CardTitle></CardHeader>
                         <CardContent className="space-y-1 text-xs">
                           <p className="text-muted-foreground">{s.tipo}</p>
-                          {s.descripcion && <p>{s.descripcion}</p>}
+                          {toDisplayText(s.descripcion) && <p>{toDisplayText(s.descripcion)}</p>}
                           <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">{JSON.stringify(s.payload, null, 2)}</pre>
                         </CardContent>
                       </Card>

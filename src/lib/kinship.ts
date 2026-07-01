@@ -39,6 +39,7 @@ const sexOf = (p?: PersonaLite | null) => p?.sexo ?? inferSexFromName(p?.nombres
 
 const fatherTypes = new Set(["padre", "progenitor", "father"]);
 const motherTypes = new Set(["madre", "progenitora", "mother"]);
+const genericParentTypes = new Set(["parent", "progenitores", "padres"]);
 const childTypes = new Set(["hijo", "hija", "child"]);
 const siblingTypes = new Set(["hermano", "hermana", "sibling"]);
 const spouseTypes = new Set([
@@ -54,9 +55,35 @@ const spouseTypes = new Set([
   "convivencia",
   "cohabitante",
   "cohabitacion",
+  "union libre",
+  "pareja de hecho",
+  "matrimonio civil",
+  "casado",
+  "casada",
+  "coprogenitor",
+  "coprogenitora",
 ]);
 
-const spouseLikeNotes = ["unión civil", "union civil", "conviviente", "convivencia", "cohabitante", "cohabitación", "cohabitacion", "matrimonio", "pareja"];
+const spouseLikeNotes = [
+  "unión civil",
+  "union civil",
+  "unión libre",
+  "union libre",
+  "conviviente",
+  "convivencia",
+  "cohabitante",
+  "cohabitación",
+  "cohabitacion",
+  "matrimonio",
+  "matrimonio civil",
+  "pareja",
+  "pareja de hecho",
+  "casado",
+  "casada",
+  "coprogenitor",
+  "coprogenitora",
+  "parentalidad compartida",
+];
 
 export const isSpouseLikeRelation = (r: Pick<RelRow, "tipo" | "notas">) => {
   const tipo = cleanTipo(r.tipo);
@@ -68,16 +95,26 @@ export const isSpouseLikeRelation = (r: Pick<RelRow, "tipo" | "notas">) => {
 
 const isFatherType = (tipo: string) => fatherTypes.has(cleanTipo(tipo));
 const isMotherType = (tipo: string) => motherTypes.has(cleanTipo(tipo));
-const isParentType = (tipo: string) => isFatherType(tipo) || isMotherType(tipo);
+const isGenericParentType = (tipo: string) => genericParentTypes.has(cleanTipo(tipo));
+const isParentType = (tipo: string) => isFatherType(tipo) || isMotherType(tipo) || isGenericParentType(tipo);
 const isChildType = (tipo: string) => childTypes.has(cleanTipo(tipo));
 const isSiblingType = (tipo: string) => siblingTypes.has(cleanTipo(tipo));
 
 export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const fatherIds = new Set<string>();
   const motherIds = new Set<string>();
+  const addParentBySex = (parentId: string) => {
+    const p = byId.get(parentId);
+    const sex = sexOf(p);
+    if (sex === "femenino") motherIds.add(parentId);
+    else if (sex === "masculino") fatherIds.add(parentId);
+    else if (motherIds.size > fatherIds.size) fatherIds.add(parentId);
+    else motherIds.add(parentId);
+  };
   for (const r of rels) {
     if (r.persona_id === pid && isFatherType(r.tipo)) fatherIds.add(r.pariente_id);
     if (r.persona_id === pid && isMotherType(r.tipo)) motherIds.add(r.pariente_id);
+    if (r.persona_id === pid && isGenericParentType(r.tipo)) addParentBySex(r.pariente_id);
     if (r.pariente_id === pid && isChildType(r.tipo)) {
       const p = byId.get(r.persona_id);
       if (sexOf(p) === "femenino") motherIds.add(r.persona_id);
@@ -103,10 +140,12 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
     return [...ids];
   };
   if (!madre && padre) {
-    madre = spouseIdsFor(padre.id).map((id) => byId.get(id)).find((p) => sexOf(p) === "femenino");
+    const spouses = spouseIdsFor(padre.id).map((id) => byId.get(id)).filter(Boolean) as PersonaLite[];
+    madre = spouses.find((p) => sexOf(p) === "femenino") ?? spouses.find((p) => p.id !== padre?.id);
   }
   if (!padre && madre) {
-    padre = spouseIdsFor(madre.id).map((id) => byId.get(id)).find((p) => sexOf(p) === "masculino");
+    const spouses = spouseIdsFor(madre.id).map((id) => byId.get(id)).filter(Boolean) as PersonaLite[];
+    padre = spouses.find((p) => sexOf(p) === "masculino") ?? spouses.find((p) => p.id !== madre?.id);
   }
 
   const all = new Map(list.map((p) => [p.id, p]));

@@ -15,10 +15,11 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "reac
 import "leaflet/dist/leaflet.css";
 import { localPhotoAnalysis } from "@/lib/offlineAi";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 type FotoRow = {
   id: string; url: string; storage_path: string | null;
-  titulo: string | null; descripcion: string | null;
+  titulo: string | null; descripcion: unknown;
   fecha: string | null; fecha_aprox: string | null; lugar_id: string | null;
   personas_ids: string[] | null; created_at: string;
 };
@@ -433,7 +434,7 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
         </div>
       )}
 
-      {foto.descripcion && <p className="text-sm">{foto.descripcion}</p>}
+      {toDisplayText(foto.descripcion) && <p className="text-sm">{toDisplayText(foto.descripcion)}</p>}
       {foto.fecha_aprox && <p className="text-xs text-muted-foreground">📅 {foto.fecha_aprox}</p>}
       <div className="flex justify-between">
         <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>

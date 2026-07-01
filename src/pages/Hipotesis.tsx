@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toDisplayText } from "@/lib/safeText";
 
 export default function Hipotesis() {
   const [items, setItems] = useState<any[]>([]);
@@ -45,7 +46,7 @@ export default function Hipotesis() {
         <Card key={h.id} className="archivo-card"><CardContent className="flex items-start justify-between pt-4">
           <div><div className="font-serif text-lg">{h.titulo}</div>
             <div className="text-xs text-muted-foreground">{h.estado} · {h.probabilidad}%</div>
-            <p className="mt-1 text-sm">{h.descripcion}</p></div>
+            <p className="mt-1 text-sm">{toDisplayText(h.descripcion)}</p></div>
           <Button size="sm" variant="ghost" onClick={() => del(h.id)}><Trash2 className="h-4 w-4" /></Button>
         </CardContent></Card>
       ))}</div>

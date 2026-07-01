@@ -25,17 +25,22 @@ export default function GlobalDataSync() {
 
     const broadcast = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("genaia-sync") : null;
     let lastNotice = 0;
+    let syncTimer: number | null = null;
     const isEditing = () =>
       document.body.dataset.geneiaiEditing === "1" ||
       Boolean(document.querySelector("[data-geneiai-editing='true']"));
 
     const notifyChange = (source: "remote" | "tab", table?: string) => {
       if (isEditing()) return;
-      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table, source } }));
-      if (source === "remote" && Date.now() - lastNotice > 4000) {
-        lastNotice = Date.now();
-        toast.info("Datos sincronizados", { description: "La app actualizó la información abierta en otra sesión.", duration: 1800 });
-      }
+      if (syncTimer) window.clearTimeout(syncTimer);
+      syncTimer = window.setTimeout(() => {
+        if (isEditing()) return;
+        window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table, source } }));
+        if (source === "remote" && Date.now() - lastNotice > 6000) {
+          lastNotice = Date.now();
+          toast.info("Datos sincronizados", { description: "La app actualizó la información abierta en otra sesión.", duration: 1600 });
+        }
+      }, 1000);
     };
 
     broadcast?.addEventListener("message", (event) => {
@@ -56,6 +61,7 @@ export default function GlobalDataSync() {
     channel.subscribe();
 
     return () => {
+      if (syncTimer) window.clearTimeout(syncTimer);
       broadcast?.close();
       supabase.removeChannel(channel);
     };

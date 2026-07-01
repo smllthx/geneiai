@@ -19,6 +19,7 @@ type Sugerencia = {
 const TOOL_LABELS: Record<string, string> = {
   search_personas: "Buscando personas",
   get_persona: "Consultando ficha",
+  get_origin_analysis: "Consultando origen estimado",
   list_recent: "Listando personas",
   create_persona: "Creando persona",
   update_persona: "Actualizando datos",
@@ -36,6 +37,7 @@ const QUICK = [
   "Mostrame el árbol de la persona principal",
   "Lanzá el mega-buscador para la persona principal",
   "Buscá información en la web sobre…",
+  "Explicá mi origen estimado por árbol",
   "Creá una persona llamada …",
   "Verificá la coherencia del árbol",
   "Conectá a … como padre de …",

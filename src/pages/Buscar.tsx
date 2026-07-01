@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { expandTerm, fuzzyScore, norm } from "@/lib/search/fuzzy";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";
 import PersonaName from "@/components/PersonaName";
+import { toDisplayText } from "@/lib/safeText";
+import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 type Cat = "personas" | "documentos" | "eventos" | "hipotesis" | "lugares";
 
@@ -56,10 +58,11 @@ export default function Buscar() {
         const expansions = q.split(/\s+/).flatMap(expandTerm);
         const uniqueExp = [...new Set(expansions)].filter((e) => e.length >= 2);
         setExpansionInfo(uniqueExp.filter((e) => e !== norm(q)));
+        const treeId = await getActiveTreeId();
 
         // 2. Pull amplio (sin filtros) y rankear en cliente — robusto frente a typos
-        const [p, d, e, h, l] = await Promise.all([
-          supabase.from("personas").select("id, nombres, apellidos, variantes_nombre, notas").limit(1000),
+        const [people, d, e, h, l] = await Promise.all([
+          fetchAllPeople<any>("id, nombres, apellidos, variantes_nombre, notas", { treeId }),
           supabase.from("documentos").select("id, titulo, tipo, transcripcion, resumen, ocr_texto").limit(1000),
           supabase.from("eventos").select("id, tipo, descripcion, lugar_original, persona_id").limit(1000),
           supabase.from("hipotesis").select("id, titulo, descripcion").limit(500),
@@ -72,7 +75,7 @@ export default function Buscar() {
         const codeNorm = normalizeCode(q);
         const looksLikeCode = /^[A-Z2-9]{2,}-?[A-Z2-9]*$/i.test(q.trim()) && codeNorm.length >= 3;
 
-        for (const r of p.data ?? []) {
+        for (const r of people ?? []) {
           const variantes = (r.variantes_nombre ?? []).join(" ");
           const text = `${r.nombres} ${r.apellidos} ${variantes} ${r.notas ?? ""}`;
           let score = fuzzyScore(q, text);
@@ -92,18 +95,20 @@ export default function Buscar() {
           });
         }
         for (const r of e.data ?? []) {
-          const text = `${r.tipo} ${r.descripcion ?? ""} ${r.lugar_original ?? ""}`;
+          const descripcion = toDisplayText(r.descripcion);
+          const text = `${r.tipo} ${descripcion} ${r.lugar_original ?? ""}`;
           const score = fuzzyScore(q, text);
           if (score >= 0.7) all.push({
-            id: r.id, cat: "eventos", label: `${r.tipo}: ${r.descripcion ?? r.lugar_original ?? ""}`,
+            id: r.id, cat: "eventos", label: `${r.tipo}: ${descripcion || r.lugar_original || ""}`,
             score, to: r.persona_id ? `/personas/${r.persona_id}` : undefined,
           });
         }
         for (const r of h.data ?? []) {
-          const text = `${r.titulo} ${r.descripcion ?? ""}`;
+          const descripcion = toDisplayText(r.descripcion);
+          const text = `${r.titulo} ${descripcion}`;
           const score = fuzzyScore(q, text);
           if (score >= 0.7) all.push({
-            id: r.id, cat: "hipotesis", label: r.titulo, sub: r.descripcion?.slice(0, 80),
+            id: r.id, cat: "hipotesis", label: r.titulo, sub: descripcion.slice(0, 80),
             score, to: `/hipotesis`,
           });
         }

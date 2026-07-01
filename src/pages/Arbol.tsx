@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 
 type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
@@ -81,7 +82,7 @@ function ArbolContent() {
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
   const [probandLocked, setProbandLocked] = useState(false);
-  const [generaciones, setGeneraciones] = useState(7);
+  const [generaciones, setGeneraciones] = useState(4);
   const [zoom, setZoom] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
@@ -365,7 +366,7 @@ function ArbolContent() {
           {partners.map((partner) => (
             <Draggable key={partner.id} p={partner}>
               <Hl p={partner}>
-                <PersonCard p={partner} compact={compact} />
+                <PersonCard p={partner} compact={compact} onClick={() => navigate(`/personas/${partner.id}`)} />
               </Hl>
             </Draggable>
           ))}
@@ -478,7 +479,11 @@ function ArbolContent() {
         <>
           <Ascendants pid={root.id} gen={Math.max(0, generaciones - 1)} />
           <div className="h-4 w-px bg-foreground/30" />
-          <Draggable p={root}><Hl p={root}><PersonCard p={root} compact /></Hl></Draggable>
+          <Draggable p={root}>
+            <Hl p={root}>
+              <PersonCard p={root} compact onClick={() => navigate(`/personas/${root.id}`)} />
+            </Hl>
+          </Draggable>
         </>
       ) : (
         <QuickAddRelative personaId={persona!.id} defaultTipo={missingTipo} onAdded={reload}
@@ -833,7 +838,7 @@ function ArbolContent() {
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">{task.tipo}</span>
                   <span className="text-[11px] text-muted-foreground">{task.estado}</span>
                 </div>
-                <p className="text-sm">{task.descripcion}</p>
+                <p className="text-sm">{toDisplayText(task.descripcion)}</p>
                 {p && <Link to={`/personas/${p.id}`} className="mt-2 block text-xs text-link underline">{p.nombres} {p.apellidos}</Link>}
                 {task.estado !== "completada" && (
                   <Button size="sm" variant="outline" className="mt-3" onClick={() => completarTarea(task.id)}>

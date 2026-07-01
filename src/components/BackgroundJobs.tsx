@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toDisplayText } from "@/lib/safeText";
 
 type Job = {
   id: string;
   tipo: string;
-  descripcion: string;
+  descripcion: unknown;
   metadata: any;
   created_at: string;
 };
@@ -73,7 +74,7 @@ export default function BackgroundJobs() {
       {visible.map((j) => (
         <Link to="/inicio" key={j.id} className="pointer-events-auto rounded-full bg-card/95 backdrop-blur border border-border shadow-lg px-4 py-2.5 flex items-center gap-2.5 text-sm">
           <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-          <span className="truncate flex-1">{j.descripcion}</span>
+          <span className="truncate flex-1">{toDisplayText(j.descripcion)}</span>
         </Link>
       ))}
       {recientes.map((j) => {
@@ -83,7 +84,7 @@ export default function BackgroundJobs() {
             className="pointer-events-auto rounded-full bg-card/95 backdrop-blur border border-border shadow-lg px-4 py-2.5 flex items-center gap-2.5 text-sm text-left">
             {err ? <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
               : <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
-            <span className="truncate flex-1">{j.descripcion}</span>
+            <span className="truncate flex-1">{toDisplayText(j.descripcion)}</span>
             <Sparkles className="h-3 w-3 opacity-50 shrink-0" />
           </button>
         );

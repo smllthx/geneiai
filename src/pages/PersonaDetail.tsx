@@ -22,6 +22,7 @@ import PersonaSmartInsights from "@/components/PersonaSmartInsights";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
+import { toDisplayText } from "@/lib/safeText";
 import AgregarInfoSheet from "@/components/AgregarInfoSheet";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
@@ -457,7 +458,7 @@ export default function PersonaDetail() {
             ...eventos.slice(0, 2).map((ev) => ({
               id: ev.id,
               title: ev.tipo ? `${ev.tipo}` : "Evento vital",
-              detail: [fmtDate(ev.fecha), lugaresById.get(ev.lugar_id)?.nombre, ev.descripcion].filter(Boolean).join(" · "),
+              detail: [fmtDate(ev.fecha), lugaresById.get(ev.lugar_id)?.nombre, toDisplayText(ev.descripcion)].filter(Boolean).join(" · "),
               status: ev.certeza ?? "probable",
               source: "Ficha genealógica",
             })),
@@ -575,7 +576,7 @@ export default function PersonaDetail() {
                       <div>
                         <div className="font-medium capitalize">{e.tipo}</div>
                         <div className="text-xs text-muted-foreground">{fmtDate(e.fecha) ?? e.fecha_aprox ?? "Sin fecha"}{e.lugar_original ? ` · ${e.lugar_original}` : ""}</div>
-                        {e.descripcion && <div className="mt-0.5 text-xs">{e.descripcion}</div>}
+                        {toDisplayText(e.descripcion) && <div className="mt-0.5 text-xs">{toDisplayText(e.descripcion)}</div>}
                       </div>
                       <CertezaBadge value={e.certeza} />
                     </li>
@@ -1301,7 +1302,7 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
-              <span><strong className="capitalize">{e.tipo}</strong> · {e.fecha ?? "s/f"} · {e.lugar_original ?? ""} <em className="text-muted-foreground">{e.descripcion}</em></span>
+              <span><strong className="capitalize">{e.tipo}</strong> · {e.fecha ?? "s/f"} · {e.lugar_original ?? ""} <em className="text-muted-foreground">{toDisplayText(e.descripcion)}</em></span>
               <div className="flex gap-1">
                 <Button size="sm" variant="ghost" onClick={() => startEdit(e)}><Pencil className="h-4 w-4" /></Button>
                 <Button size="sm" variant="ghost" onClick={() => del(e.id)}><Trash2 className="h-4 w-4" /></Button>

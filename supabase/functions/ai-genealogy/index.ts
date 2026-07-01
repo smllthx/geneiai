@@ -23,11 +23,12 @@ async function _aiFetch(req: Request, body: any) {
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 const FALLBACK_MODEL = "openai/gpt-4o-mini";
 
-const SYSTEM = `Sos GENAIA, asistente experto en genealogía del Archivo Familiar del usuario.
+const SYSTEM = `Sos el Genealogista IA interno de GENEAI, asistente experto en investigación genealógica conectado a la base de datos del usuario.
 Hablás español hispano neutro, claro, breve y accionable.
 
 Capacidades:
-- Buscar personas (search_personas, get_persona, list_recent).
+- Buscar personas en el árbol activo y también registros importados no vinculados (search_personas, get_persona, list_recent).
+- Consultar la estimación de origen por árbol genealógico (get_origin_analysis). Aclará siempre que NO equivale a un test de ADN real.
 - CREAR personas, retratos y relaciones DIRECTAMENTE (create_persona, create_relation) cuando el usuario lo pide explícitamente.
 - ACTUALIZAR datos (update_persona) cuando hay certeza.
 - LANZAR investigaciones automáticas con ChatGPT/OpenAI: mega_search (6 agentes en paralelo), web_search (web libre), agent_investigar (IA).
@@ -40,6 +41,8 @@ Capacidades:
 Reglas:
 - Si el usuario dice "creá", "agregá", "conectá", "lanzá", "buscá" → ejecutá la herramienta directa.
 - Si dudás, pedí confirmación O usá propose_change.
+- No inventes datos: distinguí hecho documentado, inferencia probable y dato desconocido.
+- Si proponés cambiar, fusionar o borrar datos importantes, pedí confirmación antes de aplicar.
 - Confirmá lo realizado en una frase breve, con bullets si hubo varias acciones.
 - Nunca inventes UUIDs: si necesitás un id, primero search_personas.`;
 
@@ -67,6 +70,19 @@ const tools: ToolDef[] = [
       name: "get_persona",
       description: "Devuelve ficha completa con eventos y relaciones.",
       parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_origin_analysis",
+      description: "Devuelve la estimación de origen por árbol genealógico guardada para una persona. No es ADN real.",
+      parameters: {
+        type: "object",
+        properties: {
+          person_id: { type: "string", description: "uuid de persona. Si falta, usa la persona principal." },
+        },
+      },
     },
   },
   {
@@ -220,6 +236,59 @@ const tools: ToolDef[] = [
 
 const norm = (s: string) => (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+const relationNoteFor = (tipo: string) => {
+  const labels: Record<string, string> = {
+    union_civil: "unión civil",
+    conviviente: "convivencia",
+    cohabitante: "cohabitación",
+    padrino: "padrino",
+    madrina: "madrina",
+    ahijado: "ahijado/a",
+    primo: "primo",
+    prima: "prima",
+    socio_negocio: "socio/a de negocio",
+    testigo: "testigo",
+    otro: "otra relación",
+  };
+  return `relación genealógica: ${labels[tipo] ?? tipo}`;
+};
+
+function applyTreeScope(query: any, treeId?: string | null) {
+  return treeId ? query.or(`arbol_id.eq.${treeId},arbol_id.is.null`) : query;
+}
+
+async function fetchActiveTreeId(sb: ReturnType<typeof createClient>, userId: string) {
+  const { data } = await sb.from("profiles").select("active_arbol_id").eq("id", userId).maybeSingle();
+  return ((data as any)?.active_arbol_id ?? null) as string | null;
+}
+
+async function fetchScopedPeople(
+  sb: ReturnType<typeof createClient>,
+  userId: string,
+  treeId: string | null,
+  select = "id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha,nacionalidad,notas,arbol_id,updated_at",
+  max = 5000,
+) {
+  const all: any[] = [];
+  const pageSize = 1000;
+  for (let from = 0; from < max; from += pageSize) {
+    const to = Math.min(from + pageSize - 1, max - 1);
+    let query = sb.from("personas")
+      .select(select)
+      .eq("user_id", userId)
+      .order("apellidos", { ascending: true })
+      .order("nombres", { ascending: true })
+      .range(from, to);
+    query = applyTreeScope(query, treeId);
+    const { data, error } = await query;
+    if (error) throw error;
+    const page = data ?? [];
+    all.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return all;
+}
+
 async function invokeFn(name: string, body: unknown, auth: string) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${name}`;
   const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -234,37 +303,82 @@ async function invokeFn(name: string, body: unknown, auth: string) {
 async function executeTool(
   name: string,
   args: Record<string, unknown>,
-  ctx: { sb: ReturnType<typeof createClient>; userId: string; auth: string },
+  ctx: { sb: ReturnType<typeof createClient>; userId: string; auth: string; treeId: string | null; probandId: string | null },
 ): Promise<unknown> {
   try {
     if (name === "search_personas") {
       const q = norm(String(args.query ?? ""));
       const limit = Math.min(Number(args.limit ?? 8), 20);
-      const { data } = await ctx.sb.from("personas")
-        .select("id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha")
-        .eq("user_id", ctx.userId).limit(200);
-      const scored = (data ?? []).filter((p: any) =>
-        norm(`${p.nombres} ${p.apellidos}`).includes(q)).slice(0, limit);
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const people = await fetchScopedPeople(ctx.sb, ctx.userId, ctx.treeId);
+      const scored = people
+        .map((p: any) => {
+          const haystack = norm(`${p.nombres ?? ""} ${p.apellidos ?? ""} ${p.nacionalidad ?? ""} ${p.notas ?? ""}`);
+          const score = tokens.reduce((acc, token) => acc + (haystack.includes(token) ? 1 : 0), 0);
+          return { p, score };
+        })
+        .filter(({ score }) => score > 0 || !q)
+        .sort((a, b) => b.score - a.score || norm(`${a.p.apellidos} ${a.p.nombres}`).localeCompare(norm(`${b.p.apellidos} ${b.p.nombres}`)))
+        .slice(0, limit)
+        .map(({ p }) => ({
+          id: p.id,
+          nombres: p.nombres,
+          apellidos: p.apellidos,
+          sexo: p.sexo,
+          nac_fecha: p.nac_fecha,
+          defuncion_fecha: p.defuncion_fecha,
+          arbol_id: p.arbol_id ?? null,
+        }));
       return { results: scored, total: scored.length };
     }
     if (name === "list_recent") {
       const limit = Math.min(Number(args.limit ?? 10), 30);
-      const { data } = await ctx.sb.from("personas")
+      let query = ctx.sb.from("personas")
         .select("id,nombres,apellidos,sexo,nac_fecha")
-        .eq("user_id", ctx.userId).order("created_at", { ascending: false }).limit(limit);
+        .eq("user_id", ctx.userId).order("updated_at", { ascending: false }).limit(limit);
+      query = applyTreeScope(query, ctx.treeId);
+      const { data } = await query;
       return { results: data ?? [] };
+    }
+    if (name === "get_origin_analysis") {
+      const personId = String(args.person_id ?? ctx.probandId ?? "");
+      if (!personId) return { ok: false, error: "No hay persona principal configurada." };
+      const { data, error } = await ctx.sb.from("dna_estimates")
+        .select("region,porcentaje,rama,fuente,notas,updated_at")
+        .eq("user_id", ctx.userId)
+        .eq("persona_id", personId)
+        .order("porcentaje", { ascending: false });
+      if (error) return { ok: false, error: error.message };
+      const total = (data ?? []).reduce((sum: number, item: any) => sum + Number(item.porcentaje ?? 0), 0);
+      return {
+        ok: true,
+        person_id: personId,
+        methodology: "Estimación por árbol genealógico/documental, ponderada por generación. No equivale a ADN real.",
+        total_percentage: total,
+        results: data ?? [],
+      };
     }
     if (name === "get_persona") {
       const id = String(args.id);
+      let eventQuery = ctx.sb.from("eventos")
+        .select("tipo,fecha,descripcion,lugar_original,arbol_id")
+        .eq("user_id", ctx.userId)
+        .eq("persona_id", id);
+      let relQuery = ctx.sb.from("relaciones")
+        .select("tipo,pariente_id,certeza,notas,arbol_id")
+        .eq("user_id", ctx.userId)
+        .eq("persona_id", id);
+      eventQuery = applyTreeScope(eventQuery, ctx.treeId);
+      relQuery = applyTreeScope(relQuery, ctx.treeId);
       const [{ data: p }, { data: ev }, { data: rels }] = await Promise.all([
         ctx.sb.from("personas").select("*").eq("user_id", ctx.userId).eq("id", id).maybeSingle(),
-        ctx.sb.from("eventos").select("tipo,fecha,descripcion,lugar_original").eq("user_id", ctx.userId).eq("persona_id", id),
-        ctx.sb.from("relaciones").select("tipo,pariente_id,certeza").eq("user_id", ctx.userId).eq("persona_id", id),
+        eventQuery,
+        relQuery,
       ]);
       return { persona: p, eventos: ev ?? [], relaciones: rels ?? [] };
     }
     if (name === "create_persona") {
-      const row: any = { user_id: ctx.userId };
+      const row: any = { user_id: ctx.userId, arbol_id: ctx.treeId };
       for (const k of ["nombres", "apellidos", "sexo", "nac_fecha", "nac_lugar", "defuncion_fecha", "ocupacion", "notas", "viva"]) {
         if (args[k] != null && args[k] !== "") row[k] = args[k];
       }
@@ -285,20 +399,8 @@ async function executeTool(
       const tipo = String(args.tipo);
       if (sourceId === targetId) return { ok: false, error: "ids iguales" };
       const { data: src } = await ctx.sb.from("personas").select("sexo").eq("id", sourceId).maybeSingle();
-      const extendedLabels: Record<string, string> = {
-        union_civil: "unión civil",
-        conviviente: "conviviente",
-        cohabitante: "cohabitante",
-        padrino: "padrino",
-        madrina: "madrina",
-        ahijado: "ahijado/a",
-        primo: "primo",
-        prima: "prima",
-        socio_negocio: "socio/a de negocio",
-        testigo: "testigo",
-        otro: "otra relación",
-      };
-      const dbTipo = ["padre", "madre", "hijo", "conyuge", "hermano"].includes(tipo) ? tipo : "otro";
+      const unionTypes = new Set(["union_civil", "conviviente", "cohabitante"]);
+      const dbTipo = unionTypes.has(tipo) ? "conyuge" : (["padre", "madre", "hijo", "conyuge", "hermano"].includes(tipo) ? tipo : "otro");
       const inverseExtended: Record<string, string> = {
         union_civil: "unión civil",
         conviviente: "conviviente",
@@ -329,13 +431,18 @@ async function executeTool(
           { persona_id: sourceId, pariente_id: targetId, tipo },
           { persona_id: targetId, pariente_id: sourceId, tipo },
         ];
+      } else if (unionTypes.has(tipo)) {
+        pairs = [
+          { persona_id: sourceId, pariente_id: targetId, tipo: "conyuge", notas: relationNoteFor(tipo) },
+          { persona_id: targetId, pariente_id: sourceId, tipo: "conyuge", notas: relationNoteFor(tipo) },
+        ];
       } else {
         pairs = [
-          { persona_id: sourceId, pariente_id: targetId, tipo: dbTipo, notas: `relación genealógica: ${extendedLabels[tipo] ?? tipo}` },
-          { persona_id: targetId, pariente_id: sourceId, tipo: "otro", notas: `relación genealógica: ${inverseExtended[tipo] ?? extendedLabels[tipo] ?? tipo}` },
+          { persona_id: sourceId, pariente_id: targetId, tipo: dbTipo, notas: relationNoteFor(tipo) },
+          { persona_id: targetId, pariente_id: sourceId, tipo: "otro", notas: `relación genealógica: ${inverseExtended[tipo] ?? tipo}` },
         ];
       }
-      const rows = pairs.map((p) => ({ ...p, user_id: ctx.userId, naturaleza: "biologica", certeza: "probable" }));
+      const rows = pairs.map((p) => ({ ...p, user_id: ctx.userId, arbol_id: ctx.treeId, naturaleza: "biologica", certeza: "probable" }));
       const { error } = await ctx.sb.from("relaciones").upsert(rows, { onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true });
       if (error) return { ok: false, error: error.message };
       return { ok: true, creadas: rows.length };
@@ -362,9 +469,17 @@ async function executeTool(
       return r;
     }
     if (name === "check_coherence") {
+      let peopleQuery = ctx.sb.from("personas")
+        .select("id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha,arbol_id")
+        .eq("user_id", ctx.userId);
+      let relQuery = ctx.sb.from("relaciones")
+        .select("persona_id,pariente_id,tipo,arbol_id")
+        .eq("user_id", ctx.userId);
+      peopleQuery = applyTreeScope(peopleQuery, ctx.treeId);
+      relQuery = applyTreeScope(relQuery, ctx.treeId);
       const [{ data: personas }, { data: rels }] = await Promise.all([
-        ctx.sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,defuncion_fecha").eq("user_id", ctx.userId),
-        ctx.sb.from("relaciones").select("persona_id,pariente_id,tipo").eq("user_id", ctx.userId),
+        peopleQuery,
+        relQuery,
       ]);
       // Lightweight checks
       let errores = 0, avisos = 0;
@@ -385,6 +500,7 @@ async function executeTool(
     if (name === "propose_change") {
       const { data, error } = await ctx.sb.from("sugerencias").insert({
         user_id: ctx.userId,
+        arbol_id: ctx.treeId,
         tipo: String(args.tipo),
         titulo: String(args.titulo),
         descripcion: args.descripcion ? String(args.descripcion) : null,
@@ -431,13 +547,16 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const body = await req.json();
     const incoming: any[] = Array.isArray(body.messages) ? body.messages : [];
-    // Pull proband context to inject
-    const { data: prof } = await sb.from("profiles").select("proband_id").eq("id", userId).maybeSingle();
+    // Pull tree/proband context to inject
+    const { data: prof } = await sb.from("profiles").select("proband_id,active_arbol_id").eq("id", userId).maybeSingle();
+    const activeTreeId = ((prof as any)?.active_arbol_id ?? await fetchActiveTreeId(sb, userId)) as string | null;
+    const probandId = ((prof as any)?.proband_id ?? null) as string | null;
     let probandCtx = "";
-    if ((prof as any)?.proband_id) {
-      const { data: p } = await sb.from("personas").select("id,nombres,apellidos").eq("id", (prof as any).proband_id).maybeSingle();
+    if (probandId) {
+      const { data: p } = await sb.from("personas").select("id,nombres,apellidos").eq("id", probandId).maybeSingle();
       if (p) probandCtx = `\nPersona principal del árbol: ${(p as any).nombres} ${(p as any).apellidos} (id: ${(p as any).id}).`;
     }
+    if (activeTreeId) probandCtx += `\nÁrbol activo: ${activeTreeId}. Usá este árbol como contexto principal y no mezcles datos de otros árboles salvo que el usuario lo pida.`;
 
     const messages: any[] = [{ role: "system", content: SYSTEM + probandCtx }, ...incoming];
     const toolEvents: any[] = [];
@@ -470,7 +589,7 @@ Deno.serve(async (req) => {
       for (const tc of toolCalls) {
         let args: Record<string, unknown> = {};
         try { args = JSON.parse(tc.function.arguments ?? "{}"); } catch { /* ignore */ }
-        const result = await executeTool(tc.function.name, args, { sb, userId, auth });
+        const result = await executeTool(tc.function.name, args, { sb, userId, auth, treeId: activeTreeId, probandId });
         toolEvents.push({ name: tc.function.name, args, result });
         messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result).slice(0, 8000) });
       }

@@ -9,6 +9,7 @@ import PersonaName from "@/components/PersonaName";
 import GenealogistaIA from "@/components/GenealogistaIA";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 import {
   Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight, Lightbulb,
 } from "lucide-react";
@@ -336,7 +337,7 @@ export default function Inicio() {
             <ul className="divide-y divide-border/50">
               {actividad.map((a) => (
                 <li key={a.id} className="py-2 text-sm">
-                  <div>{a.descripcion}</div>
+                  <div>{toDisplayText(a.descripcion) || "Actividad registrada"}</div>
                   <div className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString("es")}</div>
                 </li>
               ))}

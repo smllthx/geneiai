@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
         <text x="272" y="50" text-anchor="middle" font-size="22" font-family="Inter, Arial, sans-serif" fill="#94a3b8">Cuadro genealógico</text>
         <text x="272" y="90" text-anchor="middle" font-size="28" font-family="Inter, Arial, sans-serif" font-weight="700" fill="${pal.c}">${escapeXml(style)}</text>
       </g>
-      <text x="400" y="1002" text-anchor="middle" font-size="20" font-family="Inter, Arial, sans-serif" fill="#64748b">GENAIA · Archivo familiar</text>
+      <text x="400" y="1002" text-anchor="middle" font-size="20" font-family="Inter, Arial, sans-serif" fill="#64748b">GENEAI · Archivo familiar</text>
     </svg>`;
 
     return new Response(JSON.stringify({ imageUrl: svgToDataUrl(svg), prompt: style, source: 'geneaia-local-cuadro' }), {

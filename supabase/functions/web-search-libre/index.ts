@@ -24,7 +24,7 @@ const corsHeaders = {
 
 type Hit = { titulo: string; url: string; snippet: string; fuente: string };
 
-const UA = "Mozilla/5.0 (compatible; GenaiaBot/1.0)";
+const UA = "Mozilla/5.0 (compatible; GeneaiBot/1.0)";
 
 async function ddg(q: string, limit = 8): Promise<Hit[]> {
   try {

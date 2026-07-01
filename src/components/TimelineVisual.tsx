@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Baby, Church, Heart, Cross, MapPin, Briefcase, Ship, FileText, Sparkles, Home, Landmark } from "lucide-react";
+import { toDisplayText } from "@/lib/safeText";
 
 type Item = { fecha: string; label: string; tipo?: string; lugar?: string };
 
@@ -48,7 +49,7 @@ export default function TimelineVisual({ eventos, persona }: { eventos: any[]; p
     if (persona.bautismo_fecha) out.push({ fecha: persona.bautismo_fecha, label: "Bautismo", tipo: "bautismo" });
     if (persona.matrimonio_fecha) out.push({ fecha: persona.matrimonio_fecha, label: "Matrimonio", tipo: "matrimonio" });
     (eventos ?? []).forEach((e: any) => {
-      if (e.fecha) out.push({ fecha: e.fecha, label: e.descripcion ?? e.tipo, tipo: e.tipo, lugar: e.lugar_original });
+      if (e.fecha) out.push({ fecha: e.fecha, label: toDisplayText(e.descripcion) || e.tipo, tipo: e.tipo, lugar: e.lugar_original });
     });
     if (persona.defuncion_fecha) out.push({ fecha: persona.defuncion_fecha, label: "Defunción", tipo: "defuncion" });
     if (persona.entierro_fecha) out.push({ fecha: persona.entierro_fecha, label: "Entierro", tipo: "entierro" });

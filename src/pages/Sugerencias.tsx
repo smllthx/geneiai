@@ -10,12 +10,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Check, X, FileText, Loader2, Sparkles, Search, Users, ChevronDown } from "lucide-react";
 import { applyTreeScope, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { toDisplayText } from "@/lib/safeText";
 
 type Sugerencia = {
   id: string;
   tipo: string;
   titulo: string;
-  descripcion: string | null;
+  descripcion: unknown;
   confianza: number;
   origen: string | null;
   estado: string;
@@ -149,14 +150,14 @@ export default function Sugerencias() {
   const filtered = useMemo(() => {
     if (!q.trim()) return items;
     const lower = q.toLowerCase();
-    return items.filter((s) => s.titulo.toLowerCase().includes(lower) || (s.descripcion ?? "").toLowerCase().includes(lower));
+    return items.filter((s) => toDisplayText(s.titulo).toLowerCase().includes(lower) || toDisplayText(s.descripcion).toLowerCase().includes(lower));
   }, [items, q]);
 
   // Agrupar por documento origen
   const groups = useMemo(() => {
     const m = new Map<string, Sugerencia[]>();
     for (const s of filtered) {
-      const key = (s.payload?.documento_titulo as string) ?? (s.origen ?? "Sin origen");
+      const key = toDisplayText(s.payload?.documento_titulo ?? s.origen) || "Sin origen";
       const arr = m.get(key) ?? [];
       arr.push(s);
       m.set(key, arr);
@@ -258,13 +259,13 @@ export default function Sugerencias() {
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-baseline gap-x-2">
-                              <span className="font-medium">{s.titulo}</span>
+                              <span className="font-medium">{toDisplayText(s.titulo)}</span>
                               <Badge variant="outline" className="text-[10px]">{s.confianza}%</Badge>
                               {s.tipo === "actualizacion_persona" && <Badge variant="secondary" className="text-[10px]">Mejora</Badge>}
                               {s.tipo === "fuente" && <Badge variant="secondary" className="text-[10px]">Fuente web</Badge>}
                             </div>
-                            {s.descripcion && (
-                              <div className="text-xs text-muted-foreground">{s.descripcion}</div>
+                            {toDisplayText(s.descripcion) && (
+                              <div className="text-xs text-muted-foreground">{toDisplayText(s.descripcion)}</div>
                             )}
                             {s.url_externa && (
                               <a href={s.url_externa} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline truncate block">{s.url_externa}</a>

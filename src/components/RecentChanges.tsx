@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, Clock } from "lucide-react";
+import { toDisplayText } from "@/lib/safeText";
 
-type Change = { tipo: string; descripcion: string; fecha: string };
+type Change = { tipo: string; descripcion: unknown; fecha: string };
 
 export default function RecentChanges({ personaId }: { personaId: string }) {
   const [items, setItems] = useState<Change[]>([]);
@@ -66,7 +67,7 @@ export default function RecentChanges({ personaId }: { personaId: string }) {
                 <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium">{c.tipo}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{c.descripcion}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">{toDisplayText(c.descripcion) || "Sin descripción"}</div>
                 </div>
                 <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{fmt(c.fecha)}</span>
               </li>
