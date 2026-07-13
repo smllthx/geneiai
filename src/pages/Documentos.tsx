@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import GenealogistaIA from "@/components/GenealogistaIA";
+import { DocumentIntelligencePanel } from "@/components/ResearchWorkflowPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -161,6 +162,20 @@ export default function Documentos() {
     }
   };
 
+  const crearSugerenciasDocumentales = async () => {
+    const t = toast.loading("Analizando documentos con IA…");
+    try {
+      const { data, error } = await supabase.functions.invoke("documentos-a-sugerencias", { body: { max: 15 } });
+      if (error) throw error;
+      toast.dismiss(t);
+      toast.success(`${data?.creadas ?? 0} sugerencias · ${data?.duplicadas ?? 0} duplicadas omitidas`);
+      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "ai_suggestions" } }));
+    } catch (e: any) {
+      toast.dismiss(t);
+      toast.error(e.message ?? "No se pudieron crear sugerencias");
+    }
+  };
+
   const filtered = useMemo(() => {
     const qn = q.trim().toLowerCase();
     return items.filter((d) => {
@@ -190,15 +205,7 @@ export default function Documentos() {
         actions={
           <Button
             variant="outline"
-            onClick={async () => {
-              const t = toast.loading("Analizando documentos con IA…");
-              try {
-                const { data, error } = await supabase.functions.invoke("documentos-a-sugerencias", { body: { max: 15 } });
-                if (error) throw error;
-                toast.dismiss(t);
-                toast.success(`${data?.creadas ?? 0} sugerencias · ${data?.duplicadas ?? 0} duplicadas omitidas`);
-              } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-            }}
+            onClick={crearSugerenciasDocumentales}
           >
             <ScanLine className="h-4 w-4" /> Extraer personas → Sugerencias
           </Button>
@@ -238,6 +245,15 @@ export default function Documentos() {
           },
         ]}
         className="mb-4"
+      />
+
+      <DocumentIntelligencePanel
+        className="mb-4"
+        activeTitle={selectedDoc?.titulo}
+        hasActiveDocument={!!selectedDoc}
+        onTranscribe={() => selectedDoc && transcribir(selectedDoc.id)}
+        onExtract={() => selectedDoc && extraerDatosIA(selectedDoc.id)}
+        onSuggestions={crearSugerenciasDocumentales}
       />
 
       {/* Barra de filtros */}

@@ -68,6 +68,7 @@ const defaultActions: Record<NonNullable<Props["context"]>, AgentAction[]> = {
   ],
   investigacion: [
     { label: "Agente guiado", to: "/investigacion?tab=agente", icon: <Bot className="h-4 w-4" /> },
+    { label: "Bitácora", to: "/investigacion?tab=bitacora", icon: <ClipboardCheck className="h-4 w-4" /> },
     { label: "Agentes paralelos", to: "/investigacion?tab=paralelo", icon: <Sparkles className="h-4 w-4" /> },
     { label: "Importadas pendientes", to: "/importadas-pendientes", icon: <GitBranch className="h-4 w-4" /> },
   ],

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { SectionHeader } from "@/components/glass";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GenealogistaIA from "@/components/GenealogistaIA";
+import { ResearchLogPanel } from "@/components/ResearchWorkflowPanel";
 
 const Agente = lazy(() => import("./Agente"));
 const AgentesParalelo = lazy(() => import("./AgentesParalelo"));
@@ -15,8 +16,13 @@ const BusquedaIA = lazy(() => import("./BusquedaIA"));
 const Insights = lazy(() => import("./Insights"));
 const Buscar = lazy(() => import("./Buscar"));
 
+function BitacoraInvestigacion() {
+  return <ResearchLogPanel />;
+}
+
 const TABS = [
   { v: "hub", l: "Buscar", C: Buscar },
+  { v: "bitacora", l: "Bitácora", C: BitacoraInvestigacion },
   { v: "agente", l: "Agente IA", C: Agente },
   { v: "importadas", l: "Importadas pendientes", C: PersonasImportadasPendientes },
   { v: "busqueda", l: "Búsqueda IA", C: BusquedaIA },
