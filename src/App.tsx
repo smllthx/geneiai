@@ -49,6 +49,7 @@ const TareasIA = lazy(() => import("./pages/TareasIA"));
 const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
 const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
 const Calendario = lazy(() => import("./pages/Calendario"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -79,6 +80,7 @@ const App = () => (
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/familysearch/callback" element={<ProtectedRoute><FamilySearchCallback /></ProtectedRoute>} />
                 <Route path="/p/:id" element={<PersonaPublica />} />
                 <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

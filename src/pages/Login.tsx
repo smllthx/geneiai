@@ -17,6 +17,20 @@ import {
   markDeviceUnlocked,
 } from "@/lib/devicePasskey";
 
+function getLoginDestination() {
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+  if (!returnTo || returnTo.includes("\\") || returnTo.includes("\0")) return "/inicio";
+  try {
+    const destination = new URL(returnTo, window.location.origin);
+    if (destination.origin !== window.location.origin) return "/inicio";
+    if (destination.pathname !== "/oauth/consent") return "/inicio";
+    if (!destination.searchParams.get("authorization_id")) return "/inicio";
+    return `${destination.pathname}${destination.search}${destination.hash}`;
+  } catch {
+    return "/inicio";
+  }
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -38,7 +52,7 @@ export default function Login() {
       if (!data.session) return;
       if (isRecovery) return;
       if (hasDevicePasskey() && !isDeviceUnlocked()) return;
-      navigate("/inicio", { replace: true });
+      navigate(getLoginDestination(), { replace: true });
     });
   }, [navigate]);
 
@@ -49,7 +63,7 @@ export default function Login() {
     setLoading(false);
     if (error) return toast.error(error.message);
     markDeviceUnlocked();
-    navigate("/inicio", { replace: true });
+    navigate(getLoginDestination(), { replace: true });
   };
 
   const handleDeviceUnlock = async () => {
@@ -58,7 +72,7 @@ export default function Login() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) throw new Error("Primero ingresa con correo y contraseña en este dispositivo.");
       await authenticateDevicePasskey();
-      navigate("/inicio", { replace: true });
+      navigate(getLoginDestination(), { replace: true });
     } catch (error: any) {
       toast.error(error.message || "No se pudo desbloquear con Face ID / Touch ID.");
     } finally {
@@ -71,7 +85,7 @@ export default function Login() {
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email, password,
-        options: { emailRedirectTo: `${window.location.origin}/inicio`, data: { display_name: name } },
+        options: { emailRedirectTo: `${window.location.origin}${getLoginDestination()}`, data: { display_name: name } },
     });
     setLoading(false);
     if (error) return toast.error(error.message);

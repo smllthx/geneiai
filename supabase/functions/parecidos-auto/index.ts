@@ -29,19 +29,35 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const personaId: string | undefined = body.persona_id;
-    const userIdInput: string | undefined = body.user_id;
-    let userId = userIdInput;
-
-    // Si llaman desde el frontend con JWT, deducimos user_id
     const auth = req.headers.get("Authorization");
-    if (!userId && auth) {
+    if (!auth?.startsWith("Bearer ")) throw new Error("Autenticación requerida");
+
+    const token = auth.slice("Bearer ".length);
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    let userId: string | undefined;
+
+    // La llamada interna desde analizar-rostro usa la clave del servidor. Las
+    // llamadas de usuario nunca pueden elegir otro user_id desde el cuerpo.
+    if (token === serviceRoleKey) {
+      userId = body.user_id;
+    } else {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-      const { data: { user } } = await sb.auth.getUser();
+      const { data: { user }, error } = await sb.auth.getUser();
+      if (error || !user) throw new Error("Sesión no válida");
+
+      const payloadPart = token.split(".")[1];
+      if (!payloadPart) throw new Error("Token no válido");
+      const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+      const claims = JSON.parse(atob(padded));
+      if (claims.client_id) {
+        throw new Error("La conexión de Work solo puede operar mediante el endpoint MCP de GENEAI");
+      }
       userId = user?.id;
     }
     if (!userId) throw new Error("user_id requerido");
 
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
     // Para cada persona, tomar el rasgo más reciente
     const { data: rasgos } = await admin.from("rasgos_faciales")

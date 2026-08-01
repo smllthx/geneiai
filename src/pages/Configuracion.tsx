@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound, GitBranch, Plus } from "lucide-react";
+import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound, GitBranch, Plus, MessagesSquare, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
@@ -53,6 +53,105 @@ const UsageBox = ({ label, usage }: { label: string; usage: AiUsagePeriod }) => 
     </p>
   </div>
 );
+
+function WorkConnectionCard() {
+  type WorkGrant = {
+    client: { id: string; name: string; uri: string };
+    scopes: string[];
+    granted_at: string;
+  };
+
+  const [grants, setGrants] = useState<WorkGrant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [revoking, setRevoking] = useState("");
+
+  const loadGrants = async () => {
+    setLoading(true);
+    const [{ data, error }, { data: approved, error: approvedError }] = await Promise.all([
+      supabase.auth.oauth.listGrants(),
+      supabase.from("work_oauth_clients").select("client_id").eq("active", true),
+    ]);
+    if (!error && !approvedError) {
+      const approvedIds = new Set((approved ?? []).map((client) => client.client_id));
+      setGrants((data ?? []).filter((grant) => approvedIds.has(grant.client.id)));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadGrants();
+  }, []);
+
+  const revoke = async (clientId: string) => {
+    if (!window.confirm("¿Desconectar ChatGPT Work de tu cuenta GENEAI?")) return;
+    setRevoking(clientId);
+    const { error: trustError } = await supabase.from("work_oauth_clients")
+      .update({ active: false })
+      .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
+      .eq("client_id", clientId);
+    if (trustError) {
+      setRevoking("");
+      return toast.error("No se pudo bloquear la conexión en GENEAI. Inténtalo de nuevo.");
+    }
+    const { error } = await supabase.auth.oauth.revokeGrant({ clientId });
+    setRevoking("");
+    if (error) return toast.error("GENEAI bloqueó el acceso, pero falta retirar el permiso OAuth. Vuelve a intentarlo.");
+    toast.success("ChatGPT Work fue desconectado de GENEAI.");
+    loadGrants();
+  };
+
+  return (
+    <Card className="archivo-card mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 font-serif text-xl">
+          <MessagesSquare className="h-5 w-5" /> ChatGPT Work
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Usa GENEAI y Work al mismo tiempo. Work consulta y modifica el mismo árbol activo con tu autorización; no crea una copia de tus datos.
+        </p>
+        <div className="rounded-xl border border-border/70 bg-card/45 p-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Comprobando conexiones…</p>
+          ) : grants.length ? (
+            <div className="space-y-3">
+              {grants.map((grant) => (
+                <div key={grant.client.id} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 font-medium">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      {grant.client.name || "ChatGPT Work"} conectado
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Acceso concedido {grant.granted_at ? new Date(grant.granted_at).toLocaleDateString("es-CL") : ""}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => revoke(grant.client.id)} disabled={revoking === grant.client.id}>
+                    <Unplug className="h-4 w-4" /> {revoking === grant.client.id ? "Desconectando…" : "Desconectar"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />
+              <div>
+                <p className="font-medium">Listo para conectar</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Al activar GENEAI en Work aparecerá una pantalla de permiso. Ninguna persona se puede borrar desde esta conexión.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          La conexión con Work no usa ni muestra la API key privada configurada para las funciones IA internas de GENEAI.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 function TreesAdminCard() {
   const [trees, setTrees] = useState<any[]>([]);
@@ -408,6 +507,8 @@ export default function Configuracion() {
           </p>
         </CardContent>
       </Card>
+
+      <WorkConnectionCard />
 
       <Card className="archivo-card mb-6">
         <CardHeader>

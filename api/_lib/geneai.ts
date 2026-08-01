@@ -19,6 +19,15 @@ export function getSupabase(req: any): SupabaseClient {
   return createClient(url, key, { global: { headers: { Authorization: getBearer(req) } } });
 }
 
+export function getServiceSupabase(): SupabaseClient {
+  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("El acceso privado de GENEAI Work no está configurado en el servidor");
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 export async function getUserOrThrow(sb: SupabaseClient) {
   const { data, error } = await sb.auth.getUser();
   if (error || !data.user) throw new Error("No autenticado");

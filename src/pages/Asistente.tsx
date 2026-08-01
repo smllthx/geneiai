@@ -121,7 +121,22 @@ export default function Asistente() {
           sexo: p.sexo ?? null, nac_fecha: p.nac_fecha ?? null, ocupacion: p.ocupacion ?? null, notas: p.notas ?? null,
         }, activeTreeId));
       } else if (s.tipo === "actualizar_persona" && s.persona_id) {
-        await supabase.from("personas").update(s.payload ?? {}).eq("id", s.persona_id);
+        const allowed = [
+          "nombres", "apellidos", "variantes_nombre", "sexo", "viva", "nac_fecha", "nac_fecha_aprox",
+          "nac_rango_ini", "nac_rango_fin", "bautismo_fecha", "matrimonio_fecha", "defuncion_fecha",
+          "entierro_fecha", "ocupacion", "nacionalidad", "religion", "notas", "certeza",
+        ];
+        const patch = Object.fromEntries(
+          Object.entries(s.payload ?? {}).filter(([key]) => allowed.includes(key)),
+        );
+        if (!Object.keys(patch).length) throw new Error("La propuesta no contiene campos editables.");
+        const activeTreeId = await getActiveTreeId();
+        if (!activeTreeId) throw new Error("Selecciona un árbol activo antes de aceptar el cambio.");
+        const { error } = await supabase.from("personas")
+          .update(patch)
+          .eq("id", s.persona_id)
+          .eq("arbol_id", activeTreeId);
+        if (error) throw error;
       }
       await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
       toast.success("Aceptada");
