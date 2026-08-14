@@ -14,13 +14,19 @@ export default function FamilySearchCallback() {
   useEffect(() => {
     (async () => {
       const code = params.get("code");
+      const state = params.get("state");
       const err = params.get("error");
       if (err) { setStatus("error"); setMsg(err); return; }
       if (!code) { setStatus("error"); setMsg("Falta código de autorización"); return; }
+      if (!state) {
+        setStatus("error");
+        setMsg("Falta el parámetro de seguridad (state). Vuelve a iniciar la autorización desde FamilySearch.");
+        return;
+      }
       try {
         const redirectUri = `${window.location.origin}/familysearch/callback`;
         const { data, error } = await supabase.functions.invoke("familysearch-auth", {
-          body: { action: "exchange", code, redirect_uri: redirectUri },
+          body: { action: "exchange", code, state, redirect_uri: redirectUri },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);

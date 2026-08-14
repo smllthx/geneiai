@@ -132,7 +132,7 @@ export default function Asistente() {
         if (!Object.keys(patch).length) throw new Error("La propuesta no contiene campos editables.");
         const activeTreeId = await getActiveTreeId();
         if (!activeTreeId) throw new Error("Selecciona un árbol activo antes de aceptar el cambio.");
-        const { error } = await supabase.from("personas")
+        const { error } = await (supabase.from("personas") as any)
           .update(patch)
           .eq("id", s.persona_id)
           .eq("arbol_id", activeTreeId);

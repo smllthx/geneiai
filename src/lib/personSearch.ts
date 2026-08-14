@@ -92,8 +92,8 @@ export function filterPeopleForQuery<T extends SearchablePerson>(
   const qNorm = norm(q);
   const exact = pool
     .filter((p) => matchesCode(q, p.id) || personSearchText(p).toLowerCase().includes(q.toLowerCase()) || norm(personSearchText(p)).includes(qNorm))
-    .map((item) => ({ item, score: matchesCode(q, item.id) ? 2 : 1.15 }));
-  const fuzzy = rankResults(pool, q, personSearchText);
+    .map((item) => ({ item, score: matchesCode(q, item.id) ? 2 : 1.15 })) as Array<{ item: T; score: number }>;
+  const fuzzy = rankResults(pool, q, personSearchText) as Array<{ item: T; score: number }>;
   const byId = new Map<string, { item: T; score: number }>();
 
   [...exact, ...fuzzy].forEach((result) => {

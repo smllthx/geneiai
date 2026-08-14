@@ -51,3 +51,6 @@ verify_jwt = false
 
 [functions.compartir-persona]
 verify_jwt = false
+
+[functions.familysearch-bridge]
+verify_jwt = true

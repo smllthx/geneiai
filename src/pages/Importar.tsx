@@ -81,7 +81,8 @@ export default function Importar() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
     const { data } = await supabase.from("external_accounts")
-      .select("*").eq("user_id", user.id).eq("provider", "familysearch").maybeSingle();
+      .select("id, provider, expires_at, scope, account_ref, created_at, updated_at")
+      .eq("user_id", user.id).eq("provider", "familysearch").maybeSingle();
     setFsAccount(data);
   };
   useEffect(() => { loadAccount(); }, []);
@@ -158,8 +159,8 @@ export default function Importar() {
 
   const desconectarFS = async () => {
     if (!confirm("¿Desconectar FamilySearch?")) return;
-    const user = (await supabase.auth.getUser()).data.user!;
-    await supabase.from("external_accounts").delete().eq("user_id", user.id).eq("provider", "familysearch");
+    const { data, error } = await supabase.functions.invoke("familysearch-auth", { body: { action: "disconnect" } });
+    if (error || data?.error) return toast.error(data?.error ?? "No se pudo desconectar");
     setFsAccount(null); toast.success("Desconectado");
   };
 

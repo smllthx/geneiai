@@ -653,6 +653,36 @@ export type Database = {
         }
         Relationships: []
       }
+      familysearch_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          redirect_uri: string
+          state: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redirect_uri: string
+          state: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redirect_uri?: string
+          state?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       foto_tags: {
         Row: {
           created_at: string
@@ -1471,42 +1501,6 @@ export type Database = {
           id?: string
           user_id?: string
           variante?: string
-        }
-        Relationships: []
-      }
-      work_oauth_clients: {
-        Row: {
-          active: boolean
-          client_id: string
-          client_name: string
-          client_uri: string | null
-          created_at: string
-          id: string
-          last_authorized_at: string
-          redirect_uri: string
-          user_id: string
-        }
-        Insert: {
-          active?: boolean
-          client_id: string
-          client_name?: string
-          client_uri?: string | null
-          created_at?: string
-          id?: string
-          last_authorized_at?: string
-          redirect_uri: string
-          user_id: string
-        }
-        Update: {
-          active?: boolean
-          client_id?: string
-          client_name?: string
-          client_uri?: string | null
-          created_at?: string
-          id?: string
-          last_authorized_at?: string
-          redirect_uri?: string
-          user_id?: string
         }
         Relationships: []
       }

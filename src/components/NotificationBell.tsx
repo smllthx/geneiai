@@ -25,8 +25,8 @@ export default function NotificationBell() {
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
   const load = async () => {
-    const [{ treeId, personIds }, { data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
-      getActiveTreeScopedIds(),
+    const { treeId, personIds } = await getActiveTreeScopedIds();
+    const [{ data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
       supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
       applyTreeScope(supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30) as any, treeId),
       supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
