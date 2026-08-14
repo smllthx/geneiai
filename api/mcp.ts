@@ -329,6 +329,85 @@ function createServer(sb: SupabaseClient, userId: string) {
     () => "Propuesta guardada en GENEAI para revisión, sin aplicar cambios automáticamente.",
   ));
 
+  const fsPersonInput = {
+    personId: z.string().trim().regex(/^[A-Za-z0-9]{4}-[A-Za-z0-9]{3,4}$/).describe("Identificador de FamilySearch (formato ABCD-123)."),
+  };
+
+  server.registerTool("familysearch_status", {
+    title: "Estado de FamilySearch",
+    description: "Indica si la cuenta GENEAI conectada tiene FamilySearch vinculado. No expone tokens ni credenciales.",
+    inputSchema: {},
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async () => asToolResult(
+    () => fsStatus(sb, userId),
+    (data) => (data as { connected: boolean }).connected
+      ? "FamilySearch está conectado en esta cuenta de GENEAI."
+      : "Esta cuenta de GENEAI aún no tiene FamilySearch conectado.",
+  ));
+
+  server.registerTool("familysearch_current_person", {
+    title: "Mi persona en FamilySearch",
+    description: "Devuelve la persona asociada al usuario en el Árbol Familiar de FamilySearch, usando solo la cuenta vinculada.",
+    inputSchema: {},
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async () => asToolResult(
+    () => fsCurrentPerson(sb, userId),
+    () => "Persona actual obtenida desde FamilySearch.",
+  ));
+
+  server.registerTool("familysearch_search", {
+    title: "Buscar en FamilySearch",
+    description: "Busca personas en el Árbol Familiar de FamilySearch por nombre, apellido, lugar o fechas. Solo lectura.",
+    inputSchema: {
+      givenName: optionalText(120),
+      surname: optionalText(120),
+      birthPlace: optionalText(160),
+      birthDate: optionalText(40),
+      deathDate: optionalText(40),
+      limit: z.number().int().min(1).max(50).default(10),
+    },
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async (input) => asToolResult(
+    () => fsSearch(sb, userId, input),
+    () => "Resultados de búsqueda obtenidos desde FamilySearch.",
+  ));
+
+  server.registerTool("familysearch_person", {
+    title: "Ver persona de FamilySearch",
+    description: "Obtiene la ficha de una persona del Árbol Familiar de FamilySearch por su identificador. Solo lectura.",
+    inputSchema: fsPersonInput,
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async (input) => asToolResult(
+    () => fsPerson(sb, userId, input),
+    () => "Ficha obtenida desde FamilySearch.",
+  ));
+
+  server.registerTool("familysearch_relatives", {
+    title: "Familiares en FamilySearch",
+    description: "Obtiene padres, hijos y cónyuges de una persona de FamilySearch. Solo lectura, no modifica FamilySearch ni GENEAI.",
+    inputSchema: fsPersonInput,
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async (input) => asToolResult(
+    () => fsRelatives(sb, userId, input),
+    () => "Familiares obtenidos desde FamilySearch.",
+  ));
+
+  server.registerTool("familysearch_sources", {
+    title: "Fuentes en FamilySearch",
+    description: "Lista las fuentes adjuntas a una persona de FamilySearch para contrastar evidencia. Solo lectura.",
+    inputSchema: fsPersonInput,
+    annotations: readAnnotations,
+    _meta: protectedMeta,
+  }, async (input) => asToolResult(
+    () => fsSources(sb, userId, input),
+    () => "Fuentes obtenidas desde FamilySearch.",
+  ));
+
   return server;
 }
 
