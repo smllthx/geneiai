@@ -1474,42 +1474,6 @@ export type Database = {
         }
         Relationships: []
       }
-      work_oauth_clients: {
-        Row: {
-          active: boolean
-          client_id: string
-          client_name: string
-          client_uri: string | null
-          created_at: string
-          id: string
-          last_authorized_at: string
-          redirect_uri: string
-          user_id: string
-        }
-        Insert: {
-          active?: boolean
-          client_id: string
-          client_name?: string
-          client_uri?: string | null
-          created_at?: string
-          id?: string
-          last_authorized_at?: string
-          redirect_uri: string
-          user_id: string
-        }
-        Update: {
-          active?: boolean
-          client_id?: string
-          client_name?: string
-          client_uri?: string | null
-          created_at?: string
-          id?: string
-          last_authorized_at?: string
-          redirect_uri?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
