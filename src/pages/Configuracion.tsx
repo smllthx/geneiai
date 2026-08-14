@@ -69,10 +69,10 @@ function WorkConnectionCard() {
     setLoading(true);
     const [{ data, error }, { data: approved, error: approvedError }] = await Promise.all([
       supabase.auth.oauth.listGrants(),
-      supabase.from("work_oauth_clients").select("client_id").eq("active", true),
+      (supabase.from("work_oauth_clients") as any).select("client_id").eq("active", true),
     ]);
     if (!error && !approvedError) {
-      const approvedIds = new Set((approved ?? []).map((client) => client.client_id));
+      const approvedIds = new Set(((approved ?? []) as any[]).map((client) => client.client_id));
       setGrants((data ?? []).filter((grant) => approvedIds.has(grant.client.id)));
     }
     setLoading(false);
@@ -85,7 +85,7 @@ function WorkConnectionCard() {
   const revoke = async (clientId: string) => {
     if (!window.confirm("¿Desconectar ChatGPT Work de tu cuenta GENEAI?")) return;
     setRevoking(clientId);
-    const { error: trustError } = await supabase.from("work_oauth_clients")
+    const { error: trustError } = await (supabase.from("work_oauth_clients") as any)
       .update({ active: false })
       .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
       .eq("client_id", clientId);

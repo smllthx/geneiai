@@ -583,10 +583,10 @@ function ArbolContent() {
   };
 
   const completarTarea = async (id: string) => {
-    const { error } = await supabase.from("research_tasks").update({ estado: "completada" }).eq("id", id);
+    const { error } = await supabase.from("research_tasks").update({ estado: "encontrado" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Tarea marcada como completada");
-    setTasks((cur) => cur.map((t) => t.id === id ? { ...t, estado: "completada" } : t));
+    setTasks((cur) => cur.map((t) => t.id === id ? { ...t, estado: "encontrado" } : t));
   };
 
 

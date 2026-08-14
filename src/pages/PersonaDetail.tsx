@@ -1289,7 +1289,7 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
     const { error } = await supabase
       .from("eventos")
       .update({
-        ...editDraft,
+        ...(editDraft as any),
         fecha: editDraft.fecha || null,
         lugar_original: editDraft.lugar_original || null,
         descripcion: editDraft.descripcion || null,
