@@ -103,7 +103,7 @@ export default function OAuthConsent() {
         setSubmitting(null);
         return;
       }
-      const { error: trustError } = await (supabase.from("work_oauth_clients") as any).upsert({
+      const { error: trustError } = await (supabase as any).from("work_oauth_clients").upsert({
         user_id: user.id,
         client_id: details.client.id,
         client_name: details.client.name || "ChatGPT Work",
