@@ -15,6 +15,14 @@ import {
   searchPeople,
   updatePerson,
 } from "./_lib/geneai-work/index.js";
+import {
+  fsCurrentPerson,
+  fsPerson,
+  fsRelatives,
+  fsSearch,
+  fsSources,
+  fsStatus,
+} from "./_lib/familysearch-work.js";
 
 type ApiRequest = IncomingMessage & { body?: unknown };
 type ApiResponse = ServerResponse & {
