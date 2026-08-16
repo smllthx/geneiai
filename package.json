@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "familysearch:browser": "node tools/familysearch-browser/src/server.js",
+    "familysearch:browser:install": "npm --prefix tools/familysearch-browser install && npm --prefix tools/familysearch-browser exec -- playwright install chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

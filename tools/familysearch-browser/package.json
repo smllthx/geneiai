@@ -1,0 +1,21 @@
+{
+  "name": "genaia-familysearch-browser",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Compañero local de GENAIA: navegador visible (Playwright) para FamilySearch. Solo se ejecuta en tu Mac.",
+  "bin": {
+    "genaia-fs-browser": "./src/server.js",
+    "genaia-fs-browser-mcp": "./src/mcp.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "mcp": "node src/mcp.js",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "playwright": "^1.49.0",
+    "zod": "^3.25.76"
+  }
+}
