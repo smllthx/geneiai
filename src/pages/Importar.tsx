@@ -13,6 +13,7 @@ import { parseGedcom } from "@/lib/import/gedcom";
 import { readCSV, readXLSX, readJSON, parseTabular } from "@/lib/import/tabular";
 import { persistImport, type ImportSummary } from "@/lib/import/persist";
 import { notify } from "@/lib/notifications";
+import FamilySearchLocalBrowser from "@/components/FamilySearchLocalBrowser";
 
 const CSV_TEMPLATE = `id,nombres,apellidos,sexo,nac_fecha,nac_lugar,defuncion_fecha,defuncion_lugar,padre_id,madre_id,conyuge_id,ocupacion,notas
 P1,Giovanni Battista,Sanguineti,M,1850-03-12,Chiavari (Italia),1920-08-01,Buenos Aires,,,P2,,Migrante 1875
@@ -271,11 +272,12 @@ export default function Importar() {
 
 
         <TabsContent value="familysearch">
+          <FamilySearchLocalBrowser />
           <GlassCard>
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary"><Link2 className="h-5 w-5" /></div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-display text-lg font-semibold">FamilySearch · Sincronización en vivo</h3>
+                <h3 className="font-display text-lg font-semibold">API oficial (opcional) · Sincronización en vivo</h3>
                 {!fsAccount ? (
                   <>
                     <p className="mt-1 text-sm text-muted-foreground">Conecta tu cuenta de FamilySearch para descargar y sincronizar tu árbol automáticamente vía OAuth.</p>
