@@ -8,7 +8,10 @@ let page = null;
 let launchedChannel = null;
 
 async function launch() {
-  const { chromium } = await import("playwright");
+  // Especificador en variable + @vite-ignore: Playwright es dependencia SOLO de la
+  // herramienta local, nunca del bundle de la app.
+  const spec = "playwright";
+  const { chromium } = await import(/* @vite-ignore */ spec);
   let lastError = null;
   for (const channel of BROWSER_CHANNELS) {
     try {
