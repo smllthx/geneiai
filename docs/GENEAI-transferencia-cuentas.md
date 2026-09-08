@@ -1,5 +1,7 @@
 # GENEAI: plan de conservación y unificación de cuentas
 
+**Actualización:** la transferencia de 4.028 registros a la cuenta principal ya se aplicó. Hay 4.077 personas y tres árboles. Los archivos y la publicación siguen en verificación. Véase [el estado más reciente](GENEAI-transferencia-aplicada.md); las secciones siguientes conservan el plan y las comprobaciones anteriores.
+
 **Estado: propuesta pendiente de ejecución.** Este documento no acredita una
 migración, una vinculación de cuentas ni una publicación de la aplicación.
 Inventario de referencia: 8 de septiembre de 2026.

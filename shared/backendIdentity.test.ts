@@ -84,10 +84,10 @@ describe("one GENEAI backend across web and API", () => {
     })).toThrowError(BackendConfigurationError);
     expect(() => resolveServiceBackendConfig({ SUPABASE_SERVICE_ROLE_KEY: legacyKey("service_role", OLD_PROJECT) }))
       .toThrowError(BackendConfigurationError);
-    expect(() => resolveServerBackendConfig({
+    expect(resolveServerBackendConfig({
       SUPABASE_PUBLISHABLE_KEY: PUBLIC_FIXTURE,
       SUPABASE_SERVICE_ROLE_KEY: legacyKey("service_role", OLD_PROJECT),
-    })).toThrowError(BackendConfigurationError);
+    }).projectRef).toBe(identity.projectRef);
     expect(resolvePublicBackendConfig({ VITE_SUPABASE_PUBLISHABLE_KEY: legacyKey("anon") }).projectRef).toBe(identity.projectRef);
   });
 

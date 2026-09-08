@@ -1,5 +1,7 @@
 # GENEAI: conexión común y estado de la unificación
 
+**Actualización:** la transferencia de 4.028 registros a la cuenta principal ya se aplicó. Hay 4.077 personas y tres árboles. Los archivos y la publicación siguen en verificación. Véase [el estado más reciente](GENEAI-transferencia-aplicada.md); las secciones siguientes conservan el plan y las comprobaciones anteriores.
+
 Revisión del 8 de septiembre de 2026. Estos cambios pertenecen a `smllthx/geneiai` y al código Apple recuperado de la misma aplicación. La actualización está en una rama de revisión; no se ha desplegado sobre las publicaciones existentes ni instalado una nueva compilación Apple.
 
 ## Qué se comprobó

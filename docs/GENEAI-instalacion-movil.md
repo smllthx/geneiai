@@ -1,5 +1,7 @@
 # GENEAI: instalación y adaptación por dispositivo
 
+**Actualización:** la transferencia de 4.028 registros a la cuenta principal ya se aplicó. Hay 4.077 personas y tres árboles. Los archivos y la publicación siguen en verificación. Véase [el estado más reciente](GENEAI-transferencia-aplicada.md); las secciones siguientes conservan el plan y las comprobaciones anteriores.
+
 Esta mejora pertenece al repositorio existente `smllthx/geneiai`. Mantiene el nombre GENEAI, la identidad del manifiesto `/`, el inicio `/`, el alcance `/` y los iconos existentes. No crea otra aplicación, cuenta, base de datos ni proyecto de alojamiento.
 
 ## Uso

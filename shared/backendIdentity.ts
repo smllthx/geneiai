@@ -94,10 +94,8 @@ export function resolveServerBackendConfig(env: Environment = {}): PublicBackend
     .map((name) => value(env[name])).filter(Boolean);
   // Validate every supplied key so a stale legacy setting is not silently masked.
   keys.forEach((key) => validateKey(key, identity));
-  for (const name of ["SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
-    const key = value(env[name]);
-    if (key) validateKey(key, identity, true);
-  }
+  // User-scoped requests use only a public key and the caller's verified token.
+  // Privileged credentials are checked separately by resolveServiceBackendConfig.
   const publishableKey = keys[0] || validateKey(value(canonical.publishableKey), identity);
   return { ...identity, publishableKey };
 }
