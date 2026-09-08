@@ -14,6 +14,21 @@ export function friendlyAiErrorMessage(error: unknown, functionName?: string) {
         (error as any)?.details ??
         "La IA no pudo procesar la solicitud.";
   const msg = normalize(raw);
+  if (msg.includes('sesion invalida') || msg.includes('invalid jwt') || msg.includes('jwt expired') || msg.includes('no autenticado')) {
+    return 'La sesión ya no es válida. Vuelve a ingresar a GENEAI.';
+  }
+  if (msg.includes('funcion no desplegada') || msg.includes('function not found')) {
+    return 'Esta función no está disponible en el servidor. Actualiza GENEAI y vuelve a intentar.';
+  }
+  if (msg.includes('abort') || msg.includes('timeout') || msg.includes('timed out')) {
+    return 'La solicitud tardó demasiado. Comprueba si el cambio se guardó antes de repetirlo.';
+  }
+  if (functionName?.startsWith('familysearch-')) {
+    if (msg.includes('client id') || msg.includes('no configurado')) return 'La autorización de FamilySearch aún requiere configurar su aplicación oficial en el servidor.';
+    if (msg.includes('failed to fetch') || msg.includes('non-2xx')) return 'No se pudo conectar con FamilySearch. Comprueba la conexión y vuelve a intentar.';
+    return String(raw);
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkerror')) return 'No se pudo contactar al servidor. Comprueba la conexión y vuelve a intentar.';
   const label = functionName ? `La opción IA “${functionName}”` : "La función de IA";
 
   if (
@@ -22,14 +37,13 @@ export function friendlyAiErrorMessage(error: unknown, functionName?: string) {
     msg.includes("missing api") ||
     msg.includes("no configurado")
   ) {
-    return "Falta activar ChatGPT: abre Configuración → IA, guarda tu API key de OpenAI y reinicia para aplicar el cambio.";
+    return "Falta activar ChatGPT: abre Configuración → IA, guarda tu API key de OpenAI.";
   }
 
   if (
     msg.includes("invalid_api_key") ||
     msg.includes("incorrect api key") ||
-    msg.includes("401") ||
-    msg.includes("unauthorized")
+    msg.includes("openai unauthorized")
   ) {
     return "La API key de OpenAI no fue aceptada. Revisa que empiece con sk- y vuelve a guardarla en Configuración → IA.";
   }

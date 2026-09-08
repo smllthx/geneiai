@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { ancestorLayers } from "@/lib/treeRendering";
 import { padresDe } from "@/lib/kinship";
 
 type Persona = {
@@ -25,26 +26,15 @@ export default function FanChart({
 
   // ancestors[gen][index] = personaId | null. index 0..(2^gen - 1).
   // For each person at (gen, idx) -> father at (gen+1, 2*idx), mother at (gen+1, 2*idx+1)
-  const ancestors = useMemo(() => {
-    const a: (string | null)[][] = [[centerId]];
-    for (let g = 1; g <= generations; g++) {
-      const prev = a[g - 1];
-      const next: (string | null)[] = new Array(prev.length * 2).fill(null);
-      prev.forEach((pid, idx) => {
-        if (!pid) return;
-        const parents = padresDe(pid, rels.map((r, i) => ({ id: r.id ?? `${i}`, ...r })) as any, byId as any);
-        const padre = parents.padre?.id ?? null;
-        const madre = parents.madre?.id ?? null;
-        next[idx * 2] = padre;
-        next[idx * 2 + 1] = madre;
-      });
-      a.push(next);
-    }
-    return a;
-  }, [personas, rels, centerId, generations, byId]);
+  const normalizedRels = useMemo(() => rels.map((r, i) => ({ ...r, id: r.id ?? String(i) })), [rels]);
+  const ancestors = useMemo(() => ancestorLayers(centerId, generations, (pid) => {
+    const parents = padresDe(pid, normalizedRels, byId);
+    return [parents.padre?.id ?? null, parents.madre?.id ?? null];
+  }), [normalizedRels, centerId, generations, byId]);
+  const visibleGenerations = Math.max(1, ancestors.length - 1);
 
   const cx = size / 2, cy = size / 2;
-  const ringWidth = (size / 2 - 40) / generations;
+  const ringWidth = (size / 2 - 20) / (visibleGenerations + 1);
   const startAngle = -180; // top-left to top-right span; we'll use full 360 splitting top half (ancestors above)
   const totalAngle = 180; // ancestors go in upper semicircle
 
@@ -97,7 +87,7 @@ export default function FanChart({
       })()}
 
       {/* Ancestor rings */}
-      {Array.from({ length: generations }, (_, gi) => {
+      {Array.from({ length: ancestors.length - 1 }, (_, gi) => {
         const gen = gi + 1;
         const count = Math.pow(2, gen);
         const arc = totalAngle / count;

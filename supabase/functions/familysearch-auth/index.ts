@@ -22,7 +22,8 @@ function isSafeRedirect(value: unknown): value is string {
     const url = new URL(value);
     const isLocal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
     if (url.protocol !== "https:" && !(isLocal && url.protocol === "http:")) return false;
-    return url.pathname === "/familysearch/callback";
+    const allowedHosts = new Set(["geneiai.vercel.app", "geneiai-geneaia.vercel.app", "localhost", "127.0.0.1"]);
+    return allowedHosts.has(url.hostname) && !url.username && !url.password && !url.search && !url.hash && url.pathname === "/familysearch/callback";
   } catch {
     return false;
   }
@@ -33,7 +34,6 @@ Deno.serve(async (req) => {
   try {
     const clientId = Deno.env.get("FAMILYSEARCH_CLIENT_ID");
     const clientSecret = Deno.env.get("FAMILYSEARCH_CLIENT_SECRET") ?? "";
-    if (!clientId) throw new Error("FamilySearch Client ID no configurado");
 
     const auth = req.headers.get("Authorization");
     if (!auth) throw new Error("No autenticado");
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .eq("provider", "familysearch")
         .maybeSingle();
-      return new Response(JSON.stringify({ connected: !!data, account: data ?? null }), {
+      return new Response(JSON.stringify({ connected: !!data, configured: !!clientId, account: data ?? null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -69,6 +69,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "start" || action === "exchange") {
+      if (!clientId) throw new Error("FamilySearch Client ID no configurado");
+    }
     if (action === "start") {
       if (!isSafeRedirect(redirect_uri)) throw new Error("redirect_uri no permitida");
       const newState = crypto.randomUUID();
@@ -105,11 +108,12 @@ Deno.serve(async (req) => {
       }
       if (saved.redirect_uri !== redirect_uri) throw new Error("La dirección de retorno no coincide.");
 
-      const { error: usedError } = await supabase.from("familysearch_oauth_states")
+      const { data: claimed, error: usedError } = await supabase.from("familysearch_oauth_states")
         .update({ used_at: new Date().toISOString() })
         .eq("id", saved.id)
-        .is("used_at", null);
+        .is("used_at", null).select("id").maybeSingle();
       if (usedError) throw usedError;
+      if (!claimed) throw new Error("Esta autorización ya fue utilizada.");
 
       const params: Record<string, string> = {
         grant_type: "authorization_code",
@@ -125,6 +129,7 @@ Deno.serve(async (req) => {
           "Accept": "application/json",
         },
         body: new URLSearchParams(params),
+        signal: AbortSignal.timeout(30_000),
       });
       const tokenData = await tokenRes.json().catch(() => ({}));
       if (!tokenRes.ok || !tokenData?.access_token) {

@@ -16,7 +16,7 @@ export default function DescendancyView({ nodes, relationships, centerId, onSele
   const children = relationships
     .filter((rel) => (rel.from === center?.id && rel.type === "hijo") || (rel.to !== center?.id && rel.from === center?.id && (rel.type === "padre" || rel.type === "madre")))
     .map((rel) => byId.get(rel.to))
-    .filter(Boolean) as TreeNode[];
+    .filter((node, index, rows) => node && rows.findIndex((other) => other?.id === node.id) === index) as TreeNode[];
 
   return (
     <div className="absolute inset-0 overflow-auto p-8">

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
+import { authorizeFamilySearch } from "@/lib/familySearchBrowser";
+import { useEffect, useRef, useState } from "react";
+import { supabase, SUPABASE_URL, backendConfig } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,8 @@ export default function Importar() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
+  const [fsBusy, setFsBusy] = useState(false);
+  const fsLock = useRef(false);
   const [fsAccount, setFsAccount] = useState<any>(null);
   const [genAsc, setGenAsc] = useState(4);
   const [genDesc, setGenDesc] = useState(2);
@@ -86,7 +89,14 @@ export default function Importar() {
       .eq("user_id", user.id).eq("provider", "familysearch").maybeSingle();
     setFsAccount(data);
   };
-  useEffect(() => { loadAccount(); }, []);
+  useEffect(() => {
+    const refresh = () => { void loadAccount().catch(() => toast.error("No se pudo consultar la conexión de FamilySearch")); };
+    refresh();
+    const returned = (event: MessageEvent) => { if (event.origin === window.location.origin && event.data?.type === 'geneai:familysearch-connected') refresh(); };
+    window.addEventListener('message', returned);
+    window.addEventListener('focus', refresh);
+    return () => { window.removeEventListener('message', returned); window.removeEventListener('focus', refresh); };
+  }, []);
 
   const downloadTemplate = () => {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
@@ -147,15 +157,11 @@ export default function Importar() {
 
 
   const conectarFS = async () => {
-    try {
-      const redirectUri = `${window.location.origin}/familysearch/callback`;
-      const { data, error } = await supabase.functions.invoke("familysearch-auth", {
-        body: { action: "start", redirect_uri: redirectUri },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      window.location.href = data.url;
-    } catch (e: any) { toast.error(e.message); }
+    if (fsLock.current) return;
+    fsLock.current = true; setFsBusy(true);
+    try { await authorizeFamilySearch(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo abrir FamilySearch"); }
+    finally { fsLock.current = false; setFsBusy(false); }
   };
 
   const desconectarFS = async () => {
@@ -166,6 +172,8 @@ export default function Importar() {
   };
 
   const sincronizarFS = async () => {
+    if (fsLock.current) return;
+    fsLock.current = true; setFsBusy(true);
     const t = toast.loading("Sincronizando con FamilySearch…");
     try {
       const { data, error } = await supabase.functions.invoke("familysearch-sync", {
@@ -174,18 +182,25 @@ export default function Importar() {
       toast.dismiss(t);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`${data.creadas} personas creadas, ${data.relsCreadas} relaciones`);
+      const created = data.creadas ?? data.persons?.created ?? 0;
+      const relations = data.relsCreadas ?? data.relationships?.created ?? 0;
+      if (data.errores) toast.warning(`Importación parcial: ${created} personas, ${relations} relaciones; ${data.errores} errores.`);
+      else toast.success(`${created} personas creadas, ${relations} relaciones`);
+      window.dispatchEvent(new CustomEvent('genaia:data-changed', { detail: { table: 'personas' } }));
     } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
+    finally { fsLock.current = false; setFsBusy(false); }
   };
 
   const exportarGEDCOM = async () => {
     const t = toast.loading("Generando GEDCOM…");
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Vuelve a ingresar a GENEAI para exportar.");
       const url = `${SUPABASE_URL}/functions/v1/familysearch-export`;
       const res = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${session!.access_token}` },
+        headers: { Authorization: `Bearer ${session.access_token}`, apikey: backendConfig.publishableKey },
+        signal: AbortSignal.timeout(60_000),
       });
       toast.dismiss(t);
       if (!res.ok) throw new Error(await res.text());
@@ -193,12 +208,13 @@ export default function Importar() {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = "arbol-familiar.ged"; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       toast.success("Descargado");
     } catch (e: any) { toast.dismiss(t); toast.error(e.message); }
   };
 
   return (
-    <div>
+    <div data-geneiai-editing={busy || fsBusy || iaBusy || mhBusy || !!file || !!mhFile || !!iaFile ? "true" : undefined}>
       <SectionHeader
         eyebrow="Importar / Exportar"
         title="Conectar con otras plataformas"
@@ -281,7 +297,7 @@ export default function Importar() {
                 {!fsAccount ? (
                   <>
                     <p className="mt-1 text-sm text-muted-foreground">Conecta tu cuenta de FamilySearch para descargar y sincronizar tu árbol automáticamente vía OAuth.</p>
-                    <Button className="mt-3" onClick={conectarFS}>Conectar cuenta de FamilySearch</Button>
+                    <Button className="mt-3" onClick={conectarFS} disabled={fsBusy}>{fsBusy ? "Abriendo…" : "Conectar"} cuenta de FamilySearch</Button>
                   </>
                 ) : (
                   <>
@@ -306,8 +322,8 @@ export default function Importar() {
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Button onClick={sincronizarFS}><RefreshCw className="h-4 w-4" /> Sincronizar ahora</Button>
-                      <Button variant="outline" onClick={desconectarFS}>Desconectar</Button>
+                      <Button onClick={sincronizarFS} disabled={fsBusy}><RefreshCw className="h-4 w-4" /> Sincronizar ahora</Button>
+                      <Button variant="outline" onClick={desconectarFS} disabled={fsBusy}>Desconectar</Button>
                     </div>
                   </>
                 )}

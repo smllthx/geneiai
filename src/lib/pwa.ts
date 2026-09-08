@@ -1,6 +1,6 @@
 let started = false;
 let reloadForUpdate = false;
-const isEditing = () => document.body.dataset.geneiaiEditing === "1" || Boolean(document.querySelector("[data-geneiai-editing='true']"));
+export const isAppEditing = () => document.body.dataset.geneiaiEditing === "1" || Boolean(document.querySelector("[data-geneiai-editing='true']"));
 
 export function registerSW() {
   if (started || typeof window === "undefined" || !("serviceWorker" in navigator)) return;
@@ -10,7 +10,7 @@ export function registerSW() {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!reloadForUpdate) return;
     reloadForUpdate = false;
-    if (isEditing()) return;
+    if (isAppEditing()) return;
     window.location.reload();
   });
   const register = async () => {
@@ -43,10 +43,11 @@ export function registerSW() {
 }
 
 export async function applyAppUpdate() {
-  if (isEditing()) return "editing";
+  if (isAppEditing()) return "editing";
   if (!("serviceWorker" in navigator)) return "unavailable";
   const registration = await navigator.serviceWorker.getRegistration();
-  if (isEditing()) return "editing";
+  if (registration && !registration.waiting) await registration.update();
+  if (isAppEditing()) return "editing";
   if (registration?.waiting) {
     reloadForUpdate = true;
     registration.waiting.postMessage({ type: "SKIP_WAITING" });

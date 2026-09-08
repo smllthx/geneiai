@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
@@ -29,40 +29,43 @@ export default function PersonasList() {
     try { return JSON.parse(sessionStorage.getItem(PEOPLE_LIST_STATE_KEY) || "{}").linkFilter || "todas"; } catch { return "todas"; }
   });
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
+  const loadController = useRef<AbortController | null>(null);
+  const deferredQuery = useDeferredValue(q);
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
+    loadController.current?.abort();
+    const controller = new AbortController();
+    loadController.current = controller;
+    if (!hasLoaded.current) setLoading(true);
     try {
+      const treeId = await getActiveTreeId();
+      if (controller.signal.aborted) return;
       const [people, rels] = await Promise.all([
-        fetchAllPeople<any>("*"),
-        fetchAllRelations<any>("persona_id,pariente_id,tipo"),
+        fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,sexo,nacionalidad,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,certeza,arbol_id", { treeId, signal: controller.signal }),
+        fetchAllRelations<any>("persona_id,pariente_id,tipo", { treeId, signal: controller.signal }),
       ]);
-      setPersonas(people);
-      setRelaciones(rels);
-    } catch (e: any) {
-      toast.error(e.message ?? "No se pudieron cargar todas las personas");
+      if (controller.signal.aborted) return;
+      setPersonas(people); setRelaciones(rels); hasLoaded.current = true;
+    } catch (error) {
+      if (!controller.signal.aborted) toast.error(error instanceof Error ? error.message : "No se pudieron cargar las personas");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  };
-
-  useEffect(() => { load(); }, []);
+  }, []);
   useEffect(() => {
-    sessionStorage.setItem(PEOPLE_LIST_STATE_KEY, JSON.stringify({ q, linkFilter }));
+    void load();
+    const refresh = (event: Event) => {
+      const table = (event as CustomEvent).detail?.table;
+      if (table && !['personas', 'relaciones'].includes(table)) return;
+      void load();
+    };
+    window.addEventListener('genaia:data-changed', refresh);
+    return () => { loadController.current?.abort(); window.removeEventListener('genaia:data-changed', refresh); };
+  }, [load]);
+  useEffect(() => {
+    try { sessionStorage.setItem(PEOPLE_LIST_STATE_KEY, JSON.stringify({ q, linkFilter })); } catch {}
   }, [q, linkFilter]);
-  useEffect(() => {
-    const refreshIfNeeded = () => {
-      if (personas.length === 0 || document.visibilityState === "visible") load();
-    };
-    window.addEventListener("pageshow", refreshIfNeeded);
-    window.addEventListener("focus", refreshIfNeeded);
-    window.addEventListener("genaia:data-changed", refreshIfNeeded);
-    return () => {
-      window.removeEventListener("pageshow", refreshIfNeeded);
-      window.removeEventListener("focus", refreshIfNeeded);
-      window.removeEventListener("genaia:data-changed", refreshIfNeeded);
-    };
-  }, [personas.length]);
 
   const linkedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -79,9 +82,9 @@ export default function PersonasList() {
       if (linkFilter === "sin_vincular") return !linkedIds.has(p.id);
       return true;
     });
-    if (!q.trim()) return base;
-    return filterPeopleForQuery(base, q, { limit: 5000 });
-  }, [personas, q, linkFilter, linkedIds]);
+    if (!deferredQuery.trim()) return base;
+    return filterPeopleForQuery(base, deferredQuery, { limit: 5000 });
+  }, [personas, deferredQuery, linkFilter, linkedIds]);
 
   const generarSugerenciasApellido = async () => {
     const user = (await supabase.auth.getUser()).data.user;

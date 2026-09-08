@@ -22,6 +22,19 @@ const SUPABASE_PUBLISHABLE_KEY = backendConfig.publishableKey;
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  global: {
+    fetch: async (input, init) => {
+      const controller = new AbortController();
+      const source = init?.signal;
+      const onAbort = () => controller.abort();
+      if (source?.aborted) controller.abort();
+      source?.addEventListener('abort', onAbort, { once: true });
+      const isFunction = String(input).includes('/functions/v1/');
+      const timer = window.setTimeout(() => controller.abort(), isFunction ? 120_000 : 30_000);
+      try { return await fetch(input, { ...init, signal: controller.signal }); }
+      finally { window.clearTimeout(timer); source?.removeEventListener('abort', onAbort); }
+    },
+  },
   auth: {
     storage: localStorage,
     persistSession: !backendConfigurationError,
@@ -43,6 +56,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
 });
 
 const invokeKey = (functionName: string, options?: any) => {
+  if (options?.signal || options?.body instanceof FormData || options?.body instanceof Blob || options?.body instanceof ArrayBuffer) return `${functionName}:uncached`;
   try {
     return `${sessionGeneration}:${functionName}:${JSON.stringify(options ?? {})}`;
   } catch {
@@ -61,12 +75,14 @@ supabase.functions.invoke = (async (functionName: string, options?: any) => {
     };
   }
 
-  const pending = originalInvoke(functionName as any, options);
+  const pending = originalInvoke(functionName as any, options).catch((error: unknown) => ({
+    data: null, error: error instanceof Error ? error : new Error('No se pudo completar la solicitud.'),
+  }));
   if (key !== `${functionName}:uncached`) {
     inFlightInvokes.set(key, pending);
-    const forget = () => window.setTimeout(() => {
+    const forget = () => {
       if (inFlightInvokes.get(key) === pending) inFlightInvokes.delete(key);
-    }, 2500);
+    };
     void pending.then(forget, forget);
   }
 
@@ -109,7 +125,8 @@ supabase.functions.invoke = (async (functionName: string, options?: any) => {
     return { data: null, error: new Error('La sesión cambió durante la consulta. Vuelve a intentarlo.') };
   }
 
-  const rawMessage = detail || result.error.message || "Error de IA";
+  const status = typeof context?.status === 'number' ? context.status : 0;
+  const rawMessage = detail || (status === 404 ? 'Función no desplegada' : status === 401 ? 'Sesión inválida' : result.error.message) || "Error de conexión";
   const friendly = friendlyAiErrorMessage(rawMessage, functionName);
 
   (result.error as any).message = friendly;

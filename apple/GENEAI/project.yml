@@ -39,8 +39,8 @@ targets:
       path: GENAIAApple/Info.plist
       properties:
         CFBundleDisplayName: GENEAI
-        CFBundleShortVersionString: "0.2.0"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "3.0.1"
+        CFBundleVersion: "301"
         GENAIA_SUPABASE_URL: "$(SUPABASE_URL)"
         GENAIA_SUPABASE_PROJECT_REF: "$(SUPABASE_PROJECT_REF)"
         GENAIA_SUPABASE_PUBLISHABLE_KEY: "$(SUPABASE_PUBLISHABLE_KEY)"

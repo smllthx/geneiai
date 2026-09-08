@@ -37,15 +37,17 @@ const relationNoteFor = (t: Tipo) => {
 };
 
 export default function QuickAddRelative({
-  personaId, personaSexo, defaultTipo, trigger, onAdded,
+  personaId, personaSexo, defaultTipo, trigger, onAdded, initialOpen = false, onOpenChange,
 }: {
   personaId: string;
   personaSexo?: string | null;
   defaultTipo: Tipo;
   trigger?: React.ReactNode;
   onAdded?: () => void;
+  initialOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [tipo, setTipo] = useState<Tipo>(defaultTipo);
   const [mode, setMode] = useState<"buscar" | "crear">("buscar");
   const [picked, setPicked] = useState<any | null>(null);
@@ -252,11 +254,11 @@ export default function QuickAddRelative({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(value) => { setOpen(value); onOpenChange?.(value); }}>
       <DialogTrigger asChild>
         {trigger ?? (<Button size="sm" variant="outline"><UserPlus className="h-4 w-4" /> Agregar familiar</Button>)}
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent data-geneiai-editing="true" className="max-w-md">
         <DialogHeader><DialogTitle>Agregar {labels[tipo]}</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div>

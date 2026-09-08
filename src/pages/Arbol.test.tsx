@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchAllPeople } from "@/lib/peopleData";
 import Arbol from "./Arbol";
 
 vi.mock("@/contexts/AuthContext", () => ({
@@ -72,4 +73,13 @@ describe("Arbol", () => {
       expect(screen.getByText(/Selecciona una persona o crea la primera/i)).toBeInTheDocument();
     });
   });
+});
+
+it("recovers a failed tree load instead of spinning forever", async () => {
+  vi.mocked(fetchAllPeople).mockRejectedValueOnce(new Error("Conexión interrumpida"));
+  render(<MemoryRouter initialEntries={["/arbol"]}><Arbol /></MemoryRouter>);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Conexión interrumpida');
+  expect(screen.queryByText('Cargando árbol…')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar carga' }));
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
 });

@@ -100,6 +100,25 @@ const isParentType = (tipo: string) => isFatherType(tipo) || isMotherType(tipo) 
 const isChildType = (tipo: string) => childTypes.has(cleanTipo(tipo));
 const isSiblingType = (tipo: string) => siblingTypes.has(cleanTipo(tipo));
 
+// Arrays are immutable snapshots. Build the adjacency index once per snapshot;
+// every subsequent lookup visits only this person's edges, not the entire tree.
+const relationIndexes = new WeakMap<RelRow[], Map<string, RelRow[]>>();
+function incident(pid: string, rels: RelRow[]) {
+  let index = relationIndexes.get(rels);
+  if (!index) {
+    index = new Map();
+    for (const row of rels) {
+      for (const id of new Set([row.persona_id, row.pariente_id])) {
+        const bucket = index.get(id) ?? [];
+        bucket.push(row);
+        index.set(id, bucket);
+      }
+    }
+    relationIndexes.set(rels, index);
+  }
+  return index.get(pid) ?? [];
+}
+
 export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const fatherIds = new Set<string>();
   const motherIds = new Set<string>();
@@ -111,7 +130,7 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
     else if (motherIds.size > fatherIds.size) fatherIds.add(parentId);
     else motherIds.add(parentId);
   };
-  for (const r of rels) {
+  for (const r of incident(pid, rels)) {
     if (r.persona_id === pid && isFatherType(r.tipo)) fatherIds.add(r.pariente_id);
     if (r.persona_id === pid && isMotherType(r.tipo)) motherIds.add(r.pariente_id);
     if (r.persona_id === pid && isGenericParentType(r.tipo)) addParentBySex(r.pariente_id);
@@ -132,7 +151,7 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
   const spouseIdsFor = (personId?: string) => {
     if (!personId) return [] as string[];
     const ids = new Set<string>();
-    for (const r of rels) {
+    for (const r of incident(personId, rels)) {
       if (!isSpouseLikeRelation(r)) continue;
       if (r.persona_id === personId) ids.add(r.pariente_id);
       if (r.pariente_id === personId) ids.add(r.persona_id);
@@ -156,7 +175,7 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
 
 export function conyugesDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const ids = new Set<string>();
-  for (const r of rels) {
+  for (const r of incident(pid, rels)) {
     if (!isSpouseLikeRelation(r)) continue;
     if (r.persona_id === pid) ids.add(r.pariente_id);
     if (r.pariente_id === pid) ids.add(r.persona_id);
@@ -170,7 +189,7 @@ export function conyugesDe(pid: string, rels: RelRow[], byId: Map<string, Person
 
 export function hijosDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const ids = new Set<string>();
-  for (const r of rels) {
+  for (const r of incident(pid, rels)) {
     if (r.pariente_id === pid && isParentType(r.tipo)) ids.add(r.persona_id);
     if (r.persona_id === pid && isChildType(r.tipo)) ids.add(r.pariente_id);
   }
@@ -179,7 +198,7 @@ export function hijosDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLi
 
 export function hermanosDe(pid: string, rels: RelRow[], byId: Map<string, PersonaLite>) {
   const ids = new Set<string>();
-  for (const r of rels) {
+  for (const r of incident(pid, rels)) {
     if (!isSiblingType(r.tipo)) continue;
     if (r.persona_id === pid) ids.add(r.pariente_id);
     if (r.pariente_id === pid) ids.add(r.persona_id);
@@ -187,7 +206,7 @@ export function hermanosDe(pid: string, rels: RelRow[], byId: Map<string, Person
   // also infer: share at least one parent
   const padres = padresDe(pid, rels, byId).all.map((p) => p.id);
   if (padres.length) {
-    for (const r of rels) {
+    for (const r of padres.flatMap((parentId) => incident(parentId, rels))) {
       if (isParentType(r.tipo) && padres.includes(r.pariente_id) && r.persona_id !== pid) {
         ids.add(r.persona_id);
       }
@@ -198,7 +217,7 @@ export function hermanosDe(pid: string, rels: RelRow[], byId: Map<string, Person
 
 /** Find all relation rows linking two specific people (both directions). */
 export function relacionesEntre(aId: string, bId: string, rels: RelRow[]) {
-  return rels.filter(
+  return incident(aId, rels).filter(
     (r) => (r.persona_id === aId && r.pariente_id === bId) || (r.persona_id === bId && r.pariente_id === aId),
   );
 }

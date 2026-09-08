@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+import { fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
+import QuickAddRelative from "@/components/QuickAddRelative";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { isSpouseLikeRelation } from "@/lib/kinship";
-import { buildGenealogyLayout, mockPeople, mockRelationships } from "./genealogyLayout";
+import { buildGenealogyLayout } from "./genealogyLayout";
 import DescendancyView from "./DescendancyView";
 import FanChartView from "./FanChartView";
 import FounderLineageView from "./FounderLineageView";
@@ -126,15 +131,39 @@ const matchesFilters = (person: GenealogyPerson, filters: TreeFilters) => {
 
 export default function GenealogyTreeView() {
   const navigate = useNavigate();
-  const [people, setPeople] = useState<GenealogyPerson[]>(mockPeople);
-  const [relationships, setRelationships] = useState<GenealogyRelationship[]>(mockRelationships);
-  const [centerId, setCenterId] = useState("PUQT-GS2");
+  const { user: authUser } = useAuth();
+  const realtimeKey = useRealtimeReload(["personas", "relaciones", "documentos"], authUser?.id);
+  const [retryKey, setRetryKey] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [relativeTarget, setRelativeTarget] = useState<{ person: GenealogyPerson; kind: RelativeKind } | null>(null);
+  const [people, setPeople] = useState<GenealogyPerson[]>([]);
+  const [relationships, setRelationships] = useState<GenealogyRelationship[]>([]);
+  const [centerId, setCenterId] = useState("");
   const [loading, setLoading] = useState(true);
-  const { nodes, edges } = useMemo(() => buildGenealogyLayout(people, relationships, centerId), [people, relationships, centerId]);
-  const [selected, setSelected] = useState<GenealogyPerson | null>(() => nodes.find((node) => node.id === "PUQT-GS2")?.data.person ?? null);
+  const [selected, setSelected] = useState<GenealogyPerson | null>(null);
   const [filters, setFilters] = useState<TreeFilters>(defaultFilters);
   const [viewMode, setViewMode] = useState<TreeViewMode>("portrait");
   const [options, setOptions] = useState<TreeOptions>(defaultOptions);
+  const { nodes, edges } = useMemo(() => {
+    const parentSlots = new Map<string, Set<string>>();
+    const spouseSlots = new Set<string>();
+    const visibleRelationships = relationships.filter((rel) => {
+      if (!options.showAlternativeParents && ["padre", "madre"].includes(rel.type)) {
+        const key = `${rel.to}:${rel.type}`;
+        const parents = parentSlots.get(key) ?? new Set();
+        if (parents.size && !parents.has(rel.from)) return false;
+        parents.add(rel.from); parentSlots.set(key, parents);
+      }
+      if (!options.showAlternativeSpouses && rel.type === "conyuge" && (rel.from === centerId || rel.to === centerId)) {
+        const other = rel.from === centerId ? rel.to : rel.from;
+        if (spouseSlots.size && !spouseSlots.has(other)) return false;
+        spouseSlots.add(other);
+      }
+      return true;
+    });
+    const visiblePeople = people.filter((p) => p.id === centerId || ((options.showNoSources || p.sourcesCount > 0) && (options.showIncompleteBranches || !p.incomplete)));
+    return buildGenealogyLayout(visiblePeople, visibleRelationships, centerId);
+  }, [people, relationships, centerId, options.showAlternativeParents, options.showAlternativeSpouses, options.showNoSources, options.showIncompleteBranches]);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [scale, setScale] = useState(0.88);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -169,22 +198,27 @@ export default function GenealogyTreeView() {
 
   useEffect(() => {
     let active = true;
-    (async () => {
-      setLoading(true);
+    void (async () => {
+      setLoading(true); setLoadError(null);
+      try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) {
         setLoading(false);
         return;
       }
-      const [{ data: personas }, { data: rels }, { data: lugares }, { data: docs }, { data: profile }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza").eq("user_id", user.id).limit(5000),
-        supabase.from("relaciones").select("id,persona_id,pariente_id,tipo,notas").eq("user_id", user.id).limit(10000),
-        supabase.from("lugares").select("id,ciudad,provincia,region,pais").eq("user_id", user.id).limit(5000),
-        supabase.from("documentos").select("personas_mencionadas").eq("user_id", user.id).limit(5000),
+      const treeId = await getActiveTreeId(user.id);
+      const [personas, rels, placesResult, docsResult, profileResult] = await Promise.all([
+        fetchAllPeople<any>("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza", { treeId }),
+        fetchAllRelations<any>("id,persona_id,pariente_id,tipo,notas", { treeId }),
+        supabase.from("lugares").select("id,ciudad,provincia,region,pais").eq("user_id", user.id).limit(1000),
+        supabase.from("documentos").select("personas_mencionadas").eq("user_id", user.id).limit(1000),
         supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle(),
       ]);
+      for (const result of [placesResult, docsResult, profileResult]) if (result.error) throw result.error;
+      const lugares = placesResult.data, docs = docsResult.data, profile = profileResult.data;
       if (!active) return;
       if (!personas?.length) {
+        setPeople([]); setRelationships([]); setCenterId(""); setSelected(null);
         setLoading(false);
         return;
       }
@@ -220,12 +254,13 @@ export default function GenealogyTreeView() {
       const validCenter = proband && convertedPeople.some((person) => person.id === proband) ? proband : convertedPeople[0].id;
       setPeople(convertedPeople);
       setRelationships(convertedRels);
-      setCenterId(validCenter);
+      setCenterId((previous) => convertedPeople.some((p) => p.id === previous) ? previous : validCenter);
       setSelected(convertedPeople.find((person) => person.id === validCenter) ?? convertedPeople[0]);
-      setLoading(false);
+      } catch (error) { if (active) setLoadError(error instanceof Error ? error.message : "No se pudo cargar el árbol."); }
+      finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, []);
+  }, [realtimeKey, retryKey, authUser?.id]);
 
   const centerTree = () => {
     setScale(0.88);
@@ -238,50 +273,9 @@ export default function GenealogyTreeView() {
     setScale((current) => Math.min(1.55, Math.max(0.45, Number((current + delta).toFixed(2)))));
   };
 
-  const expandBranch = async (person: GenealogyPerson) => {
-    if (expandedBranches.has(person.id)) {
-      setExpandedBranches((current) => {
-        const next = new Set(current);
-        next.delete(person.id);
-        return next;
-      });
-      return;
-    }
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return;
-    const { data: rels } = await supabase
-      .from("relaciones")
-      .select("id,persona_id,pariente_id,tipo,notas")
-      .eq("user_id", user.id)
-      .or(`persona_id.eq.${person.id},pariente_id.eq.${person.id}`)
-      .limit(200);
-    const relatedIds = Array.from(new Set((rels ?? []).flatMap((rel: any) => [rel.persona_id, rel.pariente_id]))).filter((id) => id && id !== person.id);
-    const missingIds = relatedIds.filter((id) => !people.some((p) => p.id === id));
-    if (missingIds.length) {
-      const { data: newPeople } = await supabase
-        .from("personas")
-        .select("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza")
-        .in("id", missingIds);
-      const converted = (newPeople ?? []).map((row: any): GenealogyPerson => ({
-        id: row.id,
-        givenNames: row.nombres,
-        surnames: row.apellidos,
-        birth: yearOf(row.nac_fecha) ?? (row.nac_rango_ini ? String(row.nac_rango_ini) : undefined),
-        death: yearOf(row.defuncion_fecha) ?? (row.viva === "si" ? "Vive" : undefined),
-        mainPlace: "Lugar por completar",
-        avatarUrl: row.foto_url ?? undefined,
-        initials: initialsOf(row.nombres, row.apellidos),
-        sourcesCount: 0,
-        incomplete: true,
-        researchStatus: "pendiente",
-        lineage: "central",
-      }));
-      setPeople((current) => [...current, ...converted]);
-    }
-    const convertedRels = dedupeRelationships((rels ?? []).map(convertRelationship).filter(Boolean) as GenealogyRelationship[]);
-    setRelationships((current) => dedupeRelationships([...current, ...convertedRels]));
-    setExpandedBranches((current) => new Set(current).add(person.id));
-    toast.success(`Rama expandida: ${person.givenNames}`);
+  const expandBranch = (person: GenealogyPerson) => {
+    setCenterId(person.id); setSelected(null); centerTree();
+    setExpandedBranches(new Set([person.id]));
   };
 
   const handleAction = (action: "profile" | "ai" | "expand", person: GenealogyPerson) => {
@@ -305,38 +299,45 @@ export default function GenealogyTreeView() {
   };
 
   const handleAddRelative = (kind: RelativeKind, person: GenealogyPerson) => {
-    navigate(`/personas/nueva?relacion=${person.id}&tipo=${kind}`);
+    setRelativeTarget({ person, kind });
   };
 
   return (
-    <div className={`-mx-3 -my-3 min-h-[calc(100vh-1px)] md:-mx-6 md:-my-6 ${options.darkMode ? "bg-slate-950" : "bg-slate-100"}`}>
+    <div className={`-mx-3 -my-3 min-h-[calc(100dvh-8rem)] md:-mx-6 md:-my-6 ${options.darkMode ? "bg-slate-950" : "bg-slate-100"}`}>
       <div
         ref={viewportRef}
-        className={`relative h-[calc(100vh-1px)] min-h-[720px] overflow-hidden [background-size:28px_28px] ${
+        className={`relative h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden touch-none [background-size:28px_28px] ${
           options.darkMode
             ? "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
             : "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
         }`}
         onWheel={handleWheel}
-        onMouseDown={(event) => {
+        onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button,article,input")) return;
+          event.currentTarget.setPointerCapture(event.pointerId);
           setDrag({ x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y });
         }}
-        onMouseMove={(event) => {
+        onPointerMove={(event) => {
           if (!drag) return;
           setOffset({ x: drag.ox + event.clientX - drag.x, y: drag.oy + event.clientY - drag.y });
         }}
-        onMouseUp={() => setDrag(null)}
-        onMouseLeave={() => setDrag(null)}
+        onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); setDrag(null); }}
+        onPointerCancel={() => setDrag(null)}
       >
         <TreeToolbar filters={filters} onFiltersChange={setFilters} onCenter={centerTree} onAddPerson={() => navigate("/personas/nueva")} />
 
         {loading && (
           <div className="absolute left-1/2 top-28 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin" /> Cargando árbol desde Supabase…
+            <Loader2 className="h-4 w-4 animate-spin" /> Cargando árbol…
           </div>
         )}
 
+        {loadError && <div role="alert" className="absolute inset-x-4 top-28 z-30 rounded-xl border bg-background p-3"><p>{loadError}</p><Button onClick={() => setRetryKey((k) => k + 1)}>Reintentar</Button></div>}
+        {!loading && !people.length && !loadError && <div className="absolute inset-x-4 top-28 z-30 rounded-xl bg-background p-4">No hay personas en este árbol. <Button onClick={() => navigate("/personas/nueva")}>Agregar persona</Button></div>}
+        {!!filters.query.trim() && <div className="absolute left-4 top-24 z-30 max-h-48 max-w-[75%] overflow-auto rounded-xl border bg-background p-2">
+          {people.filter((person) => matchesFilters(person, { ...defaultFilters, query: filters.query })).slice(0, 8).map((person) => <button key={person.id} className="block w-full px-3 py-2 text-left text-sm" onClick={() => { expandBranch(person); setFilters(defaultFilters); }}>{person.givenNames} {person.surnames}</button>)}
+        </div>}
+        {relativeTarget && <QuickAddRelative key={`${relativeTarget.person.id}-${relativeTarget.kind}`} personaId={relativeTarget.person.id} defaultTipo={relativeTarget.kind} initialOpen trigger={<span hidden />} onOpenChange={(open) => { if (!open) setRelativeTarget(null); }} onAdded={() => { setRelativeTarget(null); setRetryKey((k) => k + 1); }} />}
         <TreeFloatingToolbar
           view={viewMode}
           scale={scale}
@@ -346,7 +347,10 @@ export default function GenealogyTreeView() {
           }}
           onOptions={() => setOptionsOpen(true)}
           onHome={() => navigate("/inicio")}
-          onFullscreen={() => viewportRef.current?.requestFullscreen?.()}
+          onFullscreen={() => {
+            if (!viewportRef.current?.requestFullscreen) { toast.info("Usa la app añadida a Inicio para aprovechar toda la pantalla."); return; }
+            void viewportRef.current.requestFullscreen().catch(() => toast.error("No se pudo activar la pantalla completa."));
+          }}
           onCenter={centerTree}
           onZoomIn={() => setScale((value) => Math.min(1.55, value + 0.08))}
           onZoomOut={() => setScale((value) => Math.max(0.45, value - 0.08))}
@@ -376,7 +380,7 @@ export default function GenealogyTreeView() {
             relationships={relationships}
             centerId={centerId}
             onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)}
-            onAddChild={(id) => navigate(`/personas/nueva?relacion=${id}&tipo=hijo`)}
+            onAddChild={(id) => { const person = people.find((p) => p.id === id); if (person) handleAddRelative("hijo", person); }}
           />
         )}
         {(viewMode === "founder") && (
@@ -447,6 +451,8 @@ export default function GenealogyTreeView() {
                 selected={selected?.id === node.id}
                 dimmed={hasActiveFilters && !visibleIds.has(node.id)}
                 showPortrait={options.showPortraits}
+                showAiHints={options.showAiHints}
+                showProblems={options.showProblems}
                 expanded={expandedBranches.has(node.id)}
                 onSelect={setSelected}
                 onAction={handleAction}
@@ -466,7 +472,7 @@ export default function GenealogyTreeView() {
           person={selected}
           onClose={() => setSelected(null)}
           onEdit={(person) => navigate(`/personas/${person.id}`)}
-          onAiEvidence={(person) => toast.info(`Buscar evidencia con IA para ${person.givenNames}`)}
+          onAiEvidence={(person) => handleAction("ai", person)}
         />
       </div>
     </div>

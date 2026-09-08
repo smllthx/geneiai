@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Suscribe a postgres_changes en las tablas indicadas, filtrando por user_id
@@ -10,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
  *   const reloadKey = useRealtimeReload(["personas","relaciones"], userId);
  *   useEffect(() => { load(); }, [reloadKey]);
  */
-export function useRealtimeReload(tables: string[], userId?: string | null, debounceMs = 1000) {
+export function useRealtimeReload(tables: string[], userId?: string | null, debounceMs = 150) {
   const [reloadKey, setReloadKey] = useState(0);
   const timer = useRef<number | null>(null);
 
@@ -31,20 +30,10 @@ export function useRealtimeReload(tables: string[], userId?: string | null, debo
       if (timer.current) window.clearTimeout(timer.current);
       timer.current = window.setTimeout(flush, debounceMs);
     };
-    const ch = supabase.channel(`rt-${tables.join("-")}-${userId}`);
-    tables.forEach((t) => {
-      ch.on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: t, filter: `user_id=eq.${userId}` },
-        bump,
-      );
-    });
-    ch.subscribe();
     window.addEventListener("genaia:data-changed", bump);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
       window.removeEventListener("genaia:data-changed", bump);
-      supabase.removeChannel(ch);
     };
   }, [tables.join("|"), userId, debounceMs]);
 

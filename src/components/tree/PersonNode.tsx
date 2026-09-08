@@ -10,6 +10,8 @@ type PersonNodeProps = {
   selected?: boolean;
   dimmed?: boolean;
   showPortrait?: boolean;
+  showAiHints?: boolean;
+  showProblems?: boolean;
   expanded?: boolean;
   onSelect?: (person: GenealogyPerson) => void;
   onAction?: (action: "profile" | "ai" | "expand", person: GenealogyPerson) => void;
@@ -34,8 +36,8 @@ const lineageBar: Record<GenealogyPerson["lineage"], string> = {
   central: "bg-slate-400",
 };
 
-export default function PersonNode({ person, selected, dimmed, showPortrait = true, expanded, onSelect, onAction, onAddRelative }: PersonNodeProps) {
-  const years = [person.birth, person.death ?? (person.birth ? "Vive" : undefined)].filter(Boolean).join("-");
+export default function PersonNode({ person, selected, dimmed, showPortrait = true, showAiHints = true, showProblems = true, expanded, onSelect, onAction, onAddRelative }: PersonNodeProps) {
+  const years = [person.birth, person.death].filter(Boolean).join("-");
   const fullName = `${person.givenNames} ${person.surnames}`.trim();
 
   return (
@@ -44,7 +46,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
       tabIndex={0}
       onClick={() => onSelect?.(person)}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") onSelect?.(person);
+        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect?.(person); }
       }}
       className={`relative w-[260px] overflow-hidden rounded-2xl border bg-white p-3 text-left shadow-sm transition ${
         lineageClass[person.lineage]
@@ -57,7 +59,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
       <div className="flex gap-3">
         {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-100 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
           {person.avatarUrl ? (
-            <img src={person.avatarUrl} alt={fullName} className="h-full w-full object-cover" />
+            <img loading="lazy" decoding="async" src={person.avatarUrl} alt={fullName} className="h-full w-full object-cover" />
           ) : person.initials ? (
             person.initials
           ) : (
@@ -78,7 +80,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">{statusLabel[person.researchStatus]}</span>
-          {person.incomplete && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Incompleto</span>}
+          {showProblems && person.incomplete && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Incompleto</span>}
         </div>
       </div>
 
@@ -87,7 +89,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
           Ver perfil
         </Button>
         <AddRelativeButton onSelect={(kind) => onAddRelative?.(kind, person)} />
-        <AIEvidenceButton compact onClick={() => onAction?.("ai", person)} />
+        {showAiHints && <AIEvidenceButton compact onClick={() => onAction?.("ai", person)} />}
         <ExpandBranchButton expanded={expanded} onClick={() => onAction?.("expand", person)} />
       </div>
     </article>

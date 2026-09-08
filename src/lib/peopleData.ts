@@ -33,7 +33,7 @@ export function applyTreeScope<T extends { or: (filters: string) => T }>(
 
 export async function fetchAllPeople<T = any>(
   select = "*",
-  options: { treeId?: string | null; includeUnscoped?: boolean } = {},
+  options: { treeId?: string | null; includeUnscoped?: boolean; signal?: AbortSignal } = {},
 ) {
   const treeId = options.treeId === undefined ? await getActiveTreeId() : options.treeId;
   const all: T[] = [];
@@ -46,6 +46,7 @@ export async function fetchAllPeople<T = any>(
       .order("nombres", { ascending: true })
       .order('id', { ascending: true })
       .range(from, to);
+    if (options.signal) query.abortSignal(options.signal);
     const { data, error } = await applyTreeScope(query as any, treeId, options.includeUnscoped ?? true);
     if (error) throw error;
     const page = (data ?? []) as T[];
@@ -57,7 +58,7 @@ export async function fetchAllPeople<T = any>(
 
 export async function fetchAllRelations<T = any>(
   select = "*",
-  options: { treeId?: string | null; includeUnscoped?: boolean } = {},
+  options: { treeId?: string | null; includeUnscoped?: boolean; signal?: AbortSignal } = {},
 ) {
   const treeId = options.treeId === undefined ? await getActiveTreeId() : options.treeId;
   const all: T[] = [];
@@ -68,6 +69,7 @@ export async function fetchAllRelations<T = any>(
       .select(select)
       .order('id', { ascending: true })
       .range(from, to);
+    if (options.signal) query.abortSignal(options.signal);
     const { data, error } = await applyTreeScope(query as any, treeId, options.includeUnscoped ?? true);
     if (error) throw error;
     const page = (data ?? []) as T[];

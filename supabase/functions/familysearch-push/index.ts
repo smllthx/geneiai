@@ -68,8 +68,11 @@ Deno.serve(async (req) => {
     if (!account) throw new Error("FamilySearch no conectado");
     const token = await refreshIfNeeded(supabase, account);
 
-    const { data: personas } = await supabase.from("personas").select("*")
-      .eq("sync_to_fs", true);
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("active_arbol_id").eq("id", user.id).single();
+    if (profileError || !profile?.active_arbol_id) throw new Error("Selecciona un árbol activo antes de exportar.");
+    const { data: personas, error: peopleError } = await supabase.from("personas").select("*")
+      .eq("user_id", user.id).or(`arbol_id.eq.${profile.active_arbol_id},arbol_id.is.null`).eq("sync_to_fs", true);
+    if (peopleError) throw peopleError;
     const pending = (personas ?? []).filter((p: any) => !p.ids_externos?.familysearch_id);
 
     let subidas = 0;
@@ -84,6 +87,7 @@ Deno.serve(async (req) => {
             Accept: "application/x-gedcomx-v1+json",
           },
           body: JSON.stringify(buildPersonPayload(p)),
+          signal: AbortSignal.timeout(30_000),
         });
         if (!res.ok) {
           errores.push(`${p.nombres} ${p.apellidos}: ${res.status}`);

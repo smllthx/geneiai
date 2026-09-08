@@ -31,7 +31,11 @@ export default function FamilySearchCallback() {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         setStatus("ok");
-        setTimeout(() => navigate("/importar"), 1500);
+        if (window.opener) {
+          window.opener.postMessage({ type: "geneai:familysearch-connected" }, window.location.origin);
+          window.close();
+        }
+        navigate("/importar", { replace: true });
       } catch (e: any) {
         setStatus("error");
         setMsg(e.message ?? "Error al conectar");
