@@ -13,7 +13,7 @@ vi.mock("sonner", () => ({ toast: { info: vi.fn() } }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   channel: () => ({
     on: (_event: string, filter: { table: string }, callback: () => void) => { sync.callbacks.set(filter.table, callback); },
-    subscribe: (callback: (status: string) => void) => { sync.subscribe = callback; },
+    subscribe: (callback?: (status: string) => void) => { if (callback) sync.subscribe = callback; },
   }), removeChannel: sync.remove,
 } }));
 beforeEach(() => { vi.useFakeTimers(); sync.callbacks.clear(); sync.invalidate.mockClear(); });
@@ -58,4 +58,19 @@ it("removes pending refreshes when the session is unmounted", () => {
   view.unmount();
   act(() => { vi.advanceTimersByTime(2000); window.dispatchEvent(new Event("online")); vi.advanceTimersByTime(2000); });
   expect(sync.invalidate).not.toHaveBeenCalled();
+});
+
+it('refreshes the shared profile and recovers missed events while foregrounded', () => {
+  const changed = vi.fn();
+  window.addEventListener('genaia:data-changed', changed);
+  const view = render(<GlobalDataSync />);
+  act(() => { sync.callbacks.get('profiles')?.(); vi.advanceTimersByTime(1000); });
+  expect(sync.invalidate).toHaveBeenCalledTimes(1);
+  expect((changed.mock.calls[0][0] as CustomEvent).detail.table).toBeUndefined();
+  act(() => { vi.advanceTimersByTime(60_000); });
+  expect(sync.invalidate).toHaveBeenCalledTimes(2);
+  view.unmount();
+  act(() => { vi.advanceTimersByTime(120_000); });
+  expect(sync.invalidate).toHaveBeenCalledTimes(2);
+  window.removeEventListener('genaia:data-changed', changed);
 });

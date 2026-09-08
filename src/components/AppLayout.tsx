@@ -17,7 +17,6 @@ import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
-import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import GlobalDataSync from "@/components/GlobalDataSync";
 import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import NetworkStatusModal from "@/components/NetworkStatusModal";
@@ -389,7 +388,6 @@ export default function AppLayout() {
       <BackgroundJobs />
       {isMobile && !isWindowFrame && <MobileBottomNav />}
       {!isWindowFrame && <AdaptiveViewport />}
-      <AppUpdateNotifier />
       <NetworkStatusModal />
       <OfflineContextKeeper />
       <GlobalDataSync />

@@ -1,10 +1,10 @@
-import { getActiveTreeId, getSupabase, getUserOrThrow, json, openAIJson } from "../_lib/geneai.js";
+import { getActiveTreeId, getBearer, getSupabase, getUserOrThrow, json, jsonApiError, openAIJson } from "../_lib/geneai.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return json(res, 405, { error: "Método no permitido" });
   try {
     const sb = getSupabase(req);
-    const user = await getUserOrThrow(sb);
+    const user = await getUserOrThrow(sb, getBearer(req).slice("Bearer ".length));
     const treeId = await getActiveTreeId(sb, user.id);
     const { person_id } = req.body ?? {};
     if (!person_id) throw new Error("Falta person_id");
@@ -64,6 +64,6 @@ export default async function handler(req: any, res: any) {
     if (error) throw error;
     return json(res, 200, { ok: true, biography: data });
   } catch (e: any) {
-    return json(res, e?.message === "No autenticado" ? 401 : 500, { error: e?.message ?? "No se pudo generar la biografía" });
+    return jsonApiError(res, e, "No se pudo generar la biografía");
   }
 }

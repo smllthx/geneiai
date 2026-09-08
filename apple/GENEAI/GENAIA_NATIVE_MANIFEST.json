@@ -1,0 +1,33 @@
+{
+  "artifact": "GENAIA-Apple-Native-WebBased",
+  "version": "0.3.0",
+  "basis": "Existing GENAIA web app",
+  "web_repository": "smllthx/geneiai",
+  "native_targets": [
+    "iOS",
+    "iPadOS",
+    "macOS",
+    "visionOS"
+  ],
+  "web_features_catalogued": 31,
+  "read_models": [
+    "arboles",
+    "profiles",
+    "personas",
+    "relaciones",
+    "eventos",
+    "lugares",
+    "documentos",
+    "actividad"
+  ],
+  "writes_enabled": true,
+  "implemented_now": [
+    "kinship parity with web",
+    "create/update person",
+    "reciprocal relationship writes",
+    "global search",
+    "FamilySearch localhost macOS client",
+    "import/connections native surface"
+  ],
+  "destructive_delete_enabled": false
+}

@@ -1,10 +1,10 @@
-import { getActiveTreeId, getSupabase, getUserOrThrow, json, limitPublicDocumentText, openAIJson, suggestionTitle } from "../_lib/geneai.js";
+import { getActiveTreeId, getBearer, getSupabase, getUserOrThrow, json, jsonApiError, limitPublicDocumentText, openAIJson, suggestionTitle } from "../_lib/geneai.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return json(res, 405, { error: "Método no permitido" });
   try {
     const sb = getSupabase(req);
-    const user = await getUserOrThrow(sb);
+    const user = await getUserOrThrow(sb, getBearer(req).slice("Bearer ".length));
     const treeId = await getActiveTreeId(sb, user.id);
     const { document_id, text } = req.body ?? {};
 
@@ -88,6 +88,6 @@ export default async function handler(req: any, res: any) {
 
     return json(res, 200, { ok: true, data: extracted });
   } catch (e: any) {
-    return json(res, e?.message === "No autenticado" ? 401 : 500, { error: e?.message ?? "No se pudo analizar el documento" });
+    return jsonApiError(res, e, "No se pudo analizar el documento");
   }
 }

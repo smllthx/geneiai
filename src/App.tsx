@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
+import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import Login from "./pages/Login";
 const Inicio = lazy(routeLoaders.Inicio);
 import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
@@ -76,6 +77,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <SelfHealer />
+        <AppUpdateNotifier />
         <BrowserRouter>
           <AuthProvider>
             <Suspense fallback={<PageFallback />}>

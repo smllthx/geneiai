@@ -4,13 +4,19 @@ const PAGE_SIZE = 1000;
 
 export async function getActiveTreeId(userId?: string | null) {
   let uid = userId ?? null;
-  if (!uid) uid = (await supabase.auth.getUser()).data.user?.id ?? null;
-  if (!uid) return null;
-  const { data } = await supabase
+  if (!uid) {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    uid = data.user?.id ?? null;
+  }
+  if (!uid) throw new Error('Sesión requerida para consultar el árbol.');
+  const { data, error } = await supabase
     .from("profiles")
     .select("active_arbol_id")
     .eq("id", uid)
     .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('No se encontró el perfil de esta cuenta.');
   return ((data as any)?.active_arbol_id ?? null) as string | null;
 }
 
@@ -38,6 +44,7 @@ export async function fetchAllPeople<T = any>(
       .select(select)
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true })
+      .order('id', { ascending: true })
       .range(from, to);
     const { data, error } = await applyTreeScope(query as any, treeId, options.includeUnscoped ?? true);
     if (error) throw error;
@@ -59,6 +66,7 @@ export async function fetchAllRelations<T = any>(
     const query = supabase
       .from("relaciones")
       .select(select)
+      .order('id', { ascending: true })
       .range(from, to);
     const { data, error } = await applyTreeScope(query as any, treeId, options.includeUnscoped ?? true);
     if (error) throw error;

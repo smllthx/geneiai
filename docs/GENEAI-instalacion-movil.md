@@ -16,15 +16,11 @@ El ajuste automático está activado de forma predeterminada. Se adapta al ancho
 
 ## Datos compartidos
 
-Se conserva el cliente Supabase existente y sus variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, junto con la autenticación y las API actuales. Los dispositivos deben usar la misma cuenta y árbol. El inicio y las pantallas que escuchan la sincronización vuelven a consultar datos al reanudar la app, recuperar red o reconectar Realtime.
+El código web, la API y la configuración del código Apple recuperado usan un contrato de conexión común. La rama prepara el proyecto dedicado existente como destino. La transferencia de cuentas, árboles y archivos aún no se ha ejecutado: consultar [el estado comprobado de la unificación](GENEAI-cuenta-compartida.md) antes de publicar.
 
-Los cambios remotos que llegan durante una edición marcada quedan pendientes y se aplican al terminar. Se mantiene el mecanismo existente de bloqueo de edición. No se añade una cola de escritura sin conexión: hay que confirmar el guardado al recuperar internet.
+La publicación Realtime de las 13 tablas GENEAI se completó y verificó en ambas bases activas. La web vuelve a consultar datos al reanudar la app, recuperar red, reconectar Realtime y cada 60 segundos en primer plano. Los cambios remotos que llegan durante una edición marcada quedan pendientes. No se añade una cola de escritura sin conexión: hay que confirmar el guardado al recuperar internet.
 
-El código nativo de macOS no está en este repositorio. El 8 de septiembre de 2026 se recuperó `GENAIA-Apple-Native-WebBased-v0.3.zip`: su manifiesto identifica `smllthx/geneiai`, y su configuración Supabase coincide con la del cliente JavaScript servido por [la GENEAI publicada](https://geneiai-geneaia.vercel.app). Esa coincidencia identifica el vínculo entre los dos proyectos, pero no comprueba la configuración de la app instalada actualmente en el Mac ni una sincronización real entre dispositivos.
-
-El `.env` versionado en GitHub apunta a otro proyecto Supabase. Antes de publicar hay que verificar los valores efectivos del despliegue y conservar la conexión de producción; reutilizar el `.env` local no garantiza compartir datos con el Mac. No se modificaron variables ni credenciales. Tampoco se ha comprobado en vivo la publicación de todas las tablas Realtime.
-
-El nativo recuperado consulta datos al iniciar la sesión, pero no incluye recarga al activar la app ni suscripción Realtime. Su actualización automática necesita una mejora nativa además de estos cambios web. Comparte las tablas principales y `profiles.active_arbol_id`; deben verificarse también diferencias de filtrado de registros sin árbol y personas fusionadas.
+El código Apple existente está ahora en `apple/GENEAI`, con recarga en primer plano, observación de sesión y carga paginada. Compartir código y configuración no comprueba la instalación actual del Mac; queda pendiente compilar e instalar esa actualización y verificar dos dispositivos reales.
 
 ## Rendimiento y actualizaciones
 
@@ -36,11 +32,11 @@ El nativo recuperado consulta datos al iniciar la sesión, pero no incluye recar
 
 ## Validación
 
-Compilación de producción y comprobación TypeScript correctas. Veinte pruebas automáticas cubren navegación adaptable, escala legible, teclado, precarga, eventos de instalación, protección de edición, reanudación de datos y caché del worker. La identidad del manifiesto, los tamaños reales de los iconos y la revisión del worker se comprueban sobre los archivos generados.
+Compilación de producción y comprobación TypeScript correctas. Las pruebas automáticas de esta mejora cubren navegación adaptable, escala legible, teclado, precarga, eventos de instalación, protección de edición, reanudación de datos y caché del worker. La identidad del manifiesto, los tamaños reales de los iconos y la revisión del worker se comprueban sobre los archivos generados.
 
-El JavaScript inicial comprimido medido mediante el grafo de importaciones del build pasa de 264.783 a aproximadamente 217.168 bytes (18 % menos). Esta medida es tamaño descargado, no tiempo de carga medido en un teléfono.
+La medición de la mejora móvil previa a la unificación redujo el JavaScript inicial comprimido de 264.783 a aproximadamente 217.168 bytes (18 % menos). La compilación posterior con las comprobaciones de cuenta informa aproximadamente 219,77 kB gzip para el chunk principal. Son medidas de descarga, no tiempos medidos en un teléfono.
 
-Pendiente de comprobar en dispositivos reales: instalación iOS/Android, giro vertical/horizontal, teclado, tamaño de texto aumentado, actualización con ficha abierta y cambios entre Mac/teléfono con la misma cuenta. No se hicieron pruebas visuales ni modificaciones de datos reales.
+Pendiente de comprobar en dispositivos reales: instalación iOS/Android, giro vertical/horizontal, teclado, tamaño de texto aumentado, actualización con ficha abierta y cambios entre Mac/teléfono con la misma cuenta. No se hicieron pruebas visuales ni modificaciones de filas de usuario; sí se reparó la publicación Realtime descrita en el estado de la unificación.
 
 ## Publicación en la GENEAI existente
 

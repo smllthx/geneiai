@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { BackendConfigurationError, resolveServerBackendConfig, resolveServiceBackendConfig } from "../../shared/backendIdentity.js";
 
 type Json = Record<string, unknown>;
 
@@ -8,34 +9,76 @@ export function json(res: any, status: number, body: unknown) {
 }
 
 export function getBearer(req: any) {
-  const raw = req.headers.authorization ?? req.headers.Authorization ?? "";
-  return typeof raw === "string" && raw.startsWith("Bearer ") ? raw : "";
+  const raw = req.headers?.authorization ?? req.headers?.Authorization;
+  if (typeof raw !== "string" || raw.length > 16_384) return "";
+  const token = /^Bearer[ \t]+([A-Za-z0-9._~+/=-]+)$/i.exec(raw)?.[1];
+  return token ? `Bearer ${token}` : "";
 }
 
 export function getSupabase(req: any): SupabaseClient {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase no está configurado en el servidor");
-  return createClient(url, key, { global: { headers: { Authorization: getBearer(req) } } });
-}
-
-export function getServiceSupabase(): SupabaseClient {
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("El acceso privado de GENEAI Work no está configurado en el servidor");
-  return createClient(url, key, {
+  const { supabaseUrl, publishableKey } = resolveServerBackendConfig(process.env);
+  return createClient(supabaseUrl, publishableKey, {
+    global: { headers: { Authorization: getBearer(req) } },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }
 
-export async function getUserOrThrow(sb: SupabaseClient) {
-  const { data, error } = await sb.auth.getUser();
-  if (error || !data.user) throw new Error("No autenticado");
+export function getServiceSupabase(): SupabaseClient {
+  const { supabaseUrl, secretKey } = resolveServiceBackendConfig(process.env);
+  return createClient(supabaseUrl, secretKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+export class GeneaiConnectionError extends Error {
+  constructor(readonly code: string, message: string, readonly status: number) {
+    super(message);
+    this.name = "GeneaiConnectionError";
+  }
+}
+
+export function connectionError(error: unknown) {
+  if (error instanceof BackendConfigurationError || error instanceof GeneaiConnectionError) {
+    return { status: error.status, code: error.code, message: error.message };
+  }
+  return null;
+}
+
+export function jsonApiError(res: any, error: unknown, fallback: string) {
+  const known = connectionError(error);
+  return json(res, known?.status ?? 500, {
+    error: known?.message ?? (error instanceof Error ? error.message : fallback),
+    ...(known ? { code: known.code } : {}),
+  });
+}
+
+export async function getUserOrThrow(sb: SupabaseClient, accessToken: string) {
+  if (!accessToken) throw new GeneaiConnectionError("AUTH_REQUIRED", "No autenticado", 401);
+  let result: Awaited<ReturnType<typeof sb.auth.getUser>>;
+  try {
+    // This network request verifies the supplied token with the canonical Auth
+    // server. Never derive a user's identity from an unverified JWT payload.
+    result = await sb.auth.getUser(accessToken);
+  } catch {
+    throw new GeneaiConnectionError("AUTH_UNAVAILABLE", "No se pudo comprobar la sesión de GENEAI. Reintenta cuando haya conexión.", 503);
+  }
+  const { data, error } = result;
+  if (error) {
+    if (/invalid api key|invalid apikey/i.test(error.message)) {
+      throw new BackendConfigurationError("BACKEND_PUBLIC_KEY_REJECTED");
+    }
+    if (!error.status || error.status >= 500 || error.status === 429) {
+      throw new GeneaiConnectionError("AUTH_UNAVAILABLE", "No se pudo comprobar la sesión de GENEAI. Reintenta cuando haya conexión.", 503);
+    }
+    throw new GeneaiConnectionError("AUTH_INVALID", "No autenticado", 401);
+  }
+  if (!data.user?.id) throw new GeneaiConnectionError("AUTH_INVALID", "No autenticado", 401);
   return data.user;
 }
 
 export async function getActiveTreeId(sb: SupabaseClient, userId: string) {
-  const { data } = await sb.from("profiles").select("active_arbol_id").eq("id", userId).maybeSingle();
+  const { data, error } = await sb.from("profiles").select("active_arbol_id").eq("id", userId).maybeSingle();
+  if (error) throw new GeneaiConnectionError("PROFILE_UNAVAILABLE", "No se pudo consultar el árbol activo. Reintenta antes de continuar.", 503);
   return (data as any)?.active_arbol_id ?? null;
 }
 

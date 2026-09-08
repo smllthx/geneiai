@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 
 const TABLES = [
+  "arboles",
   "personas",
   "relaciones",
   "eventos",
@@ -25,7 +26,7 @@ export default function GlobalDataSync() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const broadcast = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("genaia-sync") : null;
+    const broadcast = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(`genaia-sync-${user.id}`) : null;
     let lastNotice = 0;
     let syncTimer: number | null = null;
     const isEditing = () =>
@@ -60,7 +61,7 @@ export default function GlobalDataSync() {
     const notifyChange = (source: "remote" | "tab" | "resume", table?: string) => {
       pending = true;
       remoteChange ||= source === "remote";
-      if (table) dirtyTables.add(table);
+      if (table && table !== 'profiles' && table !== 'arboles') dirtyTables.add(table);
       else refreshAll = true;
       if (syncTimer) window.clearTimeout(syncTimer);
       syncTimer = window.setTimeout(flush, 1000);
@@ -87,20 +88,31 @@ export default function GlobalDataSync() {
         subscribed = true;
       }
     });
+    // Keep profile events isolated: an unavailable publication must not break data events.
+    const profileChannel = supabase.channel(`profile-sync-${user.id}`);
+    profileChannel.on('postgres_changes' as any, { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => {
+        broadcast?.postMessage({ type: 'data-changed', table: 'profiles' });
+        notifyChange('remote', 'profiles');
+      });
+    profileChannel.subscribe();
     const resume = () => {
       if (document.visibilityState !== "hidden" && navigator.onLine) notifyChange("resume");
     };
     document.addEventListener("visibilitychange", resume);
     window.addEventListener("online", resume);
     window.addEventListener("pageshow", resume);
+    // Foreground fallback also covers missed events and temporarily unavailable Realtime.
+    const refreshTimer = window.setInterval(resume, 60_000);
 
     return () => {
       if (syncTimer) window.clearTimeout(syncTimer);
+      window.clearInterval(refreshTimer);
       document.removeEventListener("visibilitychange", resume);
       window.removeEventListener("online", resume);
       window.removeEventListener("pageshow", resume);
       broadcast?.close();
       supabase.removeChannel(channel);
+      supabase.removeChannel(profileChannel);
     };
   }, [user?.id, queryClient]);
 
