@@ -1,4 +1,4 @@
-import canonical from "../config/geneai-backend.json";
+import canonical from "../config/geneai-backend.json" with { type: "json" };
 
 export type BackendIdentity = {
   projectRef: string;
