@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState, type MouseEvent } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
 import AdaptiveViewport from "@/components/AdaptiveViewport";
 import KeyboardAwareScroller from "@/components/KeyboardAwareScroller";
-import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import GlobalDataSync from "@/components/GlobalDataSync";
 import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import NetworkStatusModal from "@/components/NetworkStatusModal";
@@ -28,6 +27,8 @@ import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden, toggleHidden } from "@/lib/navConfig";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 const primaryNavBase = [
@@ -61,11 +62,12 @@ const utilityNav = [
 
 type NavItem = { to: string; label: string; icon: any };
 
-function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
+function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: NavItem[]; onNavigate?: () => void }) {
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, filterByHidden(groupKey, items)));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [options, setOptions] = useState<{ item: NavItem; x: number; y: number } | null>(null);
+  const [options, setOptions] = useState<string | null>(null);
 
   useEffect(() => {
     const refresh = () => setOrdered(loadOrder(groupKey, filterByHidden(groupKey, items)));
@@ -93,17 +95,6 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
     );
   };
 
-  const openOptions = (item: NavItem, event: MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setOptions({
-      item,
-      x: Math.min(rect.right + 8, window.innerWidth - 288),
-      y: Math.min(rect.top, window.innerHeight - 245),
-    });
-  };
-
   const openMenuSettings = () => {
     window.dispatchEvent(
       new CustomEvent("geneai:open-window", {
@@ -119,7 +110,7 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
         return (
         <div
           key={to}
-          draggable
+          draggable={!isMobile}
           onDragStart={() => setDragIdx(idx)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => onDrop(idx)}
@@ -128,97 +119,50 @@ function NavItems({ groupKey, items }: { groupKey: string; items: NavItem[] }) {
           <div className="flex items-center gap-1">
             <NavLink
               to={to}
-              onDoubleClick={(event) => openOptions(item, event)}
+              onClick={onNavigate}
+              onDoubleClick={(event) => { event.preventDefault(); setOptions(to); }}
               onMouseEnter={() => prefetchRoute(to)}
               onFocus={() => prefetchRoute(to)}
               title="Doble clic para opciones de esta función"
               className={({ isActive }) =>
                 cn(
-                  "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[15px] transition-all",
+                  "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
                   isActive
                     ? "bg-primary/12 font-semibold text-foreground"
                     : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
                 )
               }
             >
-              <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />
-              <Icon className="h-5 w-5 shrink-0" /> <span className="truncate">{label}</span>
+              {!isMobile && <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />}
+              <Icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 break-words">{label}</span>
             </NavLink>
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                openWindow(item);
-              }}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-muted-foreground opacity-100 transition hover:bg-foreground/8 hover:text-primary md:opacity-0 md:group-hover/row:opacity-100"
-              title={`Abrir ${label} en ventana`}
-              aria-label={`Abrir ${label} en una ventana dentro de la app`}
-            >
-              <PanelRightOpen className="h-4 w-4" />
-            </button>
+            <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${label}`}>
+                  <PanelRightOpen className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side={isMobile ? "bottom" : "right"} align="start" collisionPadding={12} className="nav-options w-72 rounded-2xl p-2">
+                <DropdownMenuLabel className="whitespace-normal break-words">{label}</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => { navigate(to); onNavigate?.(); }}>
+                  <MousePointerClick className="mr-2 h-4 w-4 shrink-0" /> Abrir aquí
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => { openWindow(item); onNavigate?.(); }}>
+                  <PanelRightOpen className="mr-2 h-4 w-4 shrink-0" /> Abrir en ventana
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => { toggleHidden(groupKey, to); toast.success(`${label} se ocultó del menú`); }}>
+                  <EyeOff className="mr-2 h-4 w-4 shrink-0" /> Ocultar del menú
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => { openMenuSettings(); onNavigate?.(); }}>
+                  <Settings2 className="mr-2 h-4 w-4 shrink-0" /> Configurar menús
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         );
       })}
-      {options && (
-        <div className="fixed inset-0 z-[95]" onClick={() => setOptions(null)}>
-          <div
-            className="glass-strong fixed w-72 rounded-2xl border border-white/20 p-2 shadow-2xl"
-            style={{ left: options.x, top: options.y }}
-            onClick={(event) => event.stopPropagation()}
-            role="menu"
-            aria-label={`Opciones de ${options.item.label}`}
-          >
-            <div className="px-3 py-2">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Opciones rápidas</p>
-              <p className="truncate text-sm font-semibold">{options.item.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Doble clic abre este panel nativo.</p>
-            </div>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
-              onClick={() => {
-                navigate(options.item.to);
-                setOptions(null);
-              }}
-            >
-              <MousePointerClick className="h-4 w-4 text-primary" /> Abrir aquí
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
-              onClick={() => {
-                openWindow(options.item);
-                setOptions(null);
-              }}
-            >
-              <PanelRightOpen className="h-4 w-4 text-primary" /> Abrir en ventana
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
-              onClick={() => {
-                toggleHidden(groupKey, options.item.to);
-                toast.success(`${options.item.label} se ocultó del menú`);
-                setOptions(null);
-              }}
-            >
-              <EyeOff className="h-4 w-4 text-muted-foreground" /> Ocultar del menú
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-foreground/8"
-              onClick={() => {
-                openMenuSettings();
-                setOptions(null);
-              }}
-            >
-              <Settings2 className="h-4 w-4 text-primary" /> Configurar todos los menús
-            </button>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -240,7 +184,7 @@ function NavGroup({ groupKey, label, items }: { groupKey: string; label: string;
           );
         }}
         title="Doble clic para configurar esta sección"
-        className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center justify-between min-h-11 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
       >
         <span>{label}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
@@ -251,9 +195,22 @@ function NavGroup({ groupKey, label, items }: { groupKey: string; label: string;
 }
 
 export default function AppLayout() {
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, location.search, isMobile]);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const update = () => document.documentElement.style.setProperty("--app-header-height", `${header.getBoundingClientRect().height}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [isMobile]);
   const isWindowFrame = new URLSearchParams(location.search).get("window") === "1";
   const handleLogout = async () => { await signOut(); navigate("/login"); };
   const goBack = () => {
@@ -321,23 +278,23 @@ export default function AppLayout() {
 
 
   return (
-    <div className="relative flex min-h-screen">
-      <aside
+    <div className="app-shell relative flex min-h-screen" data-navigation={isMobile ? "compact" : "wide"}>
+      {!isMobile && !isWindowFrame && !sidebarCollapsed && <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 p-3 transition-[width,opacity,transform] duration-300 ease-out md:flex md:flex-col",
-          sidebarCollapsed ? "w-0 -translate-x-4 overflow-hidden p-0 opacity-0 pointer-events-none" : "w-64 opacity-100",
+          "app-sidebar sticky top-0 flex h-dvh min-h-0 shrink-0 flex-col p-3",
+          sidebarCollapsed ? "w-0 -translate-x-4 overflow-hidden p-0 opacity-0 pointer-events-none" : "w-72 opacity-100",
         )}
         aria-hidden={sidebarCollapsed}
       >
         <div className="glass-strong flex h-full flex-col rounded-3xl">
           <div className="px-5 pt-5 pb-3">
             <div className="flex items-center gap-3">
-              <BrandLogo size={68} showText subtitle="Archivo familiar privado" />
+              <BrandLogo className="min-w-0 flex-1" size={44} showText subtitle="Archivo familiar privado" />
               <div className="ml-auto flex items-center gap-1">
-                <NotificationBell />
+                {!sidebarCollapsed && <NotificationBell />}
                 <button
                   onClick={() => setSidebarCollapsed(true)}
-                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
                   aria-label="Ocultar menú"
                   title="Ocultar menú"
                 >
@@ -346,10 +303,7 @@ export default function AppLayout() {
               </div>
             </div>
           </div>
-          <div className="px-3 pb-3">
-            <UniversalPersonSearch />
-          </div>
-          <nav className="flex-1 overflow-y-auto px-2 pb-2">
+          <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
             <NavItems groupKey="primary" items={primaryNavBase} />
             <NavGroup groupKey="investigation" label="Investigación" items={investigationNav} />
             <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
@@ -364,10 +318,10 @@ export default function AppLayout() {
             </Button>
           </div>
         </div>
-      </aside>
+      </aside>}
 
       {/* Floating re-open arrow when sidebar is collapsed (desktop only) */}
-      <button
+      {!isMobile && !isWindowFrame && <button
         onClick={() => setSidebarCollapsed(false)}
         aria-label="Mostrar menú"
         title="Mostrar menú GENEAI"
@@ -377,31 +331,26 @@ export default function AppLayout() {
         )}
       >
         <ChevronRight className="h-5 w-5" />
-      </button>
+      </button>}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div
-          className="glass-strong fixed inset-x-2 z-40 flex items-center justify-between rounded-2xl px-3 py-2 md:hidden"
-          style={{
-            top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)",
-          }}
-        >
-          <Sheet>
+        {isMobile && !isWindowFrame && <div ref={headerRef} className="mobile-app-header glass-strong fixed z-40 flex items-center justify-between gap-1 rounded-2xl p-2">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl" aria-label="Abrir menú">
+              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label="Abrir menú">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="w-[86vw] max-w-sm overflow-y-auto p-3"
-              style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+              className="mobile-menu-sheet overflow-y-auto overscroll-contain p-3"
+              aria-describedby={undefined}
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={58} showText subtitle={user?.email ?? "Archivo familiar privado"} />
               </div>
-              <NavItems groupKey="mobile" items={allMobileNav} />
+              <NavItems groupKey="mobile" items={allMobileNav} onNavigate={() => setMobileMenuOpen(false)} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
                 <RefreshCw className="h-4 w-4" /> Actualizar datos
               </Button>
@@ -410,40 +359,35 @@ export default function AppLayout() {
               </Button>
             </SheetContent>
           </Sheet>
-          <Button variant="ghost" size="icon" className="rounded-xl" onClick={goBack} aria-label="Volver atrás">
+          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" onClick={goBack} aria-label="Volver atrás">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <NavLink to="/inicio" className="flex items-center gap-2">
-            <BrandLogo size={42} showText />
+          <NavLink to="/inicio" aria-label="GENEAI, inicio" className="mobile-brand min-w-0 flex-1">
+            <BrandLogo className="min-w-0" size={36} showText />
           </NavLink>
           <div className="flex items-center gap-1">
             <UniversalPersonSearch compact />
             <NotificationBell />
           </div>
-        </div>
-        <main
-          className="min-w-0 flex-1 pb-28 md:px-8 md:pt-6 md:pb-8"
-          style={{
-            paddingLeft: "max(env(safe-area-inset-left, 0px), 1rem)",
-            paddingRight: "max(env(safe-area-inset-right, 0px), 1rem)",
-            paddingTop: "calc(env(safe-area-inset-top, 0px) + 5rem)",
-          }}
-        >
-          <div className="mb-4 hidden items-center gap-2 md:flex">
-            <Button variant="ghost" size="sm" className="rounded-xl" onClick={goBack}>
+        </div>}
+        <main className={cn("app-main min-w-0 flex-1", isWindowFrame && "app-window-main")}>
+          {!isMobile && !isWindowFrame && <div className="mb-4 flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-xl" onClick={goBack}>
               <ArrowLeft className="h-4 w-4" /> Volver
             </Button>
             <UniversalPersonSearch className="max-w-52" />
-          </div>
-          <Outlet />
+            {sidebarCollapsed && <NotificationBell />}
+          </div>}
+          <Suspense fallback={<div role="status" className="grid min-h-[40vh] place-items-center text-muted-foreground">Cargando sección…</div>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 
-      <SiriAssistant />
+      {!isWindowFrame && <SiriAssistant />}
       <BackgroundJobs />
-      <MobileBottomNav />
-      <AdaptiveViewport />
-      <AppUpdateNotifier />
+      {isMobile && !isWindowFrame && <MobileBottomNav />}
+      {!isWindowFrame && <AdaptiveViewport />}
       <NetworkStatusModal />
       <OfflineContextKeeper />
       <GlobalDataSync />

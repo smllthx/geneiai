@@ -11,6 +11,7 @@ export default defineConfig({
     include: [
       "src/**/*.{test,spec}.{ts,tsx}",
       "api/**/*.{test,spec}.{ts,tsx}",
+      "shared/**/*.{test,spec}.{ts,tsx}",
       "tools/**/*.{test,spec}.{ts,tsx}",
     ],
   },

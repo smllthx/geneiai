@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, StatPill, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
-import MigrationMap from "@/components/MigrationMap";
+const MigrationMap = lazy(() => import("@/components/MigrationMap"));
 import FamilyTimeline from "@/components/FamilyTimeline";
 import PersonaName from "@/components/PersonaName";
 import GenealogistaIA from "@/components/GenealogistaIA";
@@ -13,6 +13,27 @@ import { toDisplayText } from "@/lib/safeText";
 import {
   Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight, Lightbulb,
 } from "lucide-react";
+
+function DeferredMigrationMap() {
+  const host = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!host.current || !("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(host.current);
+    return () => observer.disconnect();
+  }, []);
+  const placeholder = <div className="grid h-80 place-items-center rounded-xl bg-muted text-sm text-muted-foreground" role="status">Cargando mapa…</div>;
+  return <div ref={host} className="min-h-80">{visible ? <Suspense fallback={placeholder}><MigrationMap height={320} /></Suspense> : placeholder}</div>;
+}
 
 export default function Inicio() {
   const navigate = useNavigate();
@@ -25,8 +46,17 @@ export default function Inicio() {
   const [vistasRecientes, setVistasRecientes] = useState<any[]>([]);
   const [sinPadres, setSinPadres] = useState<any[]>([]);
   const [sinFotos, setSinFotos] = useState<any[]>([]);
+  const [dataRevision, setDataRevision] = useState(0);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    const refresh = () => setDataRevision((value) => value + 1);
+    window.addEventListener("genaia:data-changed", refresh);
+    return () => window.removeEventListener("genaia:data-changed", refresh);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     (async () => {
       const treeId = await getActiveTreeId();
       const allPersonas = await fetchAllPeople<any>("id,nombres,apellidos,foto_url,updated_at", { treeId });
@@ -42,6 +72,10 @@ export default function Inicio() {
         fetchAllRelations<any>("persona_id,tipo", { treeId }),
         applyTreeScope(supabase.from("fotos").select("personas_ids") as any, treeId),
       ]);
+      if (cancelled) return;
+      const failed = [l, f, d, c, h, i, a, fotos].find((result) => result.error);
+      if (failed) throw failed.error;
+      setLoadError(false);
       const ap = new Map<string, number>();
       allPersonas.forEach((row) => {
         const x = row.apellidos?.split(/\s+/)[0]; if (!x) return;
@@ -84,7 +118,9 @@ export default function Inicio() {
           if (edited.length) setRecientes(edited);
         }
       }
-    })();
+    })().catch(() => {
+      if (!cancelled) setLoadError(true);
+    });
 
     const onChange = () => {
       const recentIds = getRecent().map((r) => r.id);
@@ -94,8 +130,11 @@ export default function Inicio() {
       });
     };
     window.addEventListener("genaia:recent-changed", onChange);
-    return () => window.removeEventListener("genaia:recent-changed", onChange);
-  }, []);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("genaia:recent-changed", onChange);
+    };
+  }, [dataRevision]);
 
   const QuickAction = ({ icon: Icon, label, to }: any) => (
     <Link to={to} className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-all hover:shadow-xl">
@@ -106,6 +145,10 @@ export default function Inicio() {
 
   return (
     <div>
+      {loadError && <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 text-sm">
+        <p>No se pudieron actualizar los datos. Comprueba tu conexión.</p>
+        <Button variant="outline" className="min-h-11" onClick={() => setDataRevision((value) => value + 1)}>Reintentar</Button>
+      </div>}
       <SectionHeader
         eyebrow="Tu archivo familiar"
         title="Inicio"
@@ -265,7 +308,7 @@ export default function Inicio() {
             </h2>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
-          <MigrationMap height={320} />
+          <DeferredMigrationMap />
           <p className="mt-2 text-xs text-muted-foreground">
             Puntos por lugar de nacimiento y defunción · líneas indican migraciones individuales.
           </p>

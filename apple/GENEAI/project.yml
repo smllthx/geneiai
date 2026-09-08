@@ -1,0 +1,82 @@
+name: GENAIAApple
+
+options:
+  bundleIdPrefix: com.genaia
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+    visionOS: "2.0"
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: 2.0.0
+
+targets:
+  GENAIAApple:
+    type: application
+    supportedDestinations: [iOS, macOS, visionOS]
+    deploymentTarget:
+      iOS: "18.0"
+      macOS: "15.0"
+      visionOS: "2.0"
+    sources:
+      - path: GENAIAApple
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    configFiles:
+      Debug: Config/Local.xcconfig
+      Release: Config/Local.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.genaia.app
+        PRODUCT_NAME: GENEAI
+        SWIFT_VERSION: 6.0
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+    info:
+      path: GENAIAApple/Info.plist
+      properties:
+        CFBundleDisplayName: GENEAI
+        CFBundleShortVersionString: "0.2.0"
+        CFBundleVersion: "2"
+        GENAIA_SUPABASE_URL: "$(SUPABASE_URL)"
+        GENAIA_SUPABASE_PROJECT_REF: "$(SUPABASE_PROJECT_REF)"
+        GENAIA_SUPABASE_PUBLISHABLE_KEY: "$(SUPABASE_PUBLISHABLE_KEY)"
+
+  GENAIANativeTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: GENAIAApple/Models
+      - path: GENAIAApple/Services/GenealogyRepository.swift
+      - path: GENAIAApple/Services/AppServices.swift
+      - path: GENAIAApple/Services/KinshipService.swift
+      - path: GENAIAApple/Stores/AppModel.swift
+      - path: tests/Swift
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.genaia.native-tests
+        SWIFT_VERSION: 6.0
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  GENAIAApple:
+    build:
+      targets:
+        GENAIAApple: all
+    run:
+      config: Debug
+
+  GENAIANativeTests:
+    build:
+      targets:
+        GENAIANativeTests: all
+    test:
+      targets:
+        - GENAIANativeTests

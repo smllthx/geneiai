@@ -38,21 +38,21 @@ export default function BrandLogo({
 
   const inner = (
     <span className={cn(
-      "inline-flex shrink-0 items-center",
+      "inline-flex min-w-0 items-center",
       showText && textPosition === "bottom" ? "flex-col gap-1.5 text-center" : "gap-3",
     )}>
       {image}
       {showText && (
         <span className="min-w-0 leading-none">
           <span className="block font-display text-xl font-semibold tracking-tight text-foreground">GENEAI</span>
-          {subtitle && <span className="mt-1 block text-[11px] leading-tight text-muted-foreground">{subtitle}</span>}
+          {subtitle && <span className="mt-1 block truncate text-xs leading-tight text-muted-foreground">{subtitle}</span>}
         </span>
       )}
     </span>
   );
 
   if (!interactive) {
-    return <span className={cn("inline-flex shrink-0 items-center justify-center", className)}>{inner}</span>;
+    return <span className={cn("inline-flex min-w-0 items-center justify-center", className)}>{inner}</span>;
   }
   return (
     <button

@@ -1,3 +1,4 @@
+import { routeLoaders } from "@/lib/routeLoaders";
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
@@ -7,50 +8,51 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
+import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import Login from "./pages/Login";
-import Inicio from "./pages/Inicio";
+const Inicio = lazy(routeLoaders.Inicio);
 import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
 
 // Lazy-load all non-critical pages for faster initial paint
-const PersonasList = lazy(() => import("./pages/PersonasList"));
-const Apellidos = lazy(() => import("./pages/Apellidos"));
-const PersonaDetail = lazy(() => import("./pages/PersonaDetail"));
-const GenealogyProfilePage = lazy(() => import("./pages/GenealogyProfilePage"));
-const NuevaPersona = lazy(() => import("./pages/NuevaPersona"));
-const Arbol = lazy(() => import("./pages/Arbol"));
-const ArbolModerno = lazy(() => import("./pages/ArbolModerno"));
-const Familias = lazy(() => import("./pages/Familias"));
-const Documentos = lazy(() => import("./pages/Documentos"));
-const Fotos = lazy(() => import("./pages/Fotos"));
-const Buscar = lazy(() => import("./pages/Buscar"));
-const Investigacion = lazy(() => import("./pages/Investigacion"));
-const InvestigacionExterna = lazy(() => import("./pages/InvestigacionExterna"));
-const PersonasImportadasPendientes = lazy(() => import("./pages/PersonasImportadasPendientes"));
-const Importar = lazy(() => import("./pages/Importar"));
-const Agente = lazy(() => import("./pages/Agente"));
-const Asistente = lazy(() => import("./pages/Asistente"));
-const Credenciales = lazy(() => import("./pages/Credenciales"));
-const Parecidos = lazy(() => import("./pages/Parecidos"));
-const ADN = lazy(() => import("./pages/ADN"));
-const CuadrosIA = lazy(() => import("./pages/CuadrosIA"));
-const Coincidencias = lazy(() => import("./pages/Coincidencias"));
-const Pistas = lazy(() => import("./pages/Pistas"));
-const Hipotesis = lazy(() => import("./pages/Hipotesis"));
-const Inferencias = lazy(() => import("./pages/Inferencias"));
-const Lugares = lazy(() => import("./pages/Lugares"));
-const LineaDeTiempo = lazy(() => import("./pages/LineaDeTiempo"));
-const Configuracion = lazy(() => import("./pages/Configuracion"));
-const ConfigurarApp = lazy(() => import("./pages/ConfigurarApp"));
-const Fuentes = lazy(() => import("./pages/Fuentes"));
-const FamilySearchCallback = lazy(() => import("./pages/FamilySearchCallback"));
-const Fusionar = lazy(() => import("./pages/Fusionar"));
-const Sugerencias = lazy(() => import("./pages/Sugerencias"));
-const TareasIA = lazy(() => import("./pages/TareasIA"));
-const PersonaPublica = lazy(() => import("./pages/PersonaPublica"));
-const PersonaSlugRedirect = lazy(() => import("./pages/PersonaSlugRedirect"));
-const Calendario = lazy(() => import("./pages/Calendario"));
-const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const PersonasList = lazy(routeLoaders.PersonasList);
+const Apellidos = lazy(routeLoaders.Apellidos);
+const PersonaDetail = lazy(routeLoaders.PersonaDetail);
+const GenealogyProfilePage = lazy(routeLoaders.GenealogyProfilePage);
+const NuevaPersona = lazy(routeLoaders.NuevaPersona);
+const Arbol = lazy(routeLoaders.Arbol);
+const ArbolModerno = lazy(routeLoaders.ArbolModerno);
+const Familias = lazy(routeLoaders.Familias);
+const Documentos = lazy(routeLoaders.Documentos);
+const Fotos = lazy(routeLoaders.Fotos);
+const Buscar = lazy(routeLoaders.Buscar);
+const Investigacion = lazy(routeLoaders.Investigacion);
+const InvestigacionExterna = lazy(routeLoaders.InvestigacionExterna);
+const PersonasImportadasPendientes = lazy(routeLoaders.PersonasImportadasPendientes);
+const Importar = lazy(routeLoaders.Importar);
+const Agente = lazy(routeLoaders.Agente);
+const Asistente = lazy(routeLoaders.Asistente);
+const Credenciales = lazy(routeLoaders.Credenciales);
+const Parecidos = lazy(routeLoaders.Parecidos);
+const ADN = lazy(routeLoaders.ADN);
+const CuadrosIA = lazy(routeLoaders.CuadrosIA);
+const Coincidencias = lazy(routeLoaders.Coincidencias);
+const Pistas = lazy(routeLoaders.Pistas);
+const Hipotesis = lazy(routeLoaders.Hipotesis);
+const Inferencias = lazy(routeLoaders.Inferencias);
+const Lugares = lazy(routeLoaders.Lugares);
+const LineaDeTiempo = lazy(routeLoaders.LineaDeTiempo);
+const Configuracion = lazy(routeLoaders.Configuracion);
+const ConfigurarApp = lazy(routeLoaders.ConfigurarApp);
+const Fuentes = lazy(routeLoaders.Fuentes);
+const FamilySearchCallback = lazy(routeLoaders.FamilySearchCallback);
+const Fusionar = lazy(routeLoaders.Fusionar);
+const Sugerencias = lazy(routeLoaders.Sugerencias);
+const TareasIA = lazy(routeLoaders.TareasIA);
+const PersonaPublica = lazy(routeLoaders.PersonaPublica);
+const PersonaSlugRedirect = lazy(routeLoaders.PersonaSlugRedirect);
+const Calendario = lazy(routeLoaders.Calendario);
+const OAuthConsent = lazy(routeLoaders.OAuthConsent);
+const NotFound = lazy(routeLoaders.NotFound);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +77,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <SelfHealer />
+        <AppUpdateNotifier />
         <BrowserRouter>
           <AuthProvider>
             <Suspense fallback={<PageFallback />}>

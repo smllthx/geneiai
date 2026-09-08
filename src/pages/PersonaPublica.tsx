@@ -3,8 +3,9 @@ import { useParams, Link } from "react-router-dom";
 import { Loader2, MapPin, Calendar, User, Heart, Users, Briefcase, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { SUPABASE_URL } from '@/integrations/supabase/client';
 
-const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/compartir-persona`;
+const FN_URL = `${SUPABASE_URL}/functions/v1/compartir-persona`;
 
 type Ficha = {
   id: string; nombres: string; apellidos: string; sexo?: string | null; foto_url?: string | null;

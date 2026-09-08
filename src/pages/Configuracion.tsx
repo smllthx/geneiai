@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkle
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
+import InstallAppCard from "@/components/InstallAppCard";
 import {
   clearDevicePasskey,
   hasDevicePasskey,
@@ -250,6 +251,11 @@ function TreesAdminCard() {
 }
 
 export default function Configuracion() {
+  const accountViewActive = useRef(true);
+  useEffect(() => {
+    accountViewActive.current = true;
+    return () => { accountViewActive.current = false; };
+  }, []);
   const [variantes, setVariantes] = useState<any[]>([]);
   const [d, setD] = useState({ apellido_base: "", variante: "" });
   const [fsAccount, setFsAccount] = useState<any>(null);
@@ -270,17 +276,18 @@ export default function Configuracion() {
 
   const load = async () => {
     const user = (await supabase.auth.getUser()).data.user;
-    const [{ data: v }, { data: a }, { data: cfg }] = await Promise.all([
+    const [{ data: v }, { data: a }, { data: cfg }, profileResult] = await Promise.all([
       supabase.from("variantes_apellido").select("*").order("apellido_base"),
       supabase.from("external_accounts").select("*").eq("provider", "familysearch").maybeSingle(),
       user ? supabase.from("app_config").select("openai_api_key").maybeSingle() : Promise.resolve({ data: null } as any),
+      user ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
     ]);
     setVariantes(v ?? []);
     setFsAccount(a);
     if (user) {
       const meta = (user.user_metadata ?? {}) as any;
       setAccountProfile({
-        nombre_completo: meta.nombre_completo ?? meta.display_name ?? "",
+        nombre_completo: profileResult.data?.display_name ?? meta.nombre_completo ?? meta.display_name ?? "",
         fecha_nacimiento: meta.fecha_nacimiento ?? "",
         lugar_nacimiento: meta.lugar_nacimiento ?? "",
         numero_identificacion: meta.numero_identificacion ?? "",
@@ -288,6 +295,7 @@ export default function Configuracion() {
         telefono_recuperacion: meta.telefono_recuperacion ?? user.phone ?? "",
       });
     }
+    if (profileResult.error) toast.error('No se pudo consultar el perfil compartido. Vuelve a intentarlo.');
     if (cfg) {
       const k = (cfg as any).openai_api_key as string | null;
       setAiCfg({
@@ -345,13 +353,22 @@ export default function Configuracion() {
   };
 
   const saveAccountProfile = async () => {
+    const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+    if (!accountViewActive.current) return;
+    if (sessionError || !user) return toast.error('No se pudo verificar la sesión. Vuelve a iniciar sesión.');
+    const { data: savedProfile, error: profileError } = await supabase.from('profiles')
+      .update({ display_name: accountProfile.nombre_completo.trim() })
+      .eq('id', user.id).select('id').maybeSingle();
+    if (!accountViewActive.current) return;
+    if (profileError || !savedProfile) return toast.error('No se pudo guardar el perfil compartido. Vuelve a intentarlo.');
     const { error } = await supabase.auth.updateUser({
       data: {
         ...accountProfile,
         display_name: accountProfile.nombre_completo,
       },
     });
-    if (error) return toast.error(error.message);
+    if (error) return toast.error('El nombre quedó guardado, pero los demás datos de cuenta no pudieron actualizarse. Vuelve a guardar.');
+    window.dispatchEvent(new CustomEvent('genaia:data-changed', { detail: { table: 'profiles' } }));
     toast.success("Datos de cuenta guardados");
   };
 
@@ -482,6 +499,7 @@ export default function Configuracion() {
   return (
     <div>
       <PageHeader title="Configuración" subtitle="Cuenta, persona central, IA, conexiones, menús y actualizaciones remotas." />
+      <InstallAppCard />
 
       <Card className="archivo-card mb-6">
         <CardHeader>

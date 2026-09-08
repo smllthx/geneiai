@@ -71,13 +71,13 @@ export default function AppWindowLayer() {
         <section
           key={item.id}
           className={cn(
-            "pointer-events-auto fixed overflow-hidden rounded-[28px] border border-white/20 bg-background/82 shadow-2xl backdrop-blur-2xl",
+            "app-floating-window pointer-events-auto fixed overflow-hidden rounded-[28px] border border-white/20 bg-background/82 shadow-2xl backdrop-blur-2xl",
             "left-3 right-3 md:left-auto md:right-5",
           )}
           style={{
-            top: `calc(env(safe-area-inset-top, 0px) + ${88 + index * 24}px)`,
-            width: "min(92vw, 500px)",
-            height: "min(74vh, 680px)",
+            top: `calc(var(--visual-viewport-top, 0px) + env(safe-area-inset-top, 0px) + ${Math.min(index, 3) * 20 + 12}px)`,
+            width: "min(500px, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px))",
+            height: `min(680px, calc(var(--visual-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - ${Math.min(index, 3) * 20 + 24}px))`,
             zIndex: item.z,
           }}
           aria-label={`Ventana ${item.title}`}

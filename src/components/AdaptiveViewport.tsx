@@ -1,183 +1,95 @@
 import { useEffect, useState } from "react";
 import { useDevice } from "@/hooks/use-device";
-import { Settings2, X, Minus, Plus, Smartphone, Tablet, Monitor, RotateCcw, Sun, Moon, Trash2 } from "lucide-react";
+import { Settings2, Minus, Plus, RotateCcw, Sun, Moon, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const SCALE_KEY = "genai:ui-scale";
 const DENSITY_KEY = "genai:ui-density";
 const AUTO_KEY = "genai:ui-auto";
-
 type Density = "compact" | "normal" | "comfortable";
+const densityLabels = { compact: "Compacta", normal: "Normal", comfortable: "Cómoda" };
 
-/**
- * Auto-adjusts root font-size and density based on device/viewport.
- * Exposes a small floating panel to fine-tune scale + density.
- * Persisted in localStorage.
- */
+/** Automatic layout preserves readable text; manual preferences stay available. */
 export default function AdaptiveViewport() {
   const dev = useDevice();
-  const [open, setOpen] = useState(false);
-  const [auto, setAuto] = useState<boolean>(() => localStorage.getItem(AUTO_KEY) !== "0");
-  const [scale, setScale] = useState<number>(() => Number(localStorage.getItem(SCALE_KEY)) || 1);
-  const [density, setDensity] = useState<Density>(
-    () => (localStorage.getItem(DENSITY_KEY) as Density) || "normal"
-  );
-  const [theme, setTheme] = useState<"light" | "dark">(
-    () => (localStorage.getItem("genai:theme") as "light" | "dark") || "dark"
-  );
+  const [auto, setAuto] = useState(() => localStorage.getItem(AUTO_KEY) !== "0");
+  const [manualScale, setManualScale] = useState(() => Math.min(1.4, Math.max(0.75, Number(localStorage.getItem(SCALE_KEY)) || 1)));
+  const [manualDensity, setManualDensity] = useState<Density>(() => {
+    const saved = localStorage.getItem(DENSITY_KEY);
+    return saved === "compact" || saved === "comfortable" ? saved : "normal";
+  });
+  const [theme, setTheme] = useState(() => localStorage.getItem("genai:theme") === "light" ? "light" : "dark");
+  // Width drives layout. A shorter viewport/keyboard must never shrink text.
+  const scale = auto ? (dev.width >= 2200 ? 1.2 : dev.width >= 1440 ? 1.06 : 1) : manualScale;
+  const density: Density = auto ? (dev.width < 600 ? "compact" : dev.width >= 1440 ? "comfortable" : "normal") : manualDensity;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("genai:theme", theme);
   }, [theme]);
 
-  // Auto-scale based on device kind + diagonal
-  useEffect(() => {
-    if (!auto) return;
-    let s = 1;
-    let d: Density = "normal";
-    switch (dev.kind) {
-      case "phone":    s = 0.92; d = "compact"; break;
-      case "phablet":  s = 0.96; d = "compact"; break;
-      case "tablet":   s = 1.00; d = "normal"; break;
-      case "laptop":   s = 1.00; d = "normal"; break;
-      case "desktop":  s = 1.06; d = "comfortable"; break;
-      case "tv":       s = 1.20; d = "comfortable"; break;
-    }
-    // very small heights → squeeze a bit
-    if (dev.height < 700) s -= 0.04;
-    setScale(Number(s.toFixed(2)));
-    setDensity(d);
-  }, [auto, dev.kind, dev.height]);
-
-  // Apply to <html>
   useEffect(() => {
     const root = document.documentElement;
-    root.style.fontSize = `${Math.round(16 * scale)}px`;
+    root.style.fontSize = `${scale * 100}%`;
     root.dataset.density = density;
+  }, [scale, density]);
+
+  useEffect(() => {
+    const root = document.documentElement;
     root.dataset.deviceKind = dev.kind;
     root.dataset.devicePlatform = dev.platform;
     root.dataset.orientation = dev.orientation;
     root.dataset.input = dev.coarsePointer ? "touch" : "pointer";
     document.body.classList.toggle("is-touch-device", dev.touch);
-    document.body.classList.toggle("is-apple-device", dev.platform === "iphone" || dev.platform === "ipad" || dev.platform === "macos");
-    localStorage.setItem(SCALE_KEY, String(scale));
-    localStorage.setItem(DENSITY_KEY, density);
-    localStorage.setItem(AUTO_KEY, auto ? "1" : "0");
-  }, [scale, density, auto, dev.kind, dev.orientation, dev.platform, dev.coarsePointer, dev.touch]);
+    document.body.classList.toggle("is-apple-device", ["iphone", "ipad", "macos"].includes(dev.platform));
+  }, [dev.kind, dev.orientation, dev.platform, dev.coarsePointer, dev.touch]);
 
-  const reset = () => { setAuto(true); };
-  const Icon = dev.kind === "phone" || dev.kind === "phablet" ? Smartphone
-    : dev.kind === "tablet" ? Tablet : Monitor;
+  useEffect(() => {
+    localStorage.setItem(SCALE_KEY, String(manualScale));
+    localStorage.setItem(DENSITY_KEY, manualDensity);
+    localStorage.setItem(AUTO_KEY, auto ? "1" : "0");
+  }, [manualScale, manualDensity, auto]);
+
+  const changeScale = (value: number) => {
+    setAuto(false);
+    setManualScale(Math.min(1.4, Math.max(0.75, Math.round(value * 100) / 100)));
+    setManualDensity(density);
+  };
 
   return (
-    <>
-      <button
-        aria-label="Ajustar vista"
-        onClick={() => setOpen((o) => !o)}
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 9.5rem)" }}
-        className="glass-strong fixed right-4 z-40 grid h-11 w-11 place-items-center rounded-full ring-1 ring-border/40 shadow-lg md:!bottom-4 md:right-4"
-      >
-        <Settings2 className="h-5 w-5" />
-      </button>
-
-      {open && (
-        <div
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 14.5rem)" }}
-          className="glass-strong fixed right-3 z-40 w-72 rounded-2xl p-4 ring-1 ring-border/40 shadow-xl md:!bottom-20 md:right-4"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold">Ajuste de vista</p>
-            </div>
-            <button onClick={() => setOpen(false)} className="text-foreground/60 hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <p className="mb-3 text-[11px] text-muted-foreground">
-            {dev.platform} · {dev.kind} · {dev.width}×{dev.height}px · {dev.dpr.toFixed(2)}x · ~{dev.diagonalIn.toFixed(1)}″ · {dev.orientation}
-          </p>
-
-          <label className="mb-3 flex items-center justify-between rounded-xl bg-foreground/5 px-3 py-2 text-sm">
-            <span>Auto-ajustar</span>
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-primary"
-              checked={auto}
-              onChange={(e) => setAuto(e.target.checked)}
-            />
-          </label>
-
-          <div className="mb-3">
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Escala</span>
-              <span className="tabular-nums">{Math.round(scale * 100)}%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setAuto(false); setScale((s) => Math.max(0.75, Number((s - 0.05).toFixed(2)))); }}
-                className="grid h-8 w-8 place-items-center rounded-lg bg-foreground/5 hover:bg-foreground/10"
-              ><Minus className="h-3.5 w-3.5" /></button>
-              <input
-                type="range" min={0.75} max={1.4} step={0.01} value={scale}
-                onChange={(e) => { setAuto(false); setScale(Number(e.target.value)); }}
-                className="flex-1 accent-primary"
-              />
-              <button
-                onClick={() => { setAuto(false); setScale((s) => Math.min(1.4, Number((s + 0.05).toFixed(2)))); }}
-                className="grid h-8 w-8 place-items-center rounded-lg bg-foreground/5 hover:bg-foreground/10"
-              ><Plus className="h-3.5 w-3.5" /></button>
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <p className="mb-1 text-xs text-muted-foreground">Densidad</p>
-            <div className="flex gap-1.5">
-              {(["compact","normal","comfortable"] as Density[]).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => { setAuto(false); setDensity(d); }}
-                  className={cn(
-                    "flex-1 rounded-lg px-2 py-1.5 text-xs capitalize transition-colors",
-                    density === d ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10"
-                  )}
-                >{d}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <p className="mb-1 text-xs text-muted-foreground">Tema</p>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setTheme("light")}
-                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
-                  theme === "light" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
-              ><Sun className="h-3.5 w-3.5" /> Claro</button>
-              <button
-                onClick={() => setTheme("dark")}
-                className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors",
-                  theme === "dark" ? "bg-primary text-primary-foreground" : "bg-foreground/5 hover:bg-foreground/10")}
-              ><Moon className="h-3.5 w-3.5" /> Oscuro</button>
-            </div>
-          </div>
-
-          <button
-            onClick={reset}
-            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-foreground/5 py-2 text-xs hover:bg-foreground/10"
-          >
-            <RotateCcw className="h-3 w-3" /> Restablecer auto
-          </button>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("genaia:clear-cache"))}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 py-2 text-xs text-amber-700 hover:bg-amber-400/15 dark:text-amber-100"
-          >
-            <Trash2 className="h-3 w-3" /> Limpiar caché y recargar
-          </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button aria-label="Ajustar vista" className="view-adjust-trigger glass-strong fixed z-40 grid h-11 w-11 place-items-center rounded-full ring-1 ring-border/40 shadow-lg">
+          <Settings2 className="h-5 w-5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="end" collisionPadding={12} className="view-adjust-panel w-80 rounded-2xl p-4" aria-label="Ajuste de vista">
+        <h2 className="mb-2 font-sans text-base font-semibold">Ajuste de vista</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Adaptar menús al espacio disponible.</p>
+        <label className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-foreground/5 px-3 py-2 text-sm">
+          <span>Ajuste automático</span>
+          <input type="checkbox" className="h-5 w-5 accent-primary" checked={auto} onChange={(e) => { setManualScale(scale); setManualDensity(density); setAuto(e.target.checked); }} />
+        </label>
+        <label htmlFor="ui-scale" className="mb-1 flex justify-between text-sm"><span>Tamaño del texto</span><span>{Math.round(scale * 100)}%</span></label>
+        <div className="mb-3 flex min-w-0 items-center gap-2">
+          <button aria-label="Reducir texto" onClick={() => changeScale(scale - 0.05)} className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-foreground/5"><Minus className="h-4 w-4" /></button>
+          <input id="ui-scale" type="range" min={0.75} max={1.4} step={0.01} value={scale} onChange={(e) => changeScale(Number(e.target.value))} className="min-w-0 flex-1 accent-primary" />
+          <button aria-label="Aumentar texto" onClick={() => changeScale(scale + 0.05)} className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-foreground/5"><Plus className="h-4 w-4" /></button>
         </div>
-      )}
-    </>
+        <div className="mb-3">
+          <p className="mb-1 text-sm text-muted-foreground">Espaciado</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(["compact", "normal", "comfortable"] as Density[]).map((d) => <button key={d} aria-pressed={density === d} onClick={() => { setAuto(false); setManualScale(scale); setManualDensity(d); }} className={cn("min-h-11 flex-1 rounded-lg px-2 py-2 text-sm", density === d ? "bg-primary text-primary-foreground" : "bg-foreground/5")}>{densityLabels[d]}</button>)}
+          </div>
+        </div>
+        <div className="mb-3 flex gap-2">
+          <button aria-pressed={theme === "light"} onClick={() => setTheme("light")} className={cn("flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm", theme === "light" ? "bg-primary text-primary-foreground" : "bg-foreground/5")}><Sun className="h-4 w-4" /> Claro</button>
+          <button aria-pressed={theme === "dark"} onClick={() => setTheme("dark")} className={cn("flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg text-sm", theme === "dark" ? "bg-primary text-primary-foreground" : "bg-foreground/5")}><Moon className="h-4 w-4" /> Oscuro</button>
+        </div>
+        <button onClick={() => setAuto(true)} className="mb-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-foreground/5 py-2 text-sm"><RotateCcw className="h-4 w-4" /> Restablecer automático</button>
+        <button onClick={() => window.dispatchEvent(new CustomEvent("genaia:clear-cache"))} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 py-2 text-sm text-amber-700 dark:text-amber-100"><Trash2 className="h-4 w-4" /> Limpiar caché y recargar</button>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -17,12 +17,19 @@ export function useRealtimeReload(tables: string[], userId?: string | null, debo
   useEffect(() => {
     if (!userId) return;
     const relevant = new Set(tables);
+    const flush = () => {
+      if (document.body.dataset.geneiaiEditing === "1" || document.querySelector("[data-geneiai-editing='true']")) {
+        timer.current = window.setTimeout(flush, debounceMs);
+        return;
+      }
+      timer.current = null;
+      setReloadKey((k) => k + 1);
+    };
     const bump = (event?: Event) => {
-      if (document.body.dataset.geneiaiEditing === "1" || document.querySelector("[data-geneiai-editing='true']")) return;
       const table = (event as CustomEvent)?.detail?.table;
       if (table && !relevant.has(table)) return;
       if (timer.current) window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => setReloadKey((k) => k + 1), debounceMs);
+      timer.current = window.setTimeout(flush, debounceMs);
     };
     const ch = supabase.channel(`rt-${tables.join("-")}-${userId}`);
     tables.forEach((t) => {

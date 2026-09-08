@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,7 +182,7 @@ export default function Importar() {
     const t = toast.loading("Generando GEDCOM…");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/familysearch-export`;
+      const url = `${SUPABASE_URL}/functions/v1/familysearch-export`;
       const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${session!.access_token}` },

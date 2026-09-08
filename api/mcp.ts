@@ -3,7 +3,9 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
-import { getBearer, getServiceSupabase, getSupabase, getUserOrThrow } from "./_lib/geneai.js";
+import { connectionError, getBearer, getServiceSupabase, getSupabase, getUserOrThrow } from "./_lib/geneai.js";
+import { resolveServerBackendConfig } from "../shared/backendIdentity.js";
+import { getPublicAppOrigin } from "./_lib/publicOrigin.js";
 import {
   GeneaiWorkError,
   createPerson,
@@ -75,17 +77,8 @@ const personFields = {
   certeza: certainty.optional(),
 };
 
-function originFor(req: ApiRequest) {
-  const configured = (process.env.GENEAI_PUBLIC_URL ?? "").trim().replace(/\/$/, "");
-  if (configured) return configured;
-  const rawHost = req.headers["x-forwarded-host"] ?? req.headers.host;
-  const host = Array.isArray(rawHost) ? rawHost[0] : rawHost;
-  if (host?.startsWith("localhost") || host?.startsWith("127.0.0.1")) return `http://${host}`;
-  return "https://geneiai.vercel.app";
-}
-
 function authChallenge(req: ApiRequest) {
-  return `Bearer resource_metadata="${originFor(req)}/.well-known/oauth-protected-resource/mcp", scope="openid profile email"`;
+  return `Bearer resource_metadata="${getPublicAppOrigin(req)}/.well-known/oauth-protected-resource/mcp", scope="openid profile email"`;
 }
 
 function oauthClientId(req: ApiRequest) {
@@ -424,6 +417,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     });
   }
 
+  try {
+    resolveServerBackendConfig(process.env);
+    getPublicAppOrigin(req);
+  } catch (error) {
+    return res.status(503).json({
+      jsonrpc: "2.0",
+      error: { code: -32004, message: "GENEAI backend configuration is unavailable", data: { code: connectionError(error)?.code ?? "BACKEND_UNAVAILABLE" } },
+      id: null,
+    });
+  }
+
   if (!getBearer(req)) {
     res.setHeader("WWW-Authenticate", authChallenge(req));
     return res.status(401).json({
@@ -438,16 +442,24 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   let user: User;
   try {
     authSb = getSupabase(req);
-    user = await getUserOrThrow(authSb);
-  } catch {
-    res.setHeader("WWW-Authenticate", authChallenge(req));
-    return res.status(401).json({
+    user = await getUserOrThrow(authSb, getBearer(req).slice("Bearer ".length));
+  } catch (error) {
+    const known = connectionError(error);
+    const status = known?.status ?? 503;
+    if (status === 401) res.setHeader("WWW-Authenticate", authChallenge(req));
+    return res.status(status).json({
       jsonrpc: "2.0",
-      error: { code: -32001, message: "Invalid or expired GENEAI authorization" },
+      error: {
+        code: status === 401 ? -32001 : -32004,
+        message: status === 401 ? "Invalid or expired GENEAI authorization" : "GENEAI could not verify the session right now",
+        data: { code: known?.code ?? "AUTH_UNAVAILABLE" },
+      },
       id: null,
     });
   }
 
+  // The token was verified with Auth above; this claim only selects the OAuth
+  // client approval. All data ownership uses the trusted user returned by Auth.
   const clientId = oauthClientId(req);
   if (!clientId) {
     return res.status(403).json({
@@ -459,10 +471,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     sb = getServiceSupabase();
-  } catch {
+  } catch (error) {
     return res.status(503).json({
       jsonrpc: "2.0",
-      error: { code: -32004, message: "GENEAI Work is not configured on the server" },
+      error: { code: -32004, message: "GENEAI Work is not configured on the server", data: { code: connectionError(error)?.code ?? "BACKEND_UNAVAILABLE" } },
       id: null,
     });
   }
@@ -477,7 +489,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     .eq("client_id", clientId)
     .eq("active", true)
     .maybeSingle();
-  if (approvalError || !approvedClient || (configuredClients.length > 0 && !configuredClients.includes(clientId))) {
+  if (approvalError) {
+    return res.status(503).json({
+      jsonrpc: "2.0",
+      error: { code: -32004, message: "GENEAI could not verify the connection approval", data: { code: "OAUTH_APPROVAL_UNAVAILABLE" } },
+      id: null,
+    });
+  }
+  if (!approvedClient || (configuredClients.length > 0 && !configuredClients.includes(clientId))) {
     return res.status(403).json({
       jsonrpc: "2.0",
       error: { code: -32003, message: "This OAuth client is not approved for the connected GENEAI account" },

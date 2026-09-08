@@ -1,42 +1,60 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "node scripts/build-shared-backend.mjs",
   "outputDirectory": "dist",
   "framework": "vite",
   "headers": [
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/manifest.webmanifest",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
+        }
       ]
     },
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     },
     {
       "source": "/mcp",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
       ]
     },
     {
       "source": "/.well-known/oauth-protected-resource(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, must-revalidate"
+        }
       ]
     }
   ],
@@ -57,5 +75,16 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "SUPABASE_URL": "https://camdtylwddleifaegzaf.supabase.co",
+    "VITE_SUPABASE_URL": "https://camdtylwddleifaegzaf.supabase.co",
+    "SUPABASE_PROJECT_ID": "camdtylwddleifaegzaf",
+    "SUPABASE_PROJECT_REF": "camdtylwddleifaegzaf",
+    "VITE_SUPABASE_PROJECT_ID": "camdtylwddleifaegzaf",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_CGZ6D2RXuhHsjYOzwns4nA_VnWIZ2lX",
+    "SUPABASE_ANON_KEY": "sb_publishable_CGZ6D2RXuhHsjYOzwns4nA_VnWIZ2lX",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_CGZ6D2RXuhHsjYOzwns4nA_VnWIZ2lX",
+    "GENEAI_PUBLIC_URL": "https://geneiai.vercel.app"
+  }
 }

@@ -124,7 +124,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
           {!compact && <span>Buscar persona</span>}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[88vh] overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="app-dialog person-search-dialog p-0 sm:max-w-3xl" aria-describedby={undefined}>
         <DialogHeader className="border-b border-border/70 p-4 pb-3">
           <DialogTitle>Índice universal de personas</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -154,7 +154,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
             </Button>
           </div>
 
-          <div className="max-h-[58vh] overflow-y-auto rounded-2xl border border-border bg-card/70">
+          <div className="max-h-[50dvh] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/70">
             {loading ? (
               <div className="grid min-h-44 place-items-center text-sm text-muted-foreground">
                 <Loader2 className="mb-2 h-5 w-5 animate-spin" />
