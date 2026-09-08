@@ -10,6 +10,7 @@ import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkle
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
+import InstallAppCard from "@/components/InstallAppCard";
 import {
   clearDevicePasskey,
   hasDevicePasskey,
@@ -482,6 +483,7 @@ export default function Configuracion() {
   return (
     <div>
       <PageHeader title="Configuración" subtitle="Cuenta, persona central, IA, conexiones, menús y actualizaciones remotas." />
+      <InstallAppCard />
 
       <Card className="archivo-card mb-6">
         <CardHeader>

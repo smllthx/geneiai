@@ -374,7 +374,7 @@
 }
 
 /* Adaptive density — applied via <html data-density="..."> */
-html { font-size: 16px; }
+html { font-size: 100%; }
 html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @supports (height: 100dvh) {
   .min-h-screen { min-height: 100dvh; }
@@ -408,9 +408,7 @@ html[data-density="comfortable"] .glass-card { @apply p-6; }
 }
 
 /* Prevent floating action buttons from overlapping mobile bottom nav */
-@media (max-width: 767px) {
-  main { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem) !important; }
-}
+
 
 /* Fullscreen tree mode — hide every overlay (sidebar, mobile nav, Siri, notification overlays) */
 body.tree-fullscreen aside,
@@ -424,13 +422,13 @@ body.tree-fullscreen main { padding: 0 !important; }
 
 /* Popper content must fit within the viewport on small screens */
 [data-radix-popper-content-wrapper] {
-  max-width: calc(100vw - 1rem) !important;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem) !important;
 }
 [data-radix-popper-content-wrapper] [role="menu"],
 [data-radix-popper-content-wrapper] [role="listbox"],
 [data-radix-popper-content-wrapper] [role="dialog"] {
-  max-width: calc(100vw - 1rem) !important;
-  max-height: calc(100vh - 6rem) !important;
+  max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem) !important;
+  max-height: min(var(--radix-dropdown-menu-content-available-height, var(--radix-popover-content-available-height, 100dvh)), calc(var(--visual-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1.5rem)) !important;
   overflow: auto;
 }
 
@@ -451,6 +449,83 @@ button, a, input, textarea, select, [role="button"], [role="tab"] {
 }
 
 @keyframes geneai-page-in {
-  from { opacity: 0; filter: blur(2px); }
-  to { opacity: 1; filter: blur(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* GENEAI adaptive shell: layout viewport for navigation, visual viewport for overlays. */
+:root {
+  --app-header-height: 3.75rem;
+  --bottom-nav-height: 4.5rem;
+}
+.glass.fixed, .glass-strong.fixed { position: fixed; }
+.glass.sticky, .glass-strong.sticky { position: sticky; }
+.app-main {
+  padding: 1.5rem max(1rem, env(safe-area-inset-right, 0px)) 2rem max(1rem, env(safe-area-inset-left, 0px));
+  overflow-wrap: anywhere;
+}
+.app-sidebar { padding-top: max(.75rem, env(safe-area-inset-top, 0px)); padding-bottom: max(.75rem, env(safe-area-inset-bottom, 0px)); }
+.app-sidebar > div { min-height: 0; }
+.mobile-app-header {
+  top: calc(env(safe-area-inset-top, 0px) + .5rem);
+  left: max(.5rem, env(safe-area-inset-left, 0px));
+  right: max(.5rem, env(safe-area-inset-right, 0px));
+}
+.mobile-app-header button { min-width: 2.75rem; min-height: 2.75rem; }
+.mobile-bottom-nav {
+  left: max(.5rem, env(safe-area-inset-left, 0px));
+  right: max(.5rem, env(safe-area-inset-right, 0px));
+  bottom: max(.5rem, env(safe-area-inset-bottom, 0px));
+}
+.mobile-menu-sheet {
+  width: min(24rem, calc(100vw - env(safe-area-inset-right, 0px) - .75rem));
+  max-width: calc(100vw - env(safe-area-inset-right, 0px) - .75rem) !important;
+  top: var(--visual-viewport-top, 0px);
+  bottom: auto;
+  height: var(--visual-viewport-height, 100dvh);
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(.75rem, env(safe-area-inset-left, 0px));
+}
+.mobile-menu-sheet > button:last-child, .app-dialog > button:last-child {
+  display: grid; place-items: center; min-width: 2.75rem; min-height: 2.75rem;
+}
+.nav-options [role=menuitem] { min-height: 2.75rem; white-space: normal; }
+.view-adjust-trigger { right: max(1rem, env(safe-area-inset-right, 0px)); bottom: 1.5rem; }
+.assistant-trigger { right: max(4.75rem, calc(env(safe-area-inset-right, 0px) + 4rem)); bottom: 1.5rem; }
+.app-dialog {
+  width: min(var(--app-dialog-width, 32rem), calc(var(--visual-viewport-width, 100vw) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1.5rem));
+  max-height: calc(var(--visual-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1.5rem);
+  top: calc(var(--visual-viewport-top, 0px) + var(--visual-viewport-height, 100dvh) / 2);
+  left: calc(var(--visual-viewport-left, 0px) + var(--visual-viewport-width, 100vw) / 2);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.app-window-main { padding: 1rem; }
+@media (max-width: 767px), (pointer: coarse) and (max-height: 500px) and (max-width: 1023px) {
+  .app-shell[data-navigation=compact] .app-main {
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--app-header-height) + 1.25rem);
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 2rem);
+  }
+  .app-shell[data-navigation=compact] .app-window-main { padding: 1rem; }
+  .view-adjust-trigger { bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.5rem); }
+  .assistant-trigger { bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1.25rem); }
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select { font-size: max(1rem, 16px); }
+  /* Solid surfaces avoid repeatedly blurring the moving page on phones. */
+  .glass, .glass-strong { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: hsl(var(--card)); }
+  body { background-attachment: scroll; }
+  html[data-keyboard-open=true] .mobile-bottom-nav,
+  html[data-keyboard-open=true] .view-adjust-trigger,
+  html[data-keyboard-open=true] .assistant-trigger { visibility: hidden; pointer-events: none; }
+}
+@media (max-width: 359px) {
+  .mobile-brand .font-display { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  main > div { animation: none; }
+}
+
+.person-search-dialog { --app-dialog-width: 48rem; }
+.app-floating-window { left: auto; right: max(.75rem, env(safe-area-inset-right, 0px)); }
+@media (max-width: 767px), (pointer: coarse) and (max-height: 500px) and (max-width: 1023px) {
+  .app-floating-window { left: max(.75rem, env(safe-area-inset-left, 0px)); right: auto; }
 }

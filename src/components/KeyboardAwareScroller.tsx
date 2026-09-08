@@ -1,65 +1,62 @@
 import { useEffect } from "react";
 
-/**
- * Ensures the currently focused input/textarea/contenteditable stays visible
- * above the on-screen keyboard on mobile. Uses VisualViewport API when
- * available and falls back to scrollIntoView.
- */
+/** Publish visible viewport bounds without rerendering the application. */
 export default function KeyboardAwareScroller() {
   useEffect(() => {
-    const isEditable = (el: Element | null): el is HTMLElement => {
-      if (!el || !(el instanceof HTMLElement)) return false;
-      const tag = el.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
-        const t = (el as HTMLInputElement).type;
-        return !["checkbox", "radio", "button", "submit", "reset", "file", "range", "color", "hidden"].includes(t);
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    let frame = 0;
+    let focusTimer = 0;
+    let ensureVisible = false;
+    const editable = (element: Element | null): element is HTMLElement => {
+      if (!(element instanceof HTMLElement)) return false;
+      if (element.isContentEditable || element.tagName === "TEXTAREA") return true;
+      return element instanceof HTMLInputElement && !["checkbox", "radio", "button", "submit", "reset", "file", "range", "color", "hidden"].includes(element.type);
+    };
+    const update = () => {
+      frame = 0;
+      const height = viewport?.height ?? window.innerHeight;
+      const top = viewport?.offsetTop ?? 0;
+      const left = viewport?.offsetLeft ?? 0;
+      const width = viewport?.width ?? window.innerWidth;
+      const active = document.activeElement;
+      const rect = editable(active) ? active.getBoundingClientRect() : null;
+      const keyboard = editable(active) && (viewport?.scale ?? 1) === 1 && window.innerHeight - height > 150;
+      root.style.setProperty("--visual-viewport-height", `${height}px`);
+      root.style.setProperty("--visual-viewport-width", `${width}px`);
+      root.style.setProperty("--visual-viewport-top", `${top}px`);
+      root.style.setProperty("--visual-viewport-left", `${left}px`);
+      root.dataset.keyboardOpen = String(keyboard);
+      if (ensureVisible && rect && (rect.bottom > top + height - 24 || rect.top < top + 24)) {
+        // Scroll the actual ancestor (including a sheet/dialog), without an
+        // animated scroll loop during visualViewport scroll events.
+        active.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
       }
-      return el.isContentEditable;
+      ensureVisible = false;
     };
-
-    const scrollFocusedIntoView = () => {
-      const el = document.activeElement;
-      if (!isEditable(el)) return;
-      const vv = window.visualViewport;
-      const viewportH = vv?.height ?? window.innerHeight;
-      const viewportTop = vv?.offsetTop ?? 0;
-      const rect = el.getBoundingClientRect();
-      // We want the input to sit ~16px above the keyboard line (bottom of visualViewport)
-      const margin = 24;
-      const desiredBottom = viewportTop + viewportH - margin;
-      const desiredTop = viewportTop + margin + 56; // leave room for app top bar
-      let delta = 0;
-      if (rect.bottom > desiredBottom) {
-        delta = rect.bottom - desiredBottom;
-      } else if (rect.top < desiredTop) {
-        delta = rect.top - desiredTop;
-      }
-      if (delta !== 0) {
-        window.scrollBy({ top: delta, behavior: "smooth" });
-      }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    const onResize = () => { ensureVisible = true; schedule(); };
+    const onFocus = () => {
+      schedule();
+      clearTimeout(focusTimer);
+      focusTimer = window.setTimeout(onResize, 300);
     };
-
-    const onFocusIn = (_e: FocusEvent) => {
-      // Wait a tick so the keyboard starts opening and visualViewport shrinks
-      setTimeout(scrollFocusedIntoView, 250);
-      setTimeout(scrollFocusedIntoView, 550);
-    };
-
-    const onViewportChange = () => {
-      // Keyboard appears/disappears or rotates — re-align focused field
-      scrollFocusedIntoView();
-    };
-
-    document.addEventListener("focusin", onFocusIn);
-    window.visualViewport?.addEventListener("resize", onViewportChange);
-    window.visualViewport?.addEventListener("scroll", onViewportChange);
-
+    update();
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onFocus);
+    window.addEventListener("resize", onResize, { passive: true });
+    viewport?.addEventListener("resize", onResize, { passive: true });
+    viewport?.addEventListener("scroll", schedule, { passive: true });
     return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      window.visualViewport?.removeEventListener("resize", onViewportChange);
-      window.visualViewport?.removeEventListener("scroll", onViewportChange);
+      cancelAnimationFrame(frame);
+      clearTimeout(focusTimer);
+      document.removeEventListener("focusin", onFocus);
+      document.removeEventListener("focusout", onFocus);
+      window.removeEventListener("resize", onResize);
+      viewport?.removeEventListener("resize", onResize);
+      viewport?.removeEventListener("scroll", schedule);
+      delete root.dataset.keyboardOpen;
     };
   }, []);
-
   return null;
 }

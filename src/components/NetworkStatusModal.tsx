@@ -29,7 +29,7 @@ export default function NetworkStatusModal() {
             <p className="font-semibold">{isOffline ? "Estás sin conexión" : "Comprobando conexión"}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {isOffline
-                ? "Puedes revisar datos recientes guardados en caché. Las acciones que necesiten internet se sincronizarán cuando vuelva la conexión."
+                ? "La información abierta puede estar desactualizada. Vuelve a conectarte para consultar los cambios de tus dispositivos y confirma el guardado de cualquier edición pendiente."
                 : "GENEAI está verificando que el servidor responda antes de refrescar datos."}
             </p>
             {lastCheckedAt && (

@@ -10,10 +10,22 @@ export default function AppUpdateNotifier() {
         duration: Infinity,
         action: {
           label: "Actualizar",
-          onClick: applyAppUpdate,
+          onClick: async () => {
+            const result = await applyAppUpdate();
+            if (result === "editing") {
+              toast("Guarda o cierra la edición antes de actualizar", { duration: 6000 });
+            } else if (result === "unavailable") {
+              toast("Vuelve a abrir GENEAI para cargar la versión actual.");
+            }
+          },
         },
       });
     };
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((registration) => {
+        if (registration?.waiting) onReady();
+      }).catch(() => undefined);
+    }
     window.addEventListener("genaia:update-ready", onReady);
     const onClearCache = async () => {
       const ok = await clearAppCache();

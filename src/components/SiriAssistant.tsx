@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, X, ArrowUp } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 const QUICK = [
@@ -27,29 +28,24 @@ export default function SiriAssistant() {
   };
 
   return (
-    <>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
       <button
         aria-label="Asistente"
-        onClick={() => setOpen(true)}
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.25rem)" }}
-        className="fixed right-4 z-30 grid h-14 w-14 place-items-center rounded-full shadow-[0_12px_40px_-8px_hsl(var(--mesh-2)/0.6)] ring-1 ring-border/40 transition-transform hover:scale-105 active:scale-95 md:!bottom-6"
+        className="assistant-trigger fixed z-30 grid h-14 w-14 place-items-center rounded-full shadow-[0_12px_40px_-8px_hsl(var(--mesh-2)/0.6)] ring-1 ring-border/40 transition-transform hover:scale-105 active:scale-95"
       >
         <span className="siri-orb absolute inset-0 rounded-full" />
         <span className="glass absolute inset-1 rounded-full" />
         <Sparkles className="relative h-5 w-5 text-foreground" />
       </button>
-
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-foreground/10 p-4 backdrop-blur-sm md:items-center" onClick={() => setOpen(false)}>
-          <div className="glass-strong w-full max-w-lg rounded-3xl p-4" onClick={(e) => e.stopPropagation()}>
+      </DialogTrigger>
+      <DialogContent className="app-dialog max-w-lg rounded-3xl p-4" aria-describedby={undefined}>
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="siri-orb h-6 w-6 rounded-full" />
-                <span className="font-display text-sm font-semibold">Genealogista IA</span>
+                <DialogTitle className="text-base">Genealogista IA</DialogTitle>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+
             </div>
 
             <div className="glass mb-3 flex items-center gap-2 rounded-2xl px-3 py-2">
@@ -59,9 +55,9 @@ export default function SiriAssistant() {
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submit()}
                 placeholder="¿Qué querés hacer? Ej: investigar una rama familiar…"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
-              <Button size="icon" className="h-8 w-8 rounded-full" onClick={submit}>
+              <Button size="icon" className="h-11 w-11 shrink-0 rounded-full" aria-label="Enviar al asistente" onClick={submit}>
                 <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
@@ -71,15 +67,13 @@ export default function SiriAssistant() {
                 <button
                   key={q.to}
                   onClick={() => { navigate(q.to); setOpen(false); }}
-                  className="glass-pill hover:bg-foreground/5"
+                  className="glass-pill min-h-11 whitespace-normal text-sm hover:bg-foreground/5"
                 >
                   {q.label}
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }
