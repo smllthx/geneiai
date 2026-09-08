@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Component, type ReactNode, createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 // SectionHeader removed — replaced by minimal sticky header
@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { renderGenerations } from "@/lib/treeRendering";
 import { toDisplayText } from "@/lib/safeText";
 
 
@@ -74,6 +75,243 @@ class TreeErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
   }
 }
 
+type TreeViewState = {
+  editMode: boolean; persona?: PersonaLite; rels: any[]; categoria: Categoria;
+  docsByPersona: Map<string, number>; byId: Map<string, PersonaLite>; generaciones: number;
+  navigate: ReturnType<typeof useNavigate>; reload: () => void;
+  padresDe: (id: string) => ReturnType<typeof kPadresDe>;
+  hijosDe: (id: string) => PersonaLite[]; conyugesDe: (id: string) => PersonaLite[];
+  setDropTarget: (value: { source: string; target: string }) => void;
+  setEditRel: (value: { a: PersonaLite; b: PersonaLite }) => void;
+};
+const TreeViewContext = createContext<TreeViewState | null>(null);
+
+  // Wrapper: in edit mode = drag/drop + delete badge; otherwise person cards open
+  // the full genealogical profile. The center is changed from the header control.
+  const TreeCard = ({ p, focusable = true, children }: { p: PersonaLite; focusable?: boolean; children: React.ReactNode }) => {
+    const { editMode, persona, rels, setDropTarget, setEditRel } = useContext(TreeViewContext)!;
+    if (editMode) {
+      const linkedToCenter = persona && p.id !== persona.id && relacionesEntre(persona.id, p.id, rels as any).length > 0;
+      return (
+        <div
+          draggable
+          onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const src = e.dataTransfer.getData("text/persona");
+            if (!src || src === p.id) return;
+            setDropTarget({ source: src, target: p.id });
+          }}
+          className="relative ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
+        >
+          {children}
+          {linkedToCenter && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditRel({ a: persona!, b: p }); }}
+              className="absolute -top-2 -right-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition"
+              aria-label="Editar relación"
+              title="Editar / eliminar esta relación"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      );
+    }
+    return <>{children}</>;
+  };
+
+  // Determine highlight ring based on selected categoria
+  const catRing = (p: PersonaLite | undefined, categoria: Categoria, docsByPersona: Map<string, number>): string => {
+    if (!p || categoria === "predeterminada") return "";
+    if (categoria === "fuentes") {
+      const n = docsByPersona.get(p.id) ?? 0;
+      return n > 0 ? "ring-2 ring-emerald-400/70 rounded-2xl" : "opacity-60";
+    }
+    if (categoria === "pais") {
+      const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+      if (!nac) return "opacity-60";
+      // Stable hue from string
+      let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+      return `rounded-2xl ring-2`;
+    }
+    if (categoria === "historia") {
+      const y = (p as any).nac_fecha ? new Date((p as any).nac_fecha).getUTCFullYear() : (p as any).nac_rango_ini;
+      if (!y) return "opacity-60";
+      if (y < 1850) return "ring-2 ring-amber-500/70 rounded-2xl";
+      if (y < 1920) return "ring-2 ring-orange-500/70 rounded-2xl";
+      if (y < 1970) return "ring-2 ring-purple-500/70 rounded-2xl";
+      return "ring-2 ring-sky-500/70 rounded-2xl";
+    }
+    return "";
+  };
+  const catStyle = (p: PersonaLite | undefined, categoria: Categoria): React.CSSProperties => {
+    if (!p || categoria !== "pais") return {};
+    const nac = ((p as any).nacionalidad ?? "").toLowerCase();
+    if (!nac) return {};
+    let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return { boxShadow: `0 0 0 2px hsl(${h} 70% 55%)`, borderRadius: "1rem" };
+  };
+  const Hl = ({ p, children }: { p?: PersonaLite; children: React.ReactNode }) => {
+    const { categoria, docsByPersona } = useContext(TreeViewContext)!;
+    return (
+    <div className={catRing(p, categoria, docsByPersona)} style={catStyle(p, categoria)}>{children}</div>
+  ); };
+
+  const Draggable = TreeCard; // backwards-compat alias used by older sections below
+
+  const PartnershipStrip = ({ p, compact = false }: { p: PersonaLite; compact?: boolean }) => {
+    const { conyugesDe, reload, navigate } = useContext(TreeViewContext)!;
+    const partners = conyugesDe(p.id);
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
+          <Draggable p={p}>
+            <Hl p={p}>
+              <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => navigate(`/personas/${p.id}`)} />
+            </Hl>
+          </Draggable>
+          {partners.map((partner) => (
+            <Draggable key={partner.id} p={partner}>
+              <Hl p={partner}>
+                <PersonCard p={partner} compact={compact} onClick={() => navigate(`/personas/${partner.id}`)} />
+              </Hl>
+            </Draggable>
+          ))}
+          <QuickAddRelative personaId={p.id} defaultTipo="conyuge" onAdded={reload}
+            trigger={<span className="block"><EmptySlot label="cónyuge / unión" onClick={() => {}} /></span>} />
+        </div>
+        {partners.length > 0 && (
+          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            {partners.length} unión{partners.length === 1 ? "" : "es"} registrada{partners.length === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const PersonTile = ({ p, highlighted = false }: { p: PersonaLite; highlighted?: boolean }) => {
+    const { navigate } = useContext(TreeViewContext)!;
+    return (
+    <Draggable p={p}>
+      <Hl p={p}>
+        <PersonCard p={p} compact highlighted={highlighted} onClick={() => navigate(`/personas/${p.id}`)} />
+      </Hl>
+    </Draggable>
+  ); };
+
+  const AddTile = ({ personaId, tipo, label }: { personaId: string; tipo: "padre" | "madre" | "conyuge" | "hijo"; label: string }) => {
+    const { byId, reload } = useContext(TreeViewContext)!;
+    return (
+    <QuickAddRelative personaId={personaId} personaSexo={byId.get(personaId)?.sexo} defaultTipo={tipo} onAdded={reload}
+      trigger={<span className="block"><EmptySlot label={label} onClick={() => {}} /></span>} />
+  ); };
+
+  const CouplePair = ({ childId, padre, madre }: { childId: string; padre?: PersonaLite; madre?: PersonaLite }) => (
+    <div className="relative inline-flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
+      <div className="pointer-events-none absolute left-[50%] top-1/2 h-px w-[calc(100%-2.5rem)] -translate-x-1/2 bg-foreground/30" />
+      <div className="relative z-10">
+        {padre ? <PersonTile p={padre} /> : <AddTile personaId={childId} tipo="padre" label="padre" />}
+      </div>
+      <div className="relative z-10">
+        {madre ? <PersonTile p={madre} /> : <AddTile personaId={childId} tipo="madre" label="madre" />}
+      </div>
+    </div>
+  );
+
+  // Recursive ascendants renderer — compact, connected, and symmetric.
+  const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
+    const { padresDe } = useContext(TreeViewContext)!;
+    if (gen <= 0 || trail.includes(pid)) return null;
+    const { padre, madre } = padresDe(pid);
+    const hasAny = !!(padre || madre);
+    const nextTrail = [...trail, pid];
+    return (
+      <div className="inline-flex flex-col items-center">
+        {hasAny && (
+          <div className="relative mb-2 inline-grid grid-cols-2 items-end justify-center gap-3 sm:gap-4">
+            <div className="flex min-w-[156px] flex-col items-center justify-end">
+              {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
+            </div>
+            <div className="flex min-w-[156px] flex-col items-center justify-end">
+              {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-1/4 right-1/4 h-px bg-foreground/25" />
+            <div className="pointer-events-none absolute bottom-0 left-1/2 h-4 w-px translate-y-full bg-foreground/25" />
+          </div>
+        )}
+        <div className="relative mt-4">
+          <CouplePair childId={pid} padre={padre} madre={madre} />
+        </div>
+        {hasAny && <div className="h-4 w-px bg-foreground/30" />}
+      </div>
+    );
+  };
+
+  const DescendantTree = ({ pid, depth = 2 }: { pid: string; depth?: number }) => {
+    const { hijosDe } = useContext(TreeViewContext)!;
+    if (depth <= 0) return null;
+    const children = hijosDe(pid);
+    if (!children.length) return null;
+    return (
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-4 w-px bg-foreground/30" />
+        <div className="relative flex items-start justify-center gap-4">
+          {children.length > 1 && <div className="pointer-events-none absolute left-[12%] right-[12%] top-0 h-px bg-foreground/25" />}
+          {children.map((child) => (
+            <div key={child.id} className="relative flex flex-col items-center gap-2">
+              <div className="h-3 w-px bg-foreground/25" />
+              <PartnershipStrip p={child} compact />
+              <DescendantTree pid={child.id} depth={depth - 1} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const SiblingBranch = ({ p }: { p: PersonaLite }) => {
+    const { hijosDe } = useContext(TreeViewContext)!;
+    return (
+    <div className="flex min-w-[220px] flex-col items-center gap-2 rounded-2xl border border-border/45 bg-card/20 p-3">
+      <PartnershipStrip p={p} compact />
+      {hijosDe(p.id).length > 0 && (
+        <>
+          <div className="h-3 w-px bg-foreground/25" />
+          <div className="flex max-w-[360px] flex-wrap justify-center gap-2">
+            {hijosDe(p.id).map((child) => <PersonTile key={child.id} p={child} />)}
+          </div>
+        </>
+      )}
+    </div>
+  ); };
+
+  const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => {
+    const { generaciones, persona, reload, navigate } = useContext(TreeViewContext)!;
+    return (
+    <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
+      <div className={`mb-4 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
+        {label}
+      </div>
+      {root ? (
+        <>
+          <Ascendants pid={root.id} gen={Math.max(0, renderGenerations(generaciones) - 1)} />
+          <div className="h-4 w-px bg-foreground/30" />
+          <Draggable p={root}>
+            <Hl p={root}>
+              <PersonCard p={root} compact onClick={() => navigate(`/personas/${root.id}`)} />
+            </Hl>
+          </Draggable>
+        </>
+      ) : (
+        <QuickAddRelative personaId={persona!.id} defaultTipo={missingTipo} onAdded={reload}
+          trigger={<span className="block"><EmptySlot label={missingTipo} onClick={() => {}} /></span>} />
+      )}
+    </div>
+  ); };
+
+
 function ArbolContent() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -95,6 +333,9 @@ function ArbolContent() {
   const [categoria, setCategoria] = useState<Categoria>("predeterminada");
   const [docsByPersona, setDocsByPersona] = useState<Map<string, number>>(new Map());
   const [loadingTree, setLoadingTree] = useState(true);
+  const [treeError, setTreeError] = useState<string | null>(null);
+  const [profileProband, setProfileProband] = useState<string | null>(null);
+  const [refreshingTree, setRefreshingTree] = useState(false);
   const [panel, setPanel] = useState<Panel>("arbol");
   const [tasks, setTasks] = useState<any[]>([]);
   const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
@@ -103,60 +344,77 @@ function ArbolContent() {
   const treeScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { user: authUser } = useAuth();
-  const rtKey = useRealtimeReload(["personas", "relaciones", "eventos"], authUser?.id ?? null);
+  const rtKey = useRealtimeReload(["personas", "relaciones", "documentos"], authUser?.id ?? null);
   useEffect(() => { if (rtKey > 0) setReloadKey((k) => k + 1); }, [rtKey]);
 
 
   useEffect(() => {
-    (async () => {
+    if (!authUser?.id) return;
+    const abort = new AbortController();
+    let current = true;
+    const timeout = window.setTimeout(() => abort.abort(), 30_000);
+    void (async () => {
       if (!initialTreeLoaded.current) setLoadingTree(true);
-      const user = (await supabase.auth.getUser()).data.user;
-      const activeTreeId = await getActiveTreeId(user?.id ?? null);
-      const [p, r, profRes, { data: docs }] = await Promise.all([
-        fetchAllPeople<any>("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId }),
-        fetchAllRelations<any>("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId: activeTreeId }),
-        user ? supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null } as any),
-        supabase.from("documentos").select("personas_mencionadas").limit(5000),
-      ]);
-      setPersonas((p as any) ?? []);
-      setRels(r ?? []);
-      const counts = new Map<string, number>();
-      for (const d of docs ?? []) {
-        for (const pid of (d as any).personas_mencionadas ?? []) counts.set(pid, (counts.get(pid) ?? 0) + 1);
+      setRefreshingTree(true);
+      setTreeError(null);
+      try {
+        const activeTreeId = await getActiveTreeId(authUser.id);
+        const [p, r, profile, docs] = await Promise.all([
+          fetchAllPeople<PersonaLite>("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
+          fetchAllRelations("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
+          supabase.from("profiles").select("proband_id").eq("id", authUser.id).maybeSingle(),
+          supabase.from("documentos").select("personas_mencionadas").limit(5000),
+        ]);
+        if (!current) return;
+        if (profile.error) throw profile.error;
+        if (docs.error) throw docs.error;
+        setPersonas(p);
+        setRels(r);
+        setProfileProband(profile.data?.proband_id ?? null);
+        const counts = new Map<string, number>();
+        for (const d of docs.data ?? []) {
+          const ids = Array.isArray(d.personas_mencionadas) ? d.personas_mencionadas : [];
+          for (const pid of ids) counts.set(pid, (counts.get(pid) ?? 0) + 1);
+        }
+        setDocsByPersona(counts);
+        const peopleById = new Map(p.map((person) => [person.id, person]));
+        setRecentPeople(getRecent().map(({ id }) => peopleById.get(id)).filter(Boolean) as PersonaLite[]);
+        initialTreeLoaded.current = true;
+      } catch (error) {
+        if (current) setTreeError(abort.signal.aborted ? "La carga tardó demasiado. Comprueba la conexión y vuelve a intentar." : (error instanceof Error ? error.message : "No se pudo cargar el árbol."));
+      } finally {
+        window.clearTimeout(timeout);
+        if (current) { setLoadingTree(false); setRefreshingTree(false); }
       }
-      setDocsByPersona(counts);
-      const recentIds = getRecent().map((x) => x.id);
-      const peopleById = new Map(((p as any) ?? []).map((person: PersonaLite) => [person.id, person]));
-      setRecentPeople(recentIds.map((id) => peopleById.get(id)).filter(Boolean) as PersonaLite[]);
-      const probandId = (profRes as any)?.data?.proband_id;
-      const validCentro = centroParam && p?.some((x: any) => x.id === centroParam);
-      const validProband = probandId && p?.some((x: any) => x.id === probandId);
-      if (validCentro) {
-        setCenter(centroParam!);
-        setProbandLocked(false); // permite explorar otra rama (tío, primo, etc.)
-      } else if (validProband) {
-        setCenter(probandId);
-        setProbandLocked(true);
-      } else if (!center && p?.length) {
-        setCenter(p[0].id);
-      }
-      initialTreeLoaded.current = true;
-      setLoadingTree(false);
     })();
-  }, [reloadKey, centroParam]);
+    return () => { current = false; abort.abort(); window.clearTimeout(timeout); };
+  }, [reloadKey, authUser?.id]);
+
+  // Exploring another branch changes only the view, never downloads the whole tree again.
+  useEffect(() => {
+    if (centroParam && personas.some((p) => p.id === centroParam)) {
+      setCenter(centroParam); setProbandLocked(false);
+    } else if (profileProband && personas.some((p) => p.id === profileProband)) {
+      setCenter(profileProband); setProbandLocked(true);
+    } else {
+      setCenter((previous) => personas.some((p) => p.id === previous) ? previous : personas[0]?.id ?? "");
+    }
+  }, [centroParam, profileProband, personas]);
 
   useEffect(() => {
-    (async () => {
-      const activeTreeId = await getActiveTreeId(authUser?.id ?? null);
-      const query = supabase
-        .from("research_tasks")
-        .select("id,descripcion,estado,tipo,person_id,created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      const { data } = await applyTreeScope(query as any, activeTreeId);
-      setTasks(data ?? []);
+    if (panel !== "tareas" || !authUser?.id) return;
+    let current = true;
+    void (async () => {
+      try {
+        const treeId = await getActiveTreeId(authUser.id);
+        const query = supabase.from("research_tasks").select("id,descripcion,estado,tipo,person_id,created_at").order("created_at", { ascending: false }).limit(50);
+        const { data, error } = await applyTreeScope(query, treeId);
+        if (error) throw error;
+        if (current) setTasks(data ?? []);
+      } catch (error) { if (current) toast.error(error instanceof Error ? error.message : "No se pudieron cargar las tareas"); }
     })();
-  }, [reloadKey]);
+    return () => { current = false; };
+  }, [reloadKey, panel, authUser?.id]);
 
   // Hide bottom nav / Siri / sidebar when tree is fullscreen
   useEffect(() => {
@@ -180,9 +438,12 @@ function ArbolContent() {
     if (!user) return toast.error("Sesión no encontrada");
     const t = toast.loading("Eliminando árbol completo…");
     try {
-      await supabase.from("relaciones").delete().eq("user_id", user.id);
-      await supabase.from("eventos").delete().eq("user_id", user.id);
-      await supabase.from("personas").delete().eq("user_id", user.id);
+      const treeId = await getActiveTreeId(user.id);
+      if (!treeId) throw new Error("Selecciona el árbol que quieres eliminar en Configuración.");
+      for (const table of ["relaciones", "eventos", "personas"] as const) {
+        const { error } = await applyTreeScope(supabase.from(table).delete().eq("user_id", user.id) as any, treeId, false);
+        if (error) throw error;
+      }
       toast.dismiss(t);
       toast.success("Árbol eliminado por completo");
       setCenter("");
@@ -202,10 +463,10 @@ function ArbolContent() {
   const hijosDe = (pid: string) => kHijosDe(pid, rels as any, byId);
   const hermanosDe = (pid: string) => kHermanosDe(pid, rels as any, byId);
 
-  const reload = () => setReloadKey((k) => k + 1);
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
   const refreshTree = () => {
     reload();
-    toast.success("Árbol actualizado");
+
   };
 
   const centerTreeViewport = () => {
@@ -287,222 +548,12 @@ function ArbolContent() {
   const eliminarRelacionEntre = async (aId: string, bId: string) => {
     const ids = relacionesEntre(aId, bId, rels as any).map((r) => r.id);
     if (!ids.length) return;
-    await supabase.from("relaciones").delete().in("id", ids);
+    const { error } = await supabase.from("relaciones").delete().in("id", ids);
+    if (error) return toast.error(error.message);
     toast.success("Relación eliminada");
     setEditRel(null);
     reload();
   };
-
-  // Wrapper: in edit mode = drag/drop + delete badge; otherwise person cards open
-  // the full genealogical profile. The center is changed from the header control.
-  const TreeCard = ({ p, focusable = true, children }: { p: PersonaLite; focusable?: boolean; children: React.ReactNode }) => {
-    if (editMode) {
-      const linkedToCenter = persona && p.id !== persona.id && relacionesEntre(persona.id, p.id, rels as any).length > 0;
-      return (
-        <div
-          draggable
-          onDragStart={(e) => { e.dataTransfer.setData("text/persona", p.id); e.dataTransfer.effectAllowed = "link"; }}
-          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "link"; }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const src = e.dataTransfer.getData("text/persona");
-            if (!src || src === p.id) return;
-            setDropTarget({ source: src, target: p.id });
-          }}
-          className="relative ring-2 ring-accent/40 rounded-3xl cursor-grab active:cursor-grabbing"
-        >
-          {children}
-          {linkedToCenter && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setEditRel({ a: persona!, b: p }); }}
-              className="absolute -top-2 -right-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition"
-              aria-label="Editar relación"
-              title="Editar / eliminar esta relación"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      );
-    }
-    return <>{children}</>;
-  };
-
-  // Determine highlight ring based on selected categoria
-  const catRing = (p: PersonaLite | undefined): string => {
-    if (!p || categoria === "predeterminada") return "";
-    if (categoria === "fuentes") {
-      const n = docsByPersona.get(p.id) ?? 0;
-      return n > 0 ? "ring-2 ring-emerald-400/70 rounded-2xl" : "opacity-60";
-    }
-    if (categoria === "pais") {
-      const nac = ((p as any).nacionalidad ?? "").toLowerCase();
-      if (!nac) return "opacity-60";
-      // Stable hue from string
-      let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
-      return `rounded-2xl ring-2`;
-    }
-    if (categoria === "historia") {
-      const y = (p as any).nac_fecha ? new Date((p as any).nac_fecha).getUTCFullYear() : (p as any).nac_rango_ini;
-      if (!y) return "opacity-60";
-      if (y < 1850) return "ring-2 ring-amber-500/70 rounded-2xl";
-      if (y < 1920) return "ring-2 ring-orange-500/70 rounded-2xl";
-      if (y < 1970) return "ring-2 ring-purple-500/70 rounded-2xl";
-      return "ring-2 ring-sky-500/70 rounded-2xl";
-    }
-    return "";
-  };
-  const catStyle = (p: PersonaLite | undefined): React.CSSProperties => {
-    if (!p || categoria !== "pais") return {};
-    const nac = ((p as any).nacionalidad ?? "").toLowerCase();
-    if (!nac) return {};
-    let h = 0; for (const c of nac) h = (h * 31 + c.charCodeAt(0)) % 360;
-    return { boxShadow: `0 0 0 2px hsl(${h} 70% 55%)`, borderRadius: "1rem" };
-  };
-  const Hl = ({ p, children }: { p?: PersonaLite; children: React.ReactNode }) => (
-    <div className={catRing(p)} style={catStyle(p)}>{children}</div>
-  );
-
-  const Draggable = TreeCard; // backwards-compat alias used by older sections below
-
-  const PartnershipStrip = ({ p, compact = false }: { p: PersonaLite; compact?: boolean }) => {
-    const partners = conyugesDe(p.id);
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
-          <Draggable p={p}>
-            <Hl p={p}>
-              <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => navigate(`/personas/${p.id}`)} />
-            </Hl>
-          </Draggable>
-          {partners.map((partner) => (
-            <Draggable key={partner.id} p={partner}>
-              <Hl p={partner}>
-                <PersonCard p={partner} compact={compact} onClick={() => navigate(`/personas/${partner.id}`)} />
-              </Hl>
-            </Draggable>
-          ))}
-          <QuickAddRelative personaId={p.id} defaultTipo="conyuge" onAdded={reload}
-            trigger={<button className="block"><EmptySlot label="cónyuge / unión" onClick={() => {}} /></button>} />
-        </div>
-        {partners.length > 0 && (
-          <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            {partners.length} unión{partners.length === 1 ? "" : "es"} registrada{partners.length === 1 ? "" : "s"}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const PersonTile = ({ p, highlighted = false }: { p: PersonaLite; highlighted?: boolean }) => (
-    <Draggable p={p}>
-      <Hl p={p}>
-        <PersonCard p={p} compact highlighted={highlighted} onClick={() => navigate(`/personas/${p.id}`)} />
-      </Hl>
-    </Draggable>
-  );
-
-  const AddTile = ({ personaId, tipo, label }: { personaId: string; tipo: "padre" | "madre" | "conyuge" | "hijo"; label: string }) => (
-    <QuickAddRelative personaId={personaId} personaSexo={byId.get(personaId)?.sexo} defaultTipo={tipo} onAdded={reload}
-      trigger={<button className="block"><EmptySlot label={label} onClick={() => {}} /></button>} />
-  );
-
-  const CouplePair = ({ childId, padre, madre }: { childId: string; padre?: PersonaLite; madre?: PersonaLite }) => (
-    <div className="relative inline-flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
-      <div className="pointer-events-none absolute left-[50%] top-1/2 h-px w-[calc(100%-2.5rem)] -translate-x-1/2 bg-foreground/30" />
-      <div className="relative z-10">
-        {padre ? <PersonTile p={padre} /> : <AddTile personaId={childId} tipo="padre" label="padre" />}
-      </div>
-      <div className="relative z-10">
-        {madre ? <PersonTile p={madre} /> : <AddTile personaId={childId} tipo="madre" label="madre" />}
-      </div>
-    </div>
-  );
-
-  // Recursive ascendants renderer — compact, connected, and symmetric.
-  const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
-    if (gen <= 0 || trail.includes(pid)) return null;
-    const { padre, madre } = padresDe(pid);
-    const hasAny = !!(padre || madre);
-    const nextTrail = [...trail, pid];
-    return (
-      <div className="inline-flex flex-col items-center">
-        {hasAny && (
-          <div className="relative mb-2 inline-grid grid-cols-2 items-end justify-center gap-3 sm:gap-4">
-            <div className="flex min-w-[156px] flex-col items-center justify-end">
-              {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            </div>
-            <div className="flex min-w-[156px] flex-col items-center justify-end">
-              {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            </div>
-            <div className="pointer-events-none absolute bottom-0 left-1/4 right-1/4 h-px bg-foreground/25" />
-            <div className="pointer-events-none absolute bottom-0 left-1/2 h-4 w-px translate-y-full bg-foreground/25" />
-          </div>
-        )}
-        <div className="relative mt-4">
-          <CouplePair childId={pid} padre={padre} madre={madre} />
-        </div>
-        {hasAny && <div className="h-4 w-px bg-foreground/30" />}
-      </div>
-    );
-  };
-
-  const DescendantTree = ({ pid, depth = 2 }: { pid: string; depth?: number }) => {
-    if (depth <= 0) return null;
-    const children = hijosDe(pid);
-    if (!children.length) return null;
-    return (
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-4 w-px bg-foreground/30" />
-        <div className="relative flex items-start justify-center gap-4">
-          {children.length > 1 && <div className="pointer-events-none absolute left-[12%] right-[12%] top-0 h-px bg-foreground/25" />}
-          {children.map((child) => (
-            <div key={child.id} className="relative flex flex-col items-center gap-2">
-              <div className="h-3 w-px bg-foreground/25" />
-              <PartnershipStrip p={child} compact />
-              <DescendantTree pid={child.id} depth={depth - 1} />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const SiblingBranch = ({ p }: { p: PersonaLite }) => (
-    <div className="flex min-w-[220px] flex-col items-center gap-2 rounded-2xl border border-border/45 bg-card/20 p-3">
-      <PartnershipStrip p={p} compact />
-      {hijosDe(p.id).length > 0 && (
-        <>
-          <div className="h-3 w-px bg-foreground/25" />
-          <div className="flex max-w-[360px] flex-wrap justify-center gap-2">
-            {hijosDe(p.id).map((child) => <PersonTile key={child.id} p={child} />)}
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => (
-    <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
-      <div className={`mb-4 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
-        {label}
-      </div>
-      {root ? (
-        <>
-          <Ascendants pid={root.id} gen={Math.max(0, generaciones - 1)} />
-          <div className="h-4 w-px bg-foreground/30" />
-          <Draggable p={root}>
-            <Hl p={root}>
-              <PersonCard p={root} compact onClick={() => navigate(`/personas/${root.id}`)} />
-            </Hl>
-          </Draggable>
-        </>
-      ) : (
-        <QuickAddRelative personaId={persona!.id} defaultTipo={missingTipo} onAdded={reload}
-          trigger={<button className="block"><EmptySlot label={missingTipo} onClick={() => {}} /></button>} />
-      )}
-    </div>
-  );
 
   const exportarGedcom = async () => {
     const { data, error } = await supabase.functions.invoke("familysearch-export", { body: { format: "gedcom" } });
@@ -591,6 +642,7 @@ function ArbolContent() {
 
 
   return (
+    <TreeViewContext.Provider value={{ editMode, persona, rels, categoria, docsByPersona, byId, generaciones, navigate, reload, padresDe, hijosDe, conyugesDe, setDropTarget, setEditRel }}>
     <div
       className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto" : "-mx-3 md:-mx-6"}
       style={fullscreen ? {
@@ -638,26 +690,29 @@ function ArbolContent() {
       </div>
 
       {/* Compact tree control row */}
-      <div className="mb-3 flex items-center gap-2 px-3 md:px-6">
+      <div className="mb-3 flex flex-wrap items-center gap-2 px-3 md:px-6">
         <div className="min-w-0 flex-1 rounded-full border border-border bg-card/60 px-3 py-2 text-xs">
           <span className="text-muted-foreground">Centro: </span>
           <span className="font-medium">{persona ? `${persona.nombres} ${persona.apellidos}` : "configúralo en Configuración"}</span>
           <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
         </div>
-        <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} aria-label="Actualizar árbol" title="Actualizar árbol">
+        <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} disabled={refreshingTree} aria-label="Actualizar árbol" title="Actualizar árbol">
           <RefreshCw className="h-4 w-4" />
         </Button>
         <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
           <SelectTrigger className="h-9 w-[186px] rounded-full text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {[2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50].map((n) => (
+            {[2, 3, 4, 5, 6].map((n) => (
               <SelectItem key={n} value={String(n)}>{generationOptionLabel(n)}</SelectItem>
             ))}
-            <SelectItem value="999">Todas las generaciones</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
+      <p className="mx-3 mb-3 text-xs text-muted-foreground md:mx-6">Hasta seis generaciones por vista. Abre la ficha de un antepasado y céntralo en el árbol para seguir explorando.</p>
+      {treeError && <div role="alert" className="mx-3 mb-3 rounded-xl border border-destructive/40 p-4 md:mx-6">
+        <p>{treeError}</p><Button className="mt-2" onClick={reload} disabled={refreshingTree}>Reintentar carga</Button>
+      </div>}
       {vista === "ascendientes" && (
         <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
           {["Padres", "Abuelos", "Bisabuelos", "Tatarabuelos", "Trastatarabuelos"].map((label) => (
@@ -951,7 +1006,7 @@ function ArbolContent() {
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Ascendencia paterna y materna
             </div>
-            <Ascendants pid={persona.id} gen={generaciones} />
+            <Ascendants pid={persona.id} gen={renderGenerations(generaciones)} />
 
             <div className="h-4 w-px bg-foreground/30" />
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -1053,6 +1108,7 @@ function ArbolContent() {
         </DialogContent>
       </Dialog>
     </div>
+    </TreeViewContext.Provider>
   );
 }
 

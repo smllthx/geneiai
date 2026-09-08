@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { padresDe } from "@/lib/kinship";
+import { ancestorLayers } from "@/lib/treeRendering";
 
 type Persona = {
   id: string; nombres: string; apellidos: string; sexo?: string | null;
@@ -19,24 +21,11 @@ export default function DynastyView({
   const navigate = useNavigate();
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
 
-  const layers = useMemo(() => {
-    const out: (string | null)[][] = [[centerId]];
-    for (let g = 1; g <= generations; g++) {
-      const prev = out[g - 1];
-      const next: (string | null)[] = [];
-      prev.forEach((pid) => {
-        if (!pid) { next.push(null, null); return; }
-        const padres = rels
-          .filter((r) => r.persona_id === pid && (r.tipo === "padre" || r.tipo === "madre"))
-          .map((r) => ({ id: r.pariente_id, tipo: r.tipo, sexo: byId.get(r.pariente_id)?.sexo }));
-        const padre = padres.find((x) => x.tipo === "padre" || x.sexo === "masculino")?.id ?? null;
-        const madre = padres.find((x) => x.tipo === "madre" || x.sexo === "femenino")?.id ?? null;
-        next.push(padre, madre);
-      });
-      out.push(next);
-    }
-    return out;
-  }, [personas, rels, centerId, generations, byId]);
+  const normalizedRels = useMemo(() => rels.map((r, i) => ({ ...r, id: String(i) })), [rels]);
+  const layers = useMemo(() => ancestorLayers(centerId, generations, (pid) => {
+    const parents = padresDe(pid, normalizedRels, byId);
+    return [parents.padre?.id ?? null, parents.madre?.id ?? null];
+  }), [normalizedRels, centerId, generations, byId]);
 
   const renderCard = (pid: string | null, gen: number, idx: number) => {
     const p = pid ? byId.get(pid) : undefined;
@@ -57,7 +46,7 @@ export default function DynastyView({
     }
     return (
       <button
-        key={pid}
+        key={`${gen}-${idx}-${pid}`}
         onClick={() => navigate(`/personas/${pid}`)}
         className={`glass min-w-[110px] max-w-[150px] rounded-xl ring-2 ${borderColor} ${bg} px-2 py-1.5 text-left transition-all hover:scale-[1.04]`}
       >

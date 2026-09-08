@@ -1,0 +1,11 @@
+{
+  "version": "3.0.1",
+  "publishedAt": "2026-09-08",
+  "changes": [
+    "Árbol más ligero: parentescos indexados y hasta seis generaciones por vista.",
+    "Los editores de familiares permanecen abiertos al actualizar la vista.",
+    "Recuperación de cargas fallidas y mensajes específicos de conexión, sesión e integraciones.",
+    "Navegador integrado para enlaces compatibles y autorización de FamilySearch en una ventana segura.",
+    "Aviso de novedades y actualización desde la misma app, conservando las ediciones pendientes."
+  ]
+}

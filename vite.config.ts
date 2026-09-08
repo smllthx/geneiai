@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     apply: "build",
     async writeBundle(options, bundle) {
       const hash = createHash("sha256").update(Object.keys(bundle).sort().join("\n"));
-      for (const asset of ["sw.js", "offline.html", "manifest.webmanifest", "favicon.png", "logo-sidebar.png", "apple-touch-icon.png", "app-icon-192.png", "app-icon-512.png"]) {
+      for (const asset of ["sw.js", "release.json", "offline.html", "manifest.webmanifest", "favicon.png", "logo-sidebar.png", "apple-touch-icon.png", "app-icon-192.png", "app-icon-512.png"]) {
         hash.update(await readFile(path.resolve("public", asset)));
       }
       const revision = hash.digest("hex").slice(0, 12);

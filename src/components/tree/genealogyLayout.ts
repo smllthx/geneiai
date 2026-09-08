@@ -167,10 +167,19 @@ const spousesOf = (id: string, relationships: GenealogyRelationship[]) =>
 
 const inferLineages = (centerId: string, relationships: GenealogyRelationship[]) => {
   const result = new Map<string, LineageSide>([[centerId, "central"]]);
+  const parentsByChild = new Map<string, string[]>();
+  for (const rel of relationships) if (["padre", "madre", "hijo"].includes(rel.type)) {
+    parentsByChild.set(rel.to, [...(parentsByChild.get(rel.to) ?? []), rel.from]);
+  }
   const markAncestors = (id: string | undefined, lineage: LineageSide) => {
-    if (!id || result.get(id) === lineage) return;
-    result.set(id, lineage);
-    for (const parent of parentRelsOf(id, relationships)) markAncestors(parent.from, lineage);
+    const pending = id ? [id] : [];
+    const visited = new Set<string>([centerId]);
+    while (pending.length) {
+      const next = pending.pop()!;
+      if (visited.has(next)) continue;
+      visited.add(next); result.set(next, lineage);
+      pending.push(...(parentsByChild.get(next) ?? []));
+    }
   };
   for (const parent of parentRelsOf(centerId, relationships)) {
     markAncestors(parent.from, parent.type === "madre" ? "materna" : "paterna");
@@ -189,6 +198,8 @@ const buildDynamicPositions = (centerId: string, relationships: GenealogyRelatio
   const mother = parents.find((r) => r.type === "madre")?.from;
   if (father) positions.set(father, { x: -260, y: -260 });
   if (mother) positions.set(mother, { x: 260, y: -260 });
+  const alternatives = [...new Set(parents.map((r) => r.from))].filter((id) => id !== father && id !== mother);
+  alternatives.forEach((id, index) => positions.set(id, { x: 620 + index * 290, y: -260 }));
 
   const placeGrandparents = (parentId: string | undefined, baseX: number) => {
     if (!parentId) return;
@@ -229,13 +240,19 @@ export function buildGenealogyLayout(
   const peopleById = new Map(people.map((person) => [person.id, person]));
   const dynamicPositions = buildDynamicPositions(centerId, relationships);
   const lineages = inferLineages(centerId, relationships);
-  const nodes: TreeNode[] = people.map((person) => ({
+  // Only the centered family has positions. Previously thousands of unrelated
+  // cards were stacked at (0,0), making every pan repaint the entire database.
+  const visible = people.filter((person) => dynamicPositions.has(person.id));
+  const centered = visible.find((person) => person.id === centerId);
+  const bounded = [...(centered ? [centered] : []), ...visible.filter((p) => p.id !== centerId)].slice(0, 160);
+  const visibleIds = new Set(bounded.map((person) => person.id));
+  const nodes: TreeNode[] = bounded.map((person) => ({
     id: person.id,
     type: "person",
     position: dynamicPositions.get(person.id) ?? POSITIONS[person.id] ?? { x: 0, y: 0 },
     data: { person: { ...person, lineage: lineages.get(person.id) ?? person.lineage } },
   }));
-  const edges: TreeEdge[] = relationships.map((relationship) => ({
+  const edges: TreeEdge[] = relationships.filter((r) => visibleIds.has(r.from) && visibleIds.has(r.to)).map((relationship) => ({
     id: relationship.id,
     source: relationship.from,
     target: relationship.to,

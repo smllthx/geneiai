@@ -177,7 +177,7 @@ export default function NuevaPersona() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div data-geneiai-editing="true" className="min-h-[100dvh] bg-background">
       <Helmet>
         <title>Agregar persona · GENEAI</title>
         <meta name="description" content="Agrega una nueva persona a tu árbol genealógico." />

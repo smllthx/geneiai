@@ -7,6 +7,7 @@ struct GENAIAAppleApp: App {
     var body: some Scene {
         WindowGroup {
             AppGateView()
+                .modifier(AppReleaseNotice())
                 .environment(sync.session)
                 .environment(sync.model)
                 .environment(sync)

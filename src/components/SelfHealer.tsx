@@ -68,6 +68,7 @@ export default function SelfHealer() {
     pushError = (e) => {
       setErrors((arr) => [...arr.slice(-9), e]);
       setCurrent(e);
+      setDiag(null);
       setOpen(true);
     };
 
@@ -146,10 +147,10 @@ export default function SelfHealer() {
   }, []);
 
   useEffect(() => {
-    if (!current || diag || loading) return;
+    if (!open || !current || diag || loading) return;
     const timer = window.setTimeout(() => diagnose(current), 250);
     return () => window.clearTimeout(timer);
-  }, [current, diag, loading, diagnose]);
+  }, [open, current, diag, loading, diagnose]);
 
   const apply = async () => {
     if (!diag) return;
@@ -194,7 +195,7 @@ export default function SelfHealer() {
               </button>
             </div>
             <p className="mb-2 text-xs text-muted-foreground">
-              Cuéntale a la IA qué está fallando. Analizará y aplicará un parche.
+              Cuéntale a la IA qué está fallando. Te propondrá pasos de recuperación. Las correcciones de código llegan con las actualizaciones de GENEAI.
             </p>
             <textarea
               value={manualText}
@@ -222,7 +223,7 @@ export default function SelfHealer() {
                 </h3>
               </div>
               <button
-                onClick={() => { setOpen(false); setDiag(null); }}
+                onClick={() => { setOpen(false); setDiag(null); setCurrent(null); }}
                 className="rounded-full p-1 hover:bg-foreground/10"
                 aria-label="Cerrar"
               >
@@ -272,7 +273,7 @@ export default function SelfHealer() {
                 </div>
                 <Button onClick={apply} className="w-full">
                   <Power className="mr-1 h-4 w-4" />
-                  {diag.requires_restart ? "Aplicar parche y reiniciar" : "Aplicar parche"}
+                  {diag.requires_restart ? "Aplicar recuperación y reiniciar" : "Aplicar recuperación"}
                 </Button>
               </div>
             )}

@@ -1,3 +1,4 @@
+import { currentRelease } from "@/lib/appRelease";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
@@ -500,6 +501,7 @@ export default function Configuracion() {
     <div>
       <PageHeader title="Configuración" subtitle="Cuenta, persona central, IA, conexiones, menús y actualizaciones remotas." />
       <InstallAppCard />
+          <Button variant="outline" onClick={() => window.dispatchEvent(new Event("geneai:show-release"))}>Novedades de GENEAI {currentRelease.version}</Button>
 
       <Card className="archivo-card mb-6">
         <CardHeader>

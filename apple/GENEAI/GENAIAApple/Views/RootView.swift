@@ -93,11 +93,11 @@ struct FeatureContentView: View {
         case .search:
             GlobalSearchView()
         case .importExport:
-            ImportConnectionsView()
+            WebFeatureView(feature: feature)
         case .settings:
             SettingsView()
         default:
-            FeaturePlaceholderView(feature: feature)
+            WebFeatureView(feature: feature)
         }
     }
 }

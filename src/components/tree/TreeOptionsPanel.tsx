@@ -33,7 +33,7 @@ export default function TreeOptionsPanel({ open, options, onChange, onClose }: T
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Opciones</p>
           <h2 className="text-lg font-semibold text-foreground">Vista del árbol</h2>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="Cerrar opciones">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -47,7 +47,7 @@ export default function TreeOptionsPanel({ open, options, onChange, onClose }: T
         ))}
       </div>
 
-      <Button variant="outline" className="mt-4 w-full justify-start">
+      <Button variant="outline" className="mt-4 w-full justify-start" onClick={() => window.print()}>
         <Printer className="h-4 w-4" /> Imprimir o guardar árbol
       </Button>
     </aside>

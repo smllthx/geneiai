@@ -56,6 +56,15 @@
           "value": "public, max-age=300, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/release.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ],
   "rewrites": [
