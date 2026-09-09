@@ -209,5 +209,18 @@ export function calcularParentesco(
     const r = tryPair(sp, destinoId);
     if (r) return { texto: `${r.texto} (de tu pareja)`, via: "conyuge", pasos: r.pasos + 1 };
   }
+  // 4) Imports may contain an explicit sibling row without parent rows. Keep
+  // the relationship useful instead of reporting that the people are unrelated.
+  for (const row of rels) {
+    const tipo = normalizeTipo(row.tipo);
+    if (!["hermano", "hermana", "sibling"].includes(tipo)) continue;
+    if (!((row.persona_id === yoId && row.pariente_id === destinoId) || (row.persona_id === destinoId && row.pariente_id === yoId))) continue;
+    return { texto: fem ? "tu hermana" : "tu hermano", pasos: 1 };
+  }
+  // 5) Last-resort graph path for historical/inverse relation categories. The
+  // path is intentionally labelled as familiar until documentary parents make
+  // a more precise degree possible.
+  const fallbackPath = construirCaminoParentesco(yoId, destinoId, rels);
+  if (fallbackPath.length > 1) return { texto: "familiar (camino registrado)", pasos: fallbackPath.length - 1 };
   return null;
 }
