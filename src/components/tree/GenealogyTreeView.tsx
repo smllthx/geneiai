@@ -58,12 +58,27 @@ const initialsOf = (nombres: string, apellidos: string) =>
 const placeLabel = (place: any) =>
   [place?.ciudad, place?.provincia, place?.region, place?.pais].filter(Boolean).join(", ");
 
-const convertRelationship = (row: any): GenealogyRelationship | null => {
-  if (row.tipo === "padre" || row.tipo === "madre") {
-    return { id: row.id, from: row.pariente_id, to: row.persona_id, type: row.tipo };
+const relationType = (value: unknown) => String(value ?? "")
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[\/_-]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const convertRelationship = (row: any, peopleById: Map<string, any>): GenealogyRelationship | null => {
+  const tipo = relationType(row.tipo);
+  const parent = new Set(["padre", "madre", "progenitor", "progenitora", "parent", "padres", "padre adoptivo", "madre adoptiva", "tutor", "tutora"]);
+  const child = new Set(["hijo", "hija", "child", "descendiente"]);
+  if (parent.has(tipo)) {
+    const parentPerson = peopleById.get(row.pariente_id);
+    const inferred = tipo.includes("madre") || tipo === "progenitora" || parentPerson?.sexo === "femenino" ? "madre" : "padre";
+    return { id: row.id, from: row.pariente_id, to: row.persona_id, type: inferred };
   }
-  if (row.tipo === "hijo") {
-    return { id: row.id, from: row.persona_id, to: row.pariente_id, type: "hijo" };
+  if (child.has(tipo)) {
+    const parentPerson = peopleById.get(row.persona_id);
+    const inferred = parentPerson?.sexo === "femenino" ? "madre" : "padre";
+    return { id: row.id, from: row.persona_id, to: row.pariente_id, type: inferred };
   }
   if (isSpouseLikeRelation(row)) {
     return { id: row.id, from: row.persona_id, to: row.pariente_id, type: "conyuge" };
@@ -249,7 +264,8 @@ export default function GenealogyTreeView() {
           lineage: "central",
         };
       });
-      const convertedRels = dedupeRelationships((rels ?? []).map(convertRelationship).filter(Boolean) as GenealogyRelationship[]);
+      const peopleById = new Map(convertedPeople.map((person) => [person.id, person]));
+      const convertedRels = dedupeRelationships((rels ?? []).map((row) => convertRelationship(row, peopleById)).filter(Boolean) as GenealogyRelationship[]);
       const proband = (profile as any)?.proband_id;
       const validCenter = proband && convertedPeople.some((person) => person.id === proband) ? proband : convertedPeople[0].id;
       setPeople(convertedPeople);
@@ -303,7 +319,7 @@ export default function GenealogyTreeView() {
   };
 
   return (
-    <div className={`-mx-3 -my-3 min-h-[calc(100dvh-8rem)] md:-mx-6 md:-my-6 ${options.darkMode ? "bg-slate-950" : "bg-slate-100"}`}>
+    <div className={`tree-workspace -mx-3 -my-3 min-h-[calc(100dvh-8rem)] md:-mx-6 md:-my-6 ${options.darkMode ? "bg-slate-950" : "bg-background"}`}>
       <div
         ref={viewportRef}
         className={`relative h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden touch-none [background-size:28px_28px] ${
@@ -358,9 +374,9 @@ export default function GenealogyTreeView() {
 
         <TreeOptionsPanel open={optionsOpen} options={options} onChange={setOptions} onClose={() => setOptionsOpen(false)} />
 
-        <div className="absolute bottom-4 left-4 z-10 hidden rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm sm:block">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">Mini mapa</p>
-          <div className="relative h-24 w-40 rounded-xl bg-slate-100">
+        <div className="absolute bottom-4 left-4 z-10 hidden rounded-2xl border border-border bg-card/90 p-3 shadow-sm backdrop-blur sm:block">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Mini mapa</p>
+          <div className="relative h-24 w-40 rounded-xl bg-muted/60">
             {displayNodes.map((node) => (
               <span
                 key={node.id}
@@ -371,25 +387,31 @@ export default function GenealogyTreeView() {
           </div>
         </div>
 
-        {(viewMode === "fan") && (
-          <FanChartView nodes={displayNodes} edges={edges} centerId={centerId} onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)} />
-        )}
-        {(viewMode === "descendancy") && (
-          <DescendancyView
-            nodes={displayNodes}
-            relationships={relationships}
-            centerId={centerId}
-            onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)}
-            onAddChild={(id) => { const person = people.find((p) => p.id === id); if (person) handleAddRelative("hijo", person); }}
-          />
-        )}
-        {(viewMode === "founder") && (
-          <FounderLineageView
-            nodes={displayNodes}
-            relationships={relationships}
-            centerId={centerId}
-            onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)}
-          />
+        {(viewMode === "fan" || viewMode === "descendancy" || viewMode === "founder") && (
+          <div className="tree-alternate-surface absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 origin-center" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
+              {viewMode === "fan" && (
+                <FanChartView nodes={displayNodes} edges={edges} centerId={centerId} onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)} />
+              )}
+              {viewMode === "descendancy" && (
+                <DescendancyView
+                  nodes={displayNodes}
+                  relationships={relationships}
+                  centerId={centerId}
+                  onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)}
+                  onAddChild={(id) => { const person = people.find((p) => p.id === id); if (person) handleAddRelative("hijo", person); }}
+                />
+              )}
+              {viewMode === "founder" && (
+                <FounderLineageView
+                  nodes={displayNodes}
+                  relationships={relationships}
+                  centerId={centerId}
+                  onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)}
+                />
+              )}
+            </div>
+          </div>
         )}
 
         {(viewMode === "portrait" || viewMode === "horizontal") && <div
@@ -398,10 +420,10 @@ export default function GenealogyTreeView() {
             transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px)) scale(${scale})`,
           }}
         >
-          <div className="pointer-events-none absolute left-[700px] top-[18px] rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">Abuelos</div>
-          <div className="pointer-events-none absolute left-[760px] top-[270px] rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">Padres</div>
-          <div className="pointer-events-none absolute left-[820px] top-[575px] rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">Persona central</div>
-          <div className="pointer-events-none absolute left-[830px] top-[885px] rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">Hijos</div>
+          <div className="pointer-events-none absolute left-[700px] top-[18px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Abuelos</div>
+          <div className="pointer-events-none absolute left-[760px] top-[270px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Padres</div>
+          <div className="pointer-events-none absolute left-[820px] top-[575px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Persona central</div>
+          <div className="pointer-events-none absolute left-[830px] top-[885px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Hijos</div>
           <svg className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
             {siblingEdges.map((edge) => {
               const source = nodesById.get(edge.source);
@@ -462,7 +484,7 @@ export default function GenealogyTreeView() {
           ))}
         </div>}
 
-        <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-xs text-slate-600 shadow-sm">
+        <div className="tree-legend absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card/90 px-4 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> paterna</span>
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-violet-500" /> materna</span>
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" /> datos incompletos</span>

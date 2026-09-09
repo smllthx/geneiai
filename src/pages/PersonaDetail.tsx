@@ -17,7 +17,7 @@ import CertezaBadge from "@/components/CertezaBadge";
 import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar, RefreshCw, Star, Route, Copy, Info, Network, ListChecks } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { calcularParentesco } from "@/lib/parentesco";
+import { calcularParentesco, construirCaminoParentesco } from "@/lib/parentesco";
 import PersonaSmartInsights from "@/components/PersonaSmartInsights";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
@@ -384,7 +384,7 @@ export default function PersonaDetail() {
         <link rel="canonical" href={`${window.location.origin}/personas/${id}`} />
       </Helmet>
 
-      <div className="-mx-3 mb-0 flex items-center gap-2 border-b border-border bg-black px-3 py-3 text-white md:mx-0 md:mb-3 md:rounded-2xl md:border">
+      <div className="archivo-card -mx-3 mb-0 flex items-center gap-2 px-3 py-3 text-foreground md:mx-0 md:mb-3 md:rounded-2xl">
         <Button variant="ghost" size="sm" onClick={() => navigate("/personas")}><ArrowLeft className="h-4 w-4" /> Personas</Button>
         <div className="min-w-0 flex-1 text-center font-display text-lg font-bold truncate">{fullName}</div>
         {!isNew && (
@@ -507,7 +507,7 @@ export default function PersonaDetail() {
       )}
 
       <Tabs defaultValue="detalles">
-        <TabsList className="-mx-3 mb-3 flex h-auto w-auto flex-wrap justify-start gap-1 rounded-none border-b border-cyan-400/60 bg-zinc-950 p-2 text-white md:mx-0 md:rounded-2xl md:border">
+        <TabsList className="archivo-card -mx-3 mb-3 flex h-auto w-auto flex-wrap justify-start gap-1 p-2 md:mx-0 md:rounded-2xl">
           {[
             ["detalles", "Detalles"],
             ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
@@ -523,7 +523,7 @@ export default function PersonaDetail() {
             <TabsTrigger
               key={v}
               value={v}
-              className="relative min-h-10 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/70 shadow-none transition hover:bg-white/10 data-[state=active]:border-cyan-400 data-[state=active]:bg-cyan-400/15 data-[state=active]:text-white data-[state=active]:shadow-none sm:text-sm"
+              className="relative min-h-10 shrink-0 rounded-xl border border-border/70 bg-foreground/5 px-3 py-2 text-xs font-bold text-muted-foreground shadow-none transition hover:bg-primary/10 data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none sm:text-sm"
             >
               {l}
             </TabsTrigger>
@@ -532,8 +532,8 @@ export default function PersonaDetail() {
 
         <TabsContent value="detalles">
           {!isNew && !editMode && (
-            <Card className="mb-3 overflow-hidden rounded-none border-x-0 border-border bg-zinc-950 text-white md:rounded-2xl md:border-x">
-              <CardHeader className="border-b border-border/70 bg-zinc-900 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-white/70">Información esencial</CardTitle></CardHeader>
+            <Card className="archivo-card mb-3 overflow-hidden rounded-none border-x-0 md:rounded-2xl md:border-x">
+              <CardHeader className="border-b border-border/70 bg-foreground/5 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Información esencial</CardTitle></CardHeader>
               <CardContent className="grid gap-0 p-0 text-sm">
                 <Field label="Nombre" value={fullName} />
                 <Field label="Nacimiento" value={vitalValue(p.nac_fecha, p.nac_lugar_id, p.nac_fecha_aprox)} />
@@ -544,8 +544,8 @@ export default function PersonaDetail() {
             </Card>
           )}
           {!isNew && !editMode && (
-            <Card className="mb-3 overflow-hidden rounded-none border-x-0 border-border bg-zinc-950 text-white md:rounded-2xl md:border-x">
-              <CardHeader className="border-b border-border/70 bg-zinc-900 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-white/70">Otra información</CardTitle></CardHeader>
+            <Card className="archivo-card mb-3 overflow-hidden rounded-none border-x-0 md:rounded-2xl md:border-x">
+              <CardHeader className="border-b border-border/70 bg-foreground/5 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Otra información</CardTitle></CardHeader>
               <CardContent className="grid gap-0 p-0 text-sm">
                 <Field label="Sexo" value={p.sexo} />
                 <Field label="Nacionalidad / origen" value={p.nacionalidad} />
@@ -1006,11 +1006,11 @@ function MatrimonioResumen({ titulo, fecha, lugarId, lugaresMap }: { titulo: str
   const lugarTxt = l ? [l.ciudad, l.provincia, l.pais].filter(Boolean).join(", ") : null;
   if (!fechaTxt && !lugarTxt) return null;
   return (
-    <div className="-mx-3 mb-0 border-y border-border bg-black px-6 py-4 text-white md:mx-0 md:mb-3 md:rounded-2xl md:border">
+    <div className="archivo-card -mx-3 mb-0 px-6 py-4 text-foreground md:mx-0 md:mb-3 md:rounded-2xl">
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-base">💍</div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold tracking-tight text-white/55">{titulo}</div>
+          <div className="text-sm font-semibold tracking-tight text-muted-foreground">{titulo}</div>
           <div className="mt-0.5 break-words text-xl font-bold leading-snug">
             {fechaTxt ?? "Fecha desconocida"}{lugarTxt ? ` · ${lugarTxt}` : ""}
           </div>
@@ -1047,18 +1047,18 @@ function FamiliaSeccion({
     return x.sexo === "femenino" ? "madre" : "padre";
   };
   return (
-    <section className="-mx-3 border-y border-border bg-black text-white md:mx-0 md:rounded-2xl md:border">
-      <header className="flex items-center justify-between border-b border-border/70 bg-zinc-900 px-6 py-3">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-white/60">
+    <section className="archivo-card -mx-3 border-y border-border md:mx-0 md:rounded-2xl md:border">
+      <header className="flex items-center justify-between border-b border-border/70 bg-foreground/5 px-6 py-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
           {titulo}
           <span className="ml-2 text-xs font-normal text-muted-foreground">({personas.length})</span>
         </h3>
         {quickAdd}
       </header>
       {personas.length === 0 ? (
-        <p className="px-6 py-4 text-sm text-white/55">{empty}</p>
+        <p className="px-6 py-4 text-sm text-muted-foreground">{empty}</p>
       ) : (
-        <ul className="divide-y divide-white/10">
+        <ul className="divide-y divide-border/70">
           {personas.map((x: any) => {
             const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
             const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
@@ -1073,7 +1073,7 @@ function FamiliaSeccion({
               <li key={x.id} className="flex items-stretch gap-1">
                 <Link
                   to={`/personas/${x.id}`}
-                  className="flex flex-1 items-start gap-3 px-6 py-3 transition hover:bg-white/5"
+                  className="flex flex-1 items-start gap-3 px-6 py-3 transition hover:bg-foreground/5"
                 >
                   {x.foto_url ? (
                     <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
@@ -1086,12 +1086,12 @@ function FamiliaSeccion({
                     <div className="break-words text-xl font-extrabold leading-snug">
                       {x.nombres} {x.apellidos}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-white/50">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-muted-foreground">
                       <span>{sub}</span>
                       <span className="font-mono tracking-wider opacity-70">{personaCode(x.id)}</span>
                     </div>
                     {matLinea && (
-                      <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-white/65">
+                      <div className="mt-1 inline-flex items-start gap-1 rounded-md bg-foreground/5 px-1.5 py-0.5 text-[11px] text-muted-foreground">
                         <span aria-hidden>∞</span>
                         <span className="break-words">{matLinea}</span>
                       </div>
@@ -1490,13 +1490,13 @@ function Field({ label, value }: { label: string; value: any }) {
   const empty = value === null || value === undefined || value === "";
   const country = !empty && label.toLowerCase().includes("nacionalidad") ? String(value).toLowerCase() : "";
   return (
-    <div className="border-b border-white/10 px-6 py-4">
-      <div className="text-sm font-semibold text-white/45">{label}</div>
-      <div className="mt-1 text-xl font-bold leading-snug text-white">
+    <div className="border-b border-border/70 px-6 py-4">
+      <div className="text-sm font-semibold text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xl font-bold leading-snug text-foreground">
         {empty ? (
-          <span className="text-white/35">Dato no registrado</span>
+          <span className="text-muted-foreground">Dato no registrado</span>
         ) : country ? (
-          <span className="country-chip border-white/10 bg-white/10 text-base" data-country={country}>{value}</span>
+          <span className="country-chip text-base" data-country={country}>{value}</span>
         ) : value}
       </div>
     </div>
@@ -1544,39 +1544,6 @@ function PersonaQuickMenu({
   const [parentescoPath, setParentescoPath] = useState<any[]>([]);
   const [loadingPar, setLoadingPar] = useState(false);
 
-  const construirLineaAncestral = (yoId: string, destinoId: string, rels: any[]) => {
-    const parents = new Map<string, string[]>();
-    for (const r of rels) {
-      if ((r.tipo === "padre" || r.tipo === "madre") && r.persona_id && r.pariente_id) {
-        parents.set(r.persona_id, [...(parents.get(r.persona_id) ?? []), r.pariente_id]);
-      }
-      if (r.tipo === "hijo" && r.persona_id && r.pariente_id) {
-        parents.set(r.pariente_id, [...(parents.get(r.pariente_id) ?? []), r.persona_id]);
-      }
-    }
-    const prev = new Map<string, string | null>();
-    const q = [yoId];
-    prev.set(yoId, null);
-    while (q.length) {
-      const cur = q.shift()!;
-      if (cur === destinoId) break;
-      for (const parent of parents.get(cur) ?? []) {
-        if (prev.has(parent)) continue;
-        prev.set(parent, cur);
-        q.push(parent);
-      }
-    }
-    if (!prev.has(destinoId)) return [];
-    const chain: string[] = [];
-    let cur: string | null = destinoId;
-    while (cur) {
-      chain.push(cur);
-      cur = prev.get(cur) ?? null;
-    }
-    const byId = new Map(allPersonas.map((x) => [x.id, x]));
-    return chain.map((pid) => byId.get(pid)).filter(Boolean);
-  };
-
   const verParentesco = async () => {
     setLoadingPar(true);
     setParentescoOpen(true);
@@ -1591,7 +1558,9 @@ function PersonaQuickMenu({
       if (probandId === personaId) { setParentescoTxt("Eres tú mismo."); return; }
       const { data: relsAll } = await supabase.from("relaciones").select("persona_id,pariente_id,tipo");
       const r = calcularParentesco(probandId, personaId, (relsAll ?? []) as any, allPersonas);
-      setParentescoPath(construirLineaAncestral(probandId, personaId, relsAll ?? []));
+      const pathIds = construirCaminoParentesco(probandId, personaId, (relsAll ?? []) as any);
+      const byId = new Map(allPersonas.map((x) => [x.id, x]));
+      setParentescoPath(pathIds.map((pathId) => byId.get(pathId)).filter(Boolean));
       setParentescoTxt(r?.texto ? `${persona.nombres} ${persona.apellidos} es ${r.texto}.` : "No encontré un camino de parentesco registrado entre ustedes.");
     } catch (e: any) {
       setParentescoTxt(`No se pudo calcular: ${e.message ?? e}`);
@@ -1728,36 +1697,36 @@ function PersonaQuickMenu({
       </DropdownMenu>
 
       <Dialog open={parentescoOpen} onOpenChange={setParentescoOpen}>
-        <DialogContent className="max-w-2xl bg-black text-white">
+        <DialogContent className="max-w-2xl glass-strong text-foreground">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between text-xl">
               Relación o parentesco
               <Info className="h-5 w-5 text-cyan-400" />
             </DialogTitle>
           </DialogHeader>
-          <div className="-mx-6 bg-zinc-900 px-6 py-4 text-center">
+          <div className="-mx-6 border-y border-border/70 bg-foreground/5 px-6 py-4 text-center">
             <div className="text-2xl font-extrabold">{persona.nombres} {persona.apellidos}</div>
-            <div className="mt-1 text-sm font-bold uppercase tracking-wide text-white/50">{loadingPar ? "Calculando camino genealógico" : parentescoTxt}</div>
+            <div className="mt-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">{loadingPar ? "Calculando camino genealógico" : parentescoTxt}</div>
           </div>
           {parentescoPath.length > 0 ? (
             <div className="mx-auto flex max-w-sm flex-col items-center py-4">
               {parentescoPath.map((node, idx) => (
                 <div key={node.id} className="flex flex-col items-center">
-                  {idx > 0 && <div className="h-10 w-px bg-white/25" />}
+                  {idx > 0 && <div className="h-10 w-px bg-border" />}
                   <Link to={`/personas/${node.id}`} className="flex flex-col items-center text-center">
                     {node.foto_url ? (
-                      <img src={node.foto_url} alt={node.nombres} className="h-12 w-12 rounded-full object-cover ring-2 ring-white/20" />
+                      <img src={node.foto_url} alt={node.nombres} className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20" />
                     ) : (
-                      <div className="grid h-12 w-12 place-items-center rounded-full bg-cyan-500/25 text-cyan-100 ring-2 ring-white/20">{node.nombres?.[0] ?? "?"}</div>
+                      <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 text-primary ring-2 ring-primary/20">{node.nombres?.[0] ?? "?"}</div>
                     )}
                     <div className="mt-1 max-w-[180px] truncate text-xs font-bold">{node.nombres} {node.apellidos}</div>
-                    <div className="text-[10px] text-white/50">{yearOf(node.nac_fecha) ?? "?"} - {yearOf(node.defuncion_fecha) ?? (node.viva === "si" ? "vive" : "?")} · {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
+                    <div className="text-[10px] text-muted-foreground">{yearOf(node.nac_fecha) ?? "?"} - {yearOf(node.defuncion_fecha) ?? (node.viva === "si" ? "vive" : "?")} · {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
                   </Link>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[15px] leading-relaxed text-white/75">{loadingPar ? "Calculando camino genealógico…" : parentescoTxt}</p>
+            <p className="text-[15px] leading-relaxed text-muted-foreground">{loadingPar ? "Calculando camino genealógico…" : parentescoTxt}</p>
           )}
         </DialogContent>
       </Dialog>

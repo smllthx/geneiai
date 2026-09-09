@@ -314,6 +314,8 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
   const [pendingTag, setPendingTag] = useState<null | { x: number; y: number; w: number; h: number }>(null);
   const [pickPersona, setPickPersona] = useState("");
   const [tagMode, setTagMode] = useState(false);
+  const [portraitPerson, setPortraitPerson] = useState("");
+  const [portraitBusy, setPortraitBusy] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -370,6 +372,16 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
   const removeTag = async (id: string) => {
     await supabase.from("foto_tags").delete().eq("id", id);
     loadTags();
+  };
+
+  const useAsPortrait = async () => {
+    if (!portraitPerson) return toast.error("Elige una persona primero");
+    setPortraitBusy(true);
+    const { error } = await supabase.from("personas").update({ foto_url: foto.url }).eq("id", portraitPerson);
+    setPortraitBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Retrato actualizado en toda la ficha");
+    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "personas", personId: portraitPerson } }));
   };
 
   const eliminar = async () => {
@@ -433,6 +445,16 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
           <Button size="sm" variant="ghost" onClick={() => { setPendingTag(null); setPickPersona(""); }}>Cancelar</Button>
         </div>
       )}
+
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-primary/15 bg-primary/5 p-3">
+        <span className="text-xs font-semibold text-primary">Usar esta foto como retrato</span>
+        <Select value={portraitPerson} onValueChange={setPortraitPerson}>
+          <SelectTrigger className="h-9 min-w-[190px] flex-1"><SelectValue placeholder="Elegir persona…" /></SelectTrigger>
+          <SelectContent>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => void useAsPortrait()} disabled={!portraitPerson || portraitBusy}>{portraitBusy ? "Guardando…" : "Aplicar"}</Button>
+        <span className="basis-full text-[11px] text-muted-foreground">Para recortar una parte exacta, abre la ficha de la persona y ajusta el encuadre del retrato.</span>
+      </div>
 
       {toDisplayText(foto.descripcion) && <p className="text-sm">{toDisplayText(foto.descripcion)}</p>}
       {foto.fecha_aprox && <p className="text-xs text-muted-foreground">📅 {foto.fecha_aprox}</p>}

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Laptop, Loader2, RefreshCw, LogOut, Search, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
+import { authorizeFamilySearch } from "@/lib/familySearchBrowser";
 
 const COMPANION = "http://127.0.0.1:8787";
 
@@ -37,6 +38,7 @@ export default function FamilySearchLocalBrowser() {
   const [anio, setAnio] = useState("");
   const [lugar, setLugar] = useState("");
   const [results, setResults] = useState<Result[] | null>(null);
+  const [oauthBusy, setOauthBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setStatus("checking");
@@ -78,6 +80,13 @@ export default function FamilySearchLocalBrowser() {
     }
   };
 
+  const connectFromGeneai = async () => {
+    setOauthBusy(true);
+    try { await authorizeFamilySearch(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo abrir FamilySearch"); }
+    finally { setOauthBusy(false); }
+  };
+
   const badge = {
     checking: { text: "Comprobando…", cls: "text-muted-foreground" },
     unreachable: { text: "Compañero local no accesible", cls: "text-destructive" },
@@ -104,21 +113,26 @@ export default function FamilySearchLocalBrowser() {
           </p>
 
           {status === "unreachable" ? (
-            <Alert className="mt-3 border-destructive/30 bg-destructive/5">
+            <Alert className="mt-3 border-primary/25 bg-primary/5">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Compañero local no accesible</AlertTitle>
+              <AlertTitle>El navegador local es opcional</AlertTitle>
               <AlertDescription className="space-y-2">
                 <p className="text-xs">
-                  Arráncalo en tu Mac con <code>npm run familysearch:browser</code> y vuelve a comprobar. Desde la app
-                  publicada el navegador puede bloquear <code>127.0.0.1</code>: en ese caso usa su interfaz local.
+                  Esta pantalla está publicada y no puede leer el navegador de tu Mac o iPhone si el compañero no está
+                  instalado. Puedes abrir FamilySearch desde la autorización segura de GENEAI, o arrancar el compañero
+                  en tu Mac con <code>npm run familysearch:browser</code> para usar la sesión visible.
                 </p>
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => void connectFromGeneai()} disabled={oauthBusy}>
+                    {oauthBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                    Conectar FamilySearch en GENEAI
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => void refresh()}>
                     <RefreshCw className="h-4 w-4" /> Comprobar de nuevo
                   </Button>
                   <Button size="sm" variant="outline" asChild>
-                    <a href={COMPANION} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-4 w-4" /> Abrir UI local
+                    <a href="https://www.familysearch.org/search/" target="_blank" rel="noreferrer" data-external-browser="true">
+                      <ExternalLink className="h-4 w-4" /> Abrir FamilySearch web
                     </a>
                   </Button>
                 </div>

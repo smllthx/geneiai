@@ -1,6 +1,6 @@
-# Actualización GENEAI 3.0.1
+# Actualización GENEAI 3.0.2
 
-Lee [instalación y novedades](docs/UPDATE_3_0_1.md). Este paquete conserva la app existente y añade módulos web integrados. Requiere compilar en un Mac con Xcode; no se ha instalado en tu dispositivo desde esta sesión.
+Lee [instalación y novedades](docs/UPDATE_3_0_2.md). Este paquete conserva la app existente y añade módulos web integrados. Requiere compilar en un Mac con Xcode; no se ha instalado en tu dispositivo desde esta sesión.
 
 # GENEAI para Apple — actualización de la aplicación existente
 

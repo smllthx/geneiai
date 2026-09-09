@@ -7,17 +7,42 @@ export type PersonaLite = { id: string; sexo?: string | null; nombres?: string; 
 
 type Step = { id: string; dist: number; via: "padre" | "conyuge" };
 
+const normalizeTipo = (value?: string | null) => (value ?? "")
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[\/_-]+/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const parentTypes = new Set([
+  "padre", "madre", "progenitor", "progenitora", "parent", "parentes", "padres",
+  "padre adoptivo", "madre adoptiva", "padre biologico", "madre biologica",
+  "padre de crianza", "madre de crianza", "tutor", "tutora", "father", "mother",
+]);
+const childTypes = new Set(["hijo", "hija", "child", "descendiente"]);
+const spouseTypes = new Set([
+  "conyuge", "conjuge", "esposo", "esposa", "pareja", "conviviente", "convivencia",
+  "matrimonio", "matrimonio civil", "union", "union civil", "union libre", "pareja de hecho",
+]);
+
+const isParentType = (tipo?: string | null) => parentTypes.has(normalizeTipo(tipo));
+const isChildType = (tipo?: string | null) => childTypes.has(normalizeTipo(tipo));
+const isSpouseType = (tipo?: string | null) => spouseTypes.has(normalizeTipo(tipo));
+
 /** Devuelve mapa id→distancia (en saltos padre/madre) desde `from`. */
 function ancestralMap(from: string, rels: RelRow[]): Map<string, number> {
   // Padres de X = filas (persona_id=X, tipo=padre|madre) o (pariente_id=X, tipo=hijo)
   const parentsOf = new Map<string, string[]>();
   for (const r of rels) {
-    if ((r.tipo === "padre" || r.tipo === "madre") && r.persona_id && r.pariente_id) {
+    // The canonical row is child(persona_id) -> parent(pariente_id). GEDCOM and
+    // FamilySearch imports also use the inverse child label, so normalize both.
+    if (isParentType(r.tipo) && r.persona_id && r.pariente_id) {
       const arr = parentsOf.get(r.persona_id) ?? [];
       arr.push(r.pariente_id);
       parentsOf.set(r.persona_id, arr);
     }
-    if (r.tipo === "hijo" && r.persona_id && r.pariente_id) {
+    if (isChildType(r.tipo) && r.persona_id && r.pariente_id) {
       const arr = parentsOf.get(r.pariente_id) ?? [];
       arr.push(r.persona_id);
       parentsOf.set(r.pariente_id, arr);
@@ -39,7 +64,7 @@ function ancestralMap(from: string, rels: RelRow[]): Map<string, number> {
 function spouseOf(id: string, rels: RelRow[]): string[] {
   const out = new Set<string>();
   for (const r of rels) {
-    if (r.tipo !== "conyuge") continue;
+    if (!isSpouseType(r.tipo)) continue;
     if (r.persona_id === id) out.add(r.pariente_id);
     if (r.pariente_id === id) out.add(r.persona_id);
   }
@@ -90,6 +115,46 @@ export type Parentesco = {
   via?: "conyuge";        // si el camino pasó por un cónyuge (político)
   pasos: number;          // saltos totales
 };
+
+/**
+ * Returns the shortest explainable chain between two people. Unlike the
+ * relationship label calculation, this keeps parent, child, spouse and
+ * sibling edges, so the UI can show a useful path for cousins and in-laws too.
+ */
+export function construirCaminoParentesco(origenId: string, destinoId: string, rels: RelRow[]): string[] {
+  if (!origenId || !destinoId) return [];
+  if (origenId === destinoId) return [origenId];
+  const graph = new Map<string, Set<string>>();
+  const connect = (a: string, b: string) => {
+    if (!a || !b) return;
+    const as = graph.get(a) ?? new Set<string>(); as.add(b); graph.set(a, as);
+    const bs = graph.get(b) ?? new Set<string>(); bs.add(a); graph.set(b, bs);
+  };
+  for (const r of rels) {
+    if (!r.persona_id || !r.pariente_id) continue;
+    // Unknown/"otro" rows are intentionally not used: a free-form note is
+    // not enough evidence to connect two branches of a tree.
+    if (isParentType(r.tipo) || isChildType(r.tipo) || isSpouseType(r.tipo) || normalizeTipo(r.tipo) === "hermano" || normalizeTipo(r.tipo) === "hermana" || normalizeTipo(r.tipo) === "sibling") {
+      connect(r.persona_id, r.pariente_id);
+    }
+  }
+  const previous = new Map<string, string | null>([[origenId, null]]);
+  const queue = [origenId];
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (current === destinoId) break;
+    for (const next of graph.get(current) ?? []) {
+      if (previous.has(next)) continue;
+      previous.set(next, current);
+      queue.push(next);
+    }
+  }
+  if (!previous.has(destinoId)) return [];
+  const path: string[] = [];
+  let current: string | null = destinoId;
+  while (current) { path.unshift(current); current = previous.get(current) ?? null; }
+  return path;
+}
 
 export function calcularParentesco(
   yoId: string,

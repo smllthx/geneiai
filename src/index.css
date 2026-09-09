@@ -516,7 +516,29 @@ button, a, input, textarea, select, [role="button"], [role="tab"] {
   html[data-keyboard-open=true] .mobile-bottom-nav,
   html[data-keyboard-open=true] .view-adjust-trigger,
   html[data-keyboard-open=true] .assistant-trigger { visibility: hidden; pointer-events: none; }
+
+  /* Compact research surfaces keep the brain, insights and menus above the fold. */
+  .research-brain-card { padding: .875rem !important; border-radius: 1.25rem; }
+  .research-brain-card .research-brain-copy { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: .5rem; }
+  .research-brain-card .research-action-description { display: none; }
+  .research-brain-card .grid { gap: .4rem; }
+  .research-brain-card button { min-height: 3rem; padding: .625rem .7rem; }
+  .research-brain-card .min-w-\[min\(100\%\,360px\)\] { min-width: 0; }
+  .smart-insights-grid li { font-size: .8125rem; padding: .55rem .7rem; }
+  .mobile-nav-groups > .space-y-1 { padding-bottom: .25rem; }
+  .mobile-nav-groups .mt-3 { margin-top: .5rem; border-top: 1px solid hsl(var(--border) / .7); padding-top: .35rem; }
+  .mobile-nav-groups .mt-3 > button { color: hsl(var(--primary)); background: hsl(var(--primary) / .04); }
+  .tree-floating-toolbar { left: .75rem; right: .75rem; top: auto; bottom: 4.25rem; justify-content: center; }
+  .tree-floating-toolbar > div { max-width: 100%; }
+  .tree-legend { bottom: .5rem; max-width: calc(100% - 1.5rem); overflow-x: auto; white-space: nowrap; }
+  .tree-workspace .tree-toolbar { max-height: 8.2rem; overflow: hidden; }
 }
+
+/* Keep tree views and alternate charts in the same liquid-glass language. */
+.tree-workspace .tree-alternate-surface,
+.tree-workspace .tree-alternate-surface > div { will-change: transform; }
+.tree-workspace [class*="bg-slate-"],
+.tree-workspace [class*="bg-white"] { transition: background-color 120ms ease; }
 @media (max-width: 359px) {
   .mobile-brand .font-display { display: none; }
 }

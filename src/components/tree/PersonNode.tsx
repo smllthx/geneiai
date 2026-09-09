@@ -27,13 +27,13 @@ const statusLabel: Record<GenealogyPerson["researchStatus"], string> = {
 const lineageClass: Record<GenealogyPerson["lineage"], string> = {
   paterna: "border-emerald-300",
   materna: "border-violet-300",
-  central: "border-slate-300",
+  central: "border-border",
 };
 
 const lineageBar: Record<GenealogyPerson["lineage"], string> = {
   paterna: "bg-emerald-500",
   materna: "bg-violet-500",
-  central: "bg-slate-400",
+  central: "bg-muted-foreground",
 };
 
 export default function PersonNode({ person, selected, dimmed, showPortrait = true, showAiHints = true, showProblems = true, expanded, onSelect, onAction, onAddRelative }: PersonNodeProps) {
@@ -48,16 +48,16 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
       onKeyDown={(event) => {
         if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect?.(person); }
       }}
-      className={`relative w-[260px] overflow-hidden rounded-2xl border bg-white p-3 text-left shadow-sm transition ${
+      className={`relative w-[260px] overflow-hidden rounded-2xl border bg-card/90 p-3 text-left shadow-sm backdrop-blur transition ${
         lineageClass[person.lineage]
       } ${selected ? "ring-2 ring-emerald-500" : "hover:-translate-y-0.5 hover:shadow-md"} ${
         dimmed ? "opacity-35" : "opacity-100"
       }`}
       title={fullName}
     >
-      <span className={`absolute inset-x-0 top-0 h-1 ${person.incomplete ? "bg-slate-300" : lineageBar[person.lineage]}`} />
+      <span className={`absolute inset-x-0 top-0 h-1 ${person.incomplete ? "bg-muted-foreground/40" : lineageBar[person.lineage]}`} />
       <div className="flex gap-3">
-        {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-slate-100 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
+        {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary ring-1 ring-primary/20">
           {person.avatarUrl ? (
             <img loading="lazy" decoding="async" src={person.avatarUrl} alt={fullName} className="h-full w-full object-cover" />
           ) : person.initials ? (
@@ -67,20 +67,20 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
           )}
         </div>}
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-950">{person.givenNames}</h3>
-          <p className="truncate text-xs font-medium text-slate-700">{person.surnames}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{years || "Fechas por completar"}</p>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">{person.givenNames}</h3>
+          <p className="truncate text-xs font-medium text-foreground/80">{person.surnames}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">{years || "Fechas por completar"}</p>
         </div>
       </div>
 
-      <div className="mt-3 space-y-1.5 text-[11px] text-slate-600">
+      <div className="mt-3 space-y-1.5 text-[11px] text-muted-foreground">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate">{person.mainPlace || "Lugar por completar"}</span>
-          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5">{person.sourcesCount} fuentes</span>
+          <span className="shrink-0 rounded-full bg-foreground/5 px-2 py-0.5">{person.sourcesCount} fuentes</span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">{statusLabel[person.researchStatus]}</span>
-          {showProblems && person.incomplete && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Incompleto</span>}
+          {showProblems && person.incomplete && <span className="rounded-full bg-foreground/5 px-2 py-0.5">Incompleto</span>}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lightbulb, RefreshCw } from "lucide-react";
+import { ChevronDown, Lightbulb, RefreshCw } from "lucide-react";
 import { localPersonaInsight } from "@/lib/offlineAi";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
@@ -14,6 +14,7 @@ type Insight = { icon?: string; texto: string };
 export default function PersonaSmartInsights({ persona, eventos = [], fam }: { persona: any; eventos?: any[]; fam: { padres: any[]; conyuges: any[]; hijos: any[]; hermanos: any[] } }) {
   const [extra, setExtra] = useState<Insight[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [showAll, setShowAll] = useState(false);
   const insights: Insight[] = [];
   const yN = yearOf(persona?.nac_fecha) ?? persona?.nac_rango_ini ?? null;
   const yD = yearOf(persona?.defuncion_fecha) ?? null;
@@ -83,6 +84,7 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
 
   const all = [...insights, ...extra];
   if (all.length === 0) return null;
+  const visible = showAll ? all : all.slice(0, 6);
 
   return (
     <div className="mb-5 rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] via-transparent to-accent/[0.05] p-4 md:p-5">
@@ -102,14 +104,24 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
           <RefreshCw className="h-3.5 w-3.5" />
         </button>
       </div>
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {all.map((i, idx) => (
+      <ul className="smart-insights-grid grid gap-2 sm:grid-cols-2">
+        {visible.map((i, idx) => (
           <li key={idx} className="flex items-start gap-2 rounded-2xl bg-card/50 px-3 py-2 text-[14px] leading-snug">
             <span className="shrink-0 text-base">{i.icon ?? "•"}</span>
             <span>{i.texto}</span>
           </li>
         ))}
       </ul>
+      {all.length > 6 && (
+        <button
+          type="button"
+          onClick={() => setShowAll((value) => !value)}
+          className="mt-3 inline-flex min-h-9 items-center gap-1 rounded-full border border-primary/20 px-3 text-xs font-semibold text-primary hover:bg-primary/10"
+        >
+          {showAll ? "Ver menos" : `Ver ${all.length - 6} insights más`}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAll ? "rotate-180" : ""}`} />
+        </button>
+      )}
     </div>
   );
 }

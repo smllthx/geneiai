@@ -8,6 +8,10 @@ import { toast } from "sonner";
 
 type NomSuggestion = {
   display_name: string;
+  lat?: string;
+  lon?: string;
+  type?: string;
+  category?: string;
   address?: {
     country?: string; state?: string; region?: string; county?: string;
     province?: string; city?: string; town?: string; village?: string;
@@ -15,9 +19,20 @@ type NomSuggestion = {
   };
 };
 
-async function searchNominatim(q: string, signal: AbortSignal): Promise<NomSuggestion[]> {
+export type LugarCategory = "todos" | "iglesias" | "parroquias" | "cementerios" | "comunas" | "historicos";
+
+const CATEGORY_HINT: Record<Exclude<LugarCategory, "todos">, string> = {
+  iglesias: "iglesia church cathedral chapel basilica",
+  parroquias: "parroquia parish",
+  cementerios: "cementerio cemetery graveyard memorial",
+  comunas: "comuna municipio municipality commune",
+  historicos: "histórico historic heritage monument",
+};
+
+async function searchNominatim(q: string, category: LugarCategory, signal: AbortSignal): Promise<NomSuggestion[]> {
   if (q.trim().length < 3) return [];
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&accept-language=es&q=${encodeURIComponent(q)}`;
+  const hint = category === "todos" ? "" : ` ${CATEGORY_HINT[category]}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&extratags=1&limit=8&accept-language=es&q=${encodeURIComponent(`${q}${hint}`)}`;
   const res = await fetch(url, { signal, headers: { "Accept": "application/json" } });
   if (!res.ok) return [];
   return res.json();
@@ -30,7 +45,9 @@ function suggestionToDraft(s: NomSuggestion) {
     region: a.state ?? a.region ?? "",
     provincia: a.province ?? a.county ?? "",
     ciudad: a.city ?? a.town ?? a.village ?? a.municipality ?? a.hamlet ?? a.suburb ?? "",
-    parroquia: "",
+    parroquia: s.category === "amenity" || s.type === "place_of_worship" ? s.display_name.split(",")[0] : "",
+    lat: s.lat ? Number(s.lat) : null,
+    lng: s.lon ? Number(s.lon) : null,
   };
 }
 
@@ -58,9 +75,10 @@ interface Props {
 
 export default function LugarSelect({ value, onChange, lugares, onLugaresChange, placeholder = "Sin lugar" }: Props) {
   const [q, setQ] = useState("");
+  const [category, setCategory] = useState<LugarCategory>("todos");
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ pais: "", region: "", provincia: "", ciudad: "", parroquia: "" });
+  const [draft, setDraft] = useState({ pais: "", region: "", provincia: "", ciudad: "", parroquia: "", lat: null as number | null, lng: null as number | null });
   const [remote, setRemote] = useState<NomSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -80,13 +98,13 @@ export default function LugarSelect({ value, onChange, lugares, onLugaresChange,
     setSearching(true);
     const t = setTimeout(async () => {
       try {
-        const list = await searchNominatim(q, ctrl.signal);
+        const list = await searchNominatim(q, category, ctrl.signal);
         setRemote(list);
       } catch { /* aborted */ }
       finally { setSearching(false); }
     }, 350);
     return () => { clearTimeout(t); ctrl.abort(); };
-  }, [q, open]);
+  }, [q, category, open]);
 
   const crearDesde = async (d: typeof draft, label?: string) => {
     if (!d.pais && !d.ciudad && !d.region) {
@@ -100,7 +118,7 @@ export default function LugarSelect({ value, onChange, lugares, onLugaresChange,
     if (error) return toast.error(error.message);
     onLugaresChange?.([...lugares, data]);
     onChange(data.id);
-    setDraft({ pais: "", region: "", provincia: "", ciudad: "", parroquia: "" });
+    setDraft({ pais: "", region: "", provincia: "", ciudad: "", parroquia: "", lat: null, lng: null });
     setQ("");
     setOpen(false);
     toast.success(label ? `Lugar añadido: ${label}` : "Lugar creado");
@@ -130,6 +148,22 @@ export default function LugarSelect({ value, onChange, lugares, onLugaresChange,
             autoFocus
           />
           {searching && <Loader2 className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin opacity-60" />}
+        </div>
+        <div className="mb-2 flex items-center gap-2">
+          <Globe2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as LugarCategory)}
+            className="h-9 min-w-0 flex-1 rounded-xl border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+            aria-label="Tipo de lugar"
+          >
+            <option value="todos">Todos los lugares</option>
+            <option value="iglesias">Iglesias y templos</option>
+            <option value="parroquias">Parroquias y registros</option>
+            <option value="cementerios">Cementerios y memoriales</option>
+            <option value="comunas">Comunas, municipios y ciudades</option>
+            <option value="historicos">Lugares históricos</option>
+          </select>
         </div>
 
         <div className="max-h-72 overflow-y-auto">

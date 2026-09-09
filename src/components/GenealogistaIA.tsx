@@ -122,7 +122,7 @@ export default function GenealogistaIA({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-3xl border border-cyan-300/20 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--background))_62%,hsl(var(--primary)/0.12)_100%)] p-4 shadow-sm",
+        "research-brain-card relative overflow-hidden rounded-3xl border border-cyan-300/20 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--background))_62%,hsl(var(--primary)/0.12)_100%)] p-4 shadow-sm",
         compact ? "p-4" : "p-5",
         className,
       )}
@@ -143,7 +143,7 @@ export default function GenealogistaIA({
               Confirmación humana
             </Badge>
           </div>
-          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          <p className="research-brain-copy mt-3 max-w-2xl text-sm text-muted-foreground">
             {personName ? <>Contexto activo: <strong className="text-foreground">{personName}</strong>. </> : null}
             {detail}
           </p>
@@ -192,7 +192,7 @@ export default function GenealogistaIA({
             </span>
             <span className="min-w-0">
               <span className="block text-sm font-semibold leading-tight">{action.label}</span>
-              {action.description && <span className="mt-1 block text-xs leading-snug text-muted-foreground">{action.description}</span>}
+              {action.description && <span className="research-action-description mt-1 block text-xs leading-snug text-muted-foreground">{action.description}</span>}
             </span>
           </button>
         ))}

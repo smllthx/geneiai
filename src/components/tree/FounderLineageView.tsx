@@ -24,34 +24,34 @@ export default function FounderLineageView({ nodes, relationships, centerId, onS
   return (
     <div className="absolute inset-0 overflow-auto p-8">
       <div className="mx-auto grid max-w-4xl gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Vista linaje principal</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-950">Primer antepasado hacia persona central</h2>
+        <div className="glass-card p-5 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Vista linaje principal</p>
+          <h2 className="mt-1 text-2xl font-semibold text-foreground">Primer antepasado hacia persona central</h2>
           <div className="mt-6 space-y-3">
             {line.map((node, index) => (
               <button
                 key={node.id}
                 type="button"
                 onClick={() => onSelect(node.id)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 p-3 text-left transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card/40 p-3 text-left transition hover:bg-foreground/5"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                   {node.data.person.avatarUrl ? <img src={node.data.person.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" /> : <UserRound className="h-4 w-4" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-slate-950">{node.data.person.givenNames} {node.data.person.surnames}</span>
-                  <span className="text-xs text-slate-500">Generación {index + 1} · {node.data.person.birth ?? "s/f"}</span>
+                  <span className="block truncate font-medium text-foreground">{node.data.person.givenNames} {node.data.person.surnames}</span>
+                  <span className="text-xs text-muted-foreground">Generación {index + 1} · {node.data.person.birth ?? "s/f"}</span>
                 </span>
               </button>
             ))}
           </div>
         </div>
-        <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-slate-950">Resumen</p>
+        <aside className="glass-card p-5 shadow-sm">
+          <p className="text-sm font-semibold text-foreground">Resumen</p>
           <dl className="mt-4 space-y-3 text-sm">
-            <div><dt className="text-slate-500">Total de generaciones</dt><dd className="font-semibold text-slate-950">{line.length}</dd></div>
-            <div><dt className="text-slate-500">Primer antepasado visible</dt><dd className="font-semibold text-slate-950">{line[0]?.data.person.surnames ?? "No registrado"}</dd></div>
-            <div><dt className="text-slate-500">Investigación</dt><dd className="font-semibold text-slate-950">Revisar fuentes y huecos</dd></div>
+            <div><dt className="text-muted-foreground">Total de generaciones</dt><dd className="font-semibold text-foreground">{line.length}</dd></div>
+            <div><dt className="text-muted-foreground">Primer antepasado visible</dt><dd className="font-semibold text-foreground">{line[0]?.data.person.surnames ?? "No registrado"}</dd></div>
+            <div><dt className="text-muted-foreground">Investigación</dt><dd className="font-semibold text-foreground">Revisar fuentes y huecos</dd></div>
           </dl>
         </aside>
       </div>

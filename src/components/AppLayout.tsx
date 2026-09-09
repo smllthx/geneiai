@@ -167,7 +167,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
   );
 }
 
-function NavGroup({ groupKey, label, items }: { groupKey: string; label: string; items: NavItem[] }) {
+function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; label: string; items: NavItem[]; onNavigate?: () => void }) {
   const { pathname } = useLocation();
   const containsActive = items.some((i) => pathname.startsWith(i.to));
   const [open, setOpen] = useState(containsActive);
@@ -189,7 +189,7 @@ function NavGroup({ groupKey, label, items }: { groupKey: string; label: string;
         <span>{label}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
-      {open && <div className="mt-1"><NavItems groupKey={groupKey} items={items} /></div>}
+      {open && <div className="mt-1"><NavItems groupKey={groupKey} items={items} onNavigate={onNavigate} /></div>}
     </div>
   );
 }
@@ -222,8 +222,6 @@ export default function AppLayout() {
     window.dispatchEvent(new Event("genaia:recent-changed"));
     toast.success("Datos actualizados");
   };
-  const allMobileNav = [...primaryNavBase, ...investigationNav, ...utilityNav];
-
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("genaia:sidebar-collapsed") === "1";
@@ -350,7 +348,11 @@ export default function AppLayout() {
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={58} showText subtitle={user?.email ?? "Archivo familiar privado"} />
               </div>
-              <NavItems groupKey="mobile" items={allMobileNav} onNavigate={() => setMobileMenuOpen(false)} />
+              <div className="mobile-nav-groups">
+                <NavItems groupKey="mobile-primary" items={primaryNavBase} onNavigate={() => setMobileMenuOpen(false)} />
+                <NavGroup groupKey="mobile-investigation" label="Investigación y pistas" items={investigationNav} onNavigate={() => setMobileMenuOpen(false)} />
+                <NavGroup groupKey="mobile-utility" label="Herramientas y cuenta" items={utilityNav} onNavigate={() => setMobileMenuOpen(false)} />
+              </div>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
                 <RefreshCw className="h-4 w-4" /> Actualizar datos
               </Button>

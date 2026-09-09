@@ -23,15 +23,15 @@ export default function FanChartView({ nodes, edges, centerId, onSelect }: FanCh
 
   return (
     <div className="absolute inset-0 grid place-items-center p-8">
-      <div className="relative aspect-square w-[min(86vw,760px)] rounded-full border border-slate-200 bg-white/80 shadow-sm">
+      <div className="relative aspect-square w-[min(86vw,760px)] rounded-full border border-primary/20 bg-card/75 shadow-lg backdrop-blur">
         {center && (
           <button
             type="button"
             onClick={() => onSelect(center.id)}
-            className="absolute left-1/2 top-1/2 z-10 grid h-32 w-32 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-emerald-200 bg-white p-3 text-center shadow-md"
+            className="absolute left-1/2 top-1/2 z-10 grid h-32 w-32 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-primary/35 bg-card/95 p-3 text-center shadow-md"
           >
-            <span className="text-xs font-semibold text-slate-900">{center.data.person.givenNames}</span>
-            <span className="text-[10px] text-slate-500">{center.data.person.birth ?? "s/f"}</span>
+            <span className="text-xs font-semibold text-foreground">{center.data.person.givenNames}</span>
+            <span className="text-[10px] text-muted-foreground">{center.data.person.birth ?? "s/f"}</span>
           </button>
         )}
         {rings.map((ring, ringIndex) => {
@@ -46,22 +46,22 @@ export default function FanChartView({ nodes, edges, centerId, onSelect }: FanCh
                 key={`${ringIndex}-${index}-${node.id}`}
                 type="button"
                 onClick={() => onSelect(node.id)}
-                className="absolute h-20 w-32 rounded-2xl border border-slate-200 p-2 text-left text-[11px] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="absolute h-20 w-32 rounded-2xl border border-border/80 bg-card/90 p-2 text-left text-[11px] shadow-sm transition hover:bg-card hover:shadow-md"
                 style={{
                   left: `calc(50% + ${x}px - 4rem)`,
                   top: `calc(50% + ${y}px - 2.5rem)`,
                   background: COLORS[(ringIndex + index) % COLORS.length],
                 }}
               >
-                <p className="line-clamp-2 font-semibold text-slate-950">{node.data.person.givenNames}</p>
-                <p className="truncate text-slate-600">{node.data.person.surnames}</p>
-                <p className="text-slate-500">{node.data.person.sourcesCount} fuentes</p>
+                <p className="line-clamp-2 font-semibold text-foreground">{node.data.person.givenNames}</p>
+                <p className="truncate text-muted-foreground">{node.data.person.surnames}</p>
+                <p className="text-muted-foreground">{node.data.person.sourcesCount} fuentes</p>
               </button>
             );
           });
         })}
       </div>
-      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-white/90 px-4 py-2 text-xs text-slate-600 shadow-sm">
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
         <span>Colores: estado de investigación</span>
         <span>·</span>
         <span>{rings.length} generaciones visibles</span>
