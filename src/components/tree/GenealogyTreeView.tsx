@@ -15,7 +15,8 @@ import FanChartView from "./FanChartView";
 import FounderLineageView from "./FounderLineageView";
 import PersonNode from "./PersonNode";
 import PersonSidePanel from "./PersonSidePanel";
-import TreeFloatingToolbar from "./TreeFloatingToolbar";
+import TreeFloatingToolbar from "./TreeViewportToolbar";
+import { createTreeViewport } from "./treeViewport";
 import TreeOptionsPanel from "./TreeOptionsPanel";
 import TreeToolbar from "./TreeToolbar";
 import type { RelativeKind } from "./AddRelativeButton";
@@ -180,11 +181,14 @@ export default function GenealogyTreeView() {
     return buildGenealogyLayout(visiblePeople, visibleRelationships, centerId);
   }, [people, relationships, centerId, options.showAlternativeParents, options.showAlternativeSpouses, options.showNoSources, options.showIncompleteBranches]);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [scale, setScale] = useState(0.88);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [drag, setDrag] = useState<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set());
   const viewportRef = useRef<HTMLDivElement>(null);
+  const gestureSurfaceRef = useRef<HTMLDivElement>(null);
+  const viewport = useMemo(() => createTreeViewport(), []);
+  useEffect(() => {
+    const surface = gestureSurfaceRef.current;
+    if (surface) return viewport.attach(surface);
+  }, [viewport]);
 
   const displayNodes = useMemo(() => nodes.map((node) => nodeWithView(node, viewMode)), [nodes, viewMode]);
   const nodesById = useMemo(() => new Map(displayNodes.map((node) => [node.id, node])), [displayNodes]);
@@ -278,16 +282,7 @@ export default function GenealogyTreeView() {
     return () => { active = false; };
   }, [realtimeKey, retryKey, authUser?.id]);
 
-  const centerTree = () => {
-    setScale(0.88);
-    setOffset({ x: 0, y: 0 });
-  };
-
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.06 : 0.06;
-    setScale((current) => Math.min(1.55, Math.max(0.45, Number((current + delta).toFixed(2)))));
-  };
+  const centerTree = viewport.reset;
 
   const expandBranch = (person: GenealogyPerson) => {
     setCenterId(person.id); setSelected(null); centerTree();
@@ -322,23 +317,11 @@ export default function GenealogyTreeView() {
     <div className={`tree-workspace -mx-3 -my-3 min-h-[calc(100dvh-8rem)] md:-mx-6 md:-my-6 ${options.darkMode ? "bg-slate-950" : "bg-background"}`}>
       <div
         ref={viewportRef}
-        className={`relative h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden touch-none [background-size:28px_28px] ${
+        className={`relative h-[calc(100dvh-8rem)] min-h-[480px] overflow-hidden [background-size:28px_28px] ${
           options.darkMode
             ? "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
             : "bg-[radial-gradient(circle_at_1px_1px,hsl(var(--border))_1px,transparent_0)]"
         }`}
-        onWheel={handleWheel}
-        onPointerDown={(event) => {
-          if ((event.target as HTMLElement).closest("button,article,input")) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          setDrag({ x: event.clientX, y: event.clientY, ox: offset.x, oy: offset.y });
-        }}
-        onPointerMove={(event) => {
-          if (!drag) return;
-          setOffset({ x: drag.ox + event.clientX - drag.x, y: drag.oy + event.clientY - drag.y });
-        }}
-        onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); setDrag(null); }}
-        onPointerCancel={() => setDrag(null)}
       >
         <TreeToolbar filters={filters} onFiltersChange={setFilters} onCenter={centerTree} onAddPerson={() => navigate("/personas/nueva")} />
 
@@ -356,7 +339,7 @@ export default function GenealogyTreeView() {
         {relativeTarget && <QuickAddRelative key={`${relativeTarget.person.id}-${relativeTarget.kind}`} personaId={relativeTarget.person.id} defaultTipo={relativeTarget.kind} initialOpen trigger={<span hidden />} onOpenChange={(open) => { if (!open) setRelativeTarget(null); }} onAdded={() => { setRelativeTarget(null); setRetryKey((k) => k + 1); }} />}
         <TreeFloatingToolbar
           view={viewMode}
-          scale={scale}
+          viewport={viewport}
           onViewChange={(value) => {
             setViewMode(value);
             centerTree();
@@ -368,8 +351,8 @@ export default function GenealogyTreeView() {
             void viewportRef.current.requestFullscreen().catch(() => toast.error("No se pudo activar la pantalla completa."));
           }}
           onCenter={centerTree}
-          onZoomIn={() => setScale((value) => Math.min(1.55, value + 0.08))}
-          onZoomOut={() => setScale((value) => Math.max(0.45, value - 0.08))}
+          onZoomIn={viewport.zoomIn}
+          onZoomOut={viewport.zoomOut}
         />
 
         <TreeOptionsPanel open={optionsOpen} options={options} onChange={setOptions} onClose={() => setOptionsOpen(false)} />
@@ -387,9 +370,18 @@ export default function GenealogyTreeView() {
           </div>
         </div>
 
+        <div
+          ref={gestureSurfaceRef}
+          data-tree-gesture-surface
+          role="group"
+          aria-label="Árbol genealógico interactivo. Arrastra para moverte; pellizca con dos dedos para acercar o alejar. Teclado: flechas, más, menos y cero para centrar."
+          tabIndex={0}
+          className="absolute inset-0 overflow-hidden touch-none select-none cursor-grab data-[panning=true]:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          style={{ overscrollBehavior: "none", WebkitUserSelect: "none" }}
+        >
         {(viewMode === "fan" || viewMode === "descendancy" || viewMode === "founder") && (
           <div className="tree-alternate-surface absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 origin-center" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
+            <div className="absolute inset-0 origin-center [&>div]:overflow-visible" style={{ transform: "translate3d(var(--tree-x, 0px), var(--tree-y, 0px), 0) scale(var(--tree-scale, 0.88))", willChange: "transform" }}>
               {viewMode === "fan" && (
                 <FanChartView nodes={displayNodes} edges={edges} centerId={centerId} onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)} />
               )}
@@ -417,7 +409,8 @@ export default function GenealogyTreeView() {
         {(viewMode === "portrait" || viewMode === "horizontal") && <div
           className="absolute left-1/2 top-1/2 h-[900px] w-[1700px] origin-center"
           style={{
-            transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px)) scale(${scale})`,
+            transform: "translate3d(calc(-50% + var(--tree-x, 0px)), calc(-50% + var(--tree-y, 0px)), 0) scale(var(--tree-scale, 0.88))",
+            willChange: "transform",
           }}
         >
           <div className="pointer-events-none absolute left-[700px] top-[18px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Abuelos</div>
@@ -483,6 +476,8 @@ export default function GenealogyTreeView() {
             </div>
           ))}
         </div>}
+
+        </div>
 
         <div className="tree-legend absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-card/90 px-4 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> paterna</span>
