@@ -7,7 +7,7 @@
   "version": "3.0.3",
   "build": 303,
   "publishedAt": "2026-09-22",
-  "channel": "integration",
+  "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
   "legacyTauriBundleIdentifier": "com.geneai.geneai",
   "apiContractVersion": 1,
@@ -16,6 +16,9 @@
     "Navegación del árbol con zoom anclado al gesto, desplazamiento con inercia y controles fijos.",
     "Versión, origen público y contrato de producto compartidos entre web y fuentes Apple.",
     "Integración de las correcciones de empaquetado macOS y compatibilidad del código Swift.",
-    "Validación automática que impide compilar con versiones o configuraciones divergentes."
+    "Validación automática que impide compilar con versiones o configuraciones divergentes.",
+    "Sincronización por lotes sin aplazamiento indefinido ante cambios continuos.",
+    "Los eventos tardíos de una sesión cerrada ya no actualizan la sesión siguiente.",
+    "Índices adicionales para las relaciones y la vinculación de personas y eventos con sus árboles."
   ]
 }
