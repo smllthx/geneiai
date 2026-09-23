@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [chatgpt/geneai-unification-2026-09-22]
+    branches: [main]
 permissions:
   contents: read
 jobs:
@@ -23,3 +23,23 @@ jobs:
           node --test scripts/sync-product.test.mjs
       - name: Test portable Apple configuration and packaging CLI
         run: python3 -m unittest discover -s apple/GENEAI/tests -p 'test_*.py' -v
+  web-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install the pinned dependency graph
+        run: npm ci --no-audit --no-fund
+      - name: Run application regression tests
+        run: npm test -- --maxWorkers=2 --no-file-parallelism
+      - name: Build the shared-backend web client
+        run: node scripts/build-shared-backend.mjs
+      - name: Check application and build-tool TypeScript
+        timeout-minutes: 2
+        run: npx tsc -b --pretty false

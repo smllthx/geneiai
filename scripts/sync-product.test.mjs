@@ -40,3 +40,21 @@ test('detects drift without writing and synchronizes idempotently', () => {
     assert.equal('publishableKey' in runtime, false);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 });
+
+test('accepts formatting-only JSON changes but still rejects real version drift', () => {
+  const tmp = mkdtempSync(resolve(tmpdir(), 'geneai-json-contract-'));
+  try {
+    for (const path of ['config/geneai-product.json', 'config/geneai-backend.json', 'package.json', 'package-lock.json', 'vercel.json', 'public/release.json', 'public/geneai-runtime.json', 'apple/GENEAI/project.yml', 'apple/GENEAI/GENAIAApple/Info.plist', 'apple/GENEAI/GENAIAApple/Support/ProductContract.swift']) {
+      const target = resolve(tmp, path); mkdirSync(dirname(target), { recursive: true });
+      const original = readFileSync(resolve(root, path), 'utf8');
+      writeFileSync(target, path.endsWith('.json') ? JSON.stringify(JSON.parse(original)) : original);
+    }
+    assert.deepEqual(synchronize(tmp), []);
+    const pkgPath = resolve(tmp, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    pkg.version = '99.0.0'; writeFileSync(pkgPath, JSON.stringify(pkg));
+    assert.deepEqual(synchronize(tmp), ['package.json']);
+    assert.deepEqual(synchronize(tmp, { write: true }), ['package.json']);
+    assert.deepEqual(synchronize(tmp), []);
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+});

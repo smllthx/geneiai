@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 export function validateProduct(p, backend) {
   if (p?.schemaVersion !== 1 || p.name !== 'GENEAI' || p.repository !== 'smllthx/geneiai') throw new Error('Invalid product identity');
@@ -52,7 +53,11 @@ export function synchronize(root, { write = false } = {}) {
   const drift = [];
   for (const [path, expected] of outputs) {
     let actual; try { actual = text(path); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    if (actual !== expected) { drift.push(path); if (write) writeFileSync(resolve(root, path), expected); }
+    let aligned = actual === expected;
+    if (!aligned && actual !== undefined && path.endsWith('.json')) {
+      try { aligned = isDeepStrictEqual(JSON.parse(actual), JSON.parse(expected)); } catch { aligned = false; }
+    }
+    if (!aligned) { drift.push(path); if (write) writeFileSync(resolve(root, path), expected); }
   }
   return drift;
 }

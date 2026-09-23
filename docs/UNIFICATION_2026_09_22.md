@@ -37,12 +37,12 @@ The existing SwiftUI identity and the historical Tauri identity are recorded sep
 
 ## Local verification
 
-- New Node product-contract tests: 13 passed.
+- New Node product-contract tests: 14 passed (including formatting tolerance).
 - Portable Apple configuration and DMG CLI tests: 12 passed.
 - No database rows, user accounts, production deployments or installed applications were changed.
 - Native compilation was not run: the inspected Mac selects Command Line Tools, not a full Xcode installation.
 - An IPA/DMG is not supplied or claimed by this checkpoint.
-- Full application test/build outcomes are recorded below after execution.
+- Full application test/build outcomes are recorded in the PR verification comments; portable test success alone is not release approval.
 
 ## Remaining release gates
 
