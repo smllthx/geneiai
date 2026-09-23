@@ -24,11 +24,17 @@ struct StatusPill: View {
 struct PrimaryActionModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, visionOS 26.0, *) {
+        // SDK 26 symbols require the Xcode 26 toolchain, not just a runtime
+        // availability check. visionOS keeps its existing prominent style.
+        #if compiler(>=6.2) && !os(visionOS)
+        if #available(iOS 26.0, macOS 26.0, *) {
             content.buttonStyle(.glassProminent)
         } else {
             content.buttonStyle(.borderedProminent)
         }
+        #else
+        content.buttonStyle(.borderedProminent)
+        #endif
     }
 }
 
