@@ -6,6 +6,6 @@
   "backendProjectRef": "camdtylwddleifaegzaf",
   "version": "3.0.3",
   "apiContractVersion": 1,
-  "channel": "integration",
+  "channel": "stable",
   "nativeDistributionReady": false
 }
