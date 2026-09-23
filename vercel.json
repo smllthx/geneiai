@@ -65,6 +65,15 @@
           "value": "no-store"
         }
       ]
+    },
+    {
+      "source": "/geneai-runtime.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -95,5 +104,6 @@
     "SUPABASE_ANON_KEY": "sb_publishable_CGZ6D2RXuhHsjYOzwns4nA_VnWIZ2lX",
     "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_CGZ6D2RXuhHsjYOzwns4nA_VnWIZ2lX",
     "GENEAI_PUBLIC_URL": "https://geneiai.vercel.app"
-  }
+  },
+  "installCommand": "npm ci --no-audit --no-fund"
 }

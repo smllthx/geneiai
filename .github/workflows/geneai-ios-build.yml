@@ -1,0 +1,47 @@
+name: GENEAI iOS and iPadOS compile validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apple/GENEAI/**'
+      - 'config/geneai-*.json'
+      - '.github/workflows/geneai-ios-build.yml'
+permissions:
+  contents: read
+concurrency:
+  group: geneai-ios-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ios-ipados:
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Prepare existing project without production credentials
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
+          xcodebuild -version
+          zsh apple/GENEAI/scripts/generate.sh
+      - name: Compile device code without signing or distribution
+        run: |
+          set -euo pipefail
+          xcodebuild -project apple/GENEAI/GENAIAApple.xcodeproj \
+            -scheme GENAIAApple -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/geneai-ios" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= \
+            build 2>&1 | tee "$RUNNER_TEMP/geneai-ios-build.txt"
+          echo 'Compile validation only: no signed IPA, TestFlight upload or device installation.'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: GENEAI-iOS-compile-log-${{ github.sha }}
+          path: ${{ runner.temp }}/geneai-ios-build.txt
+          if-no-files-found: warn
+          retention-days: 14

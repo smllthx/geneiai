@@ -1,0 +1,89 @@
+name: GENEAI macOS packaging validation
+
+on:
+  push:
+    branches:
+      - chatgpt/geneai-macos-packaging-2026-09-15
+      - chatgpt/geneai-unification-2026-09-22
+    paths:
+      - apple/GENEAI/**
+      - config/geneai-backend.json
+      - .github/workflows/geneai-macos-package.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geneai-macos-package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos-intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the existing project
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Record the hosted build environment
+        run: |
+          set -euo pipefail
+          mkdir -p apple/dist
+          {
+            echo 'Environment: GitHub-hosted macOS; NOT the user computer'
+            git rev-parse HEAD
+            sw_vers
+            uname -m
+            xcodebuild -version
+            swift --version
+          } | tee apple/dist/environment.txt
+      - name: Ensure XcodeGen is present on this disposable runner
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+      - name: Check portable tests and backend configuration
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s apple/GENEAI/tests -p 'test_*.py' -v 2>&1 | tee apple/dist/python-tests.txt
+          bash apple/GENEAI/scripts/crear_dmg.sh --check
+          zsh apple/GENEAI/scripts/generate.sh
+      - name: Run existing native model tests without production credentials
+        run: |
+          set -euo pipefail
+          xcodebuild -project apple/GENEAI/GENAIAApple.xcodeproj \
+            -scheme GENAIANativeTests -configuration Debug \
+            -destination 'platform=macOS,arch=x86_64' \
+            -derivedDataPath "$RUNNER_TEMP/geneai-native-tests" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= test 2>&1 | tee apple/dist/native-tests.txt
+      - name: Build and verify the existing application DMG
+        run: |
+          set -euo pipefail
+          bash apple/GENEAI/scripts/crear_dmg.sh 2>&1 | tee apple/dist/packaging.txt
+          shasum -a 256 apple/dist/GENEAI-*-macOS.dmg > apple/dist/SHA256SUMS.txt
+      - name: Store unsigned test installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: GENEAI-macOS-Intel-unsigned-${{ github.sha }}
+          path: |
+            apple/dist/GENEAI-*-macOS.dmg
+            apple/dist/SHA256SUMS.txt
+            apple/dist/environment.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Store diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: GENEAI-macOS-build-logs-${{ github.sha }}
+          path: apple/dist/*.txt
+          if-no-files-found: warn
+          retention-days: 14

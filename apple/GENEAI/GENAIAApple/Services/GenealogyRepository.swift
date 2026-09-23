@@ -40,8 +40,7 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
             .select("id,display_name,proband_id,active_arbol_id")
             .eq("id", value: userID.uuidString)
             .limit(1)
-            .execute()
-            .value
+            .executeValue()
         return rows.first
     }
 
@@ -78,8 +77,7 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
             for column in orderedBy.dropFirst() { ordered = ordered.order(column) }
             let page: [T] = try await ordered
                 .range(from: from, to: from + pageSize - 1)
-                .execute()
-                .value
+                .executeValue()
             try Task.checkCancellation()
             result.append(contentsOf: page)
             if page.count < pageSize { return result }
@@ -126,8 +124,7 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
             .eq("user_id", value: userID.uuidString)
             .order("created_at", ascending: false)
             .limit(limit)
-            .execute()
-            .value
+            .executeValue()
     }
 
     func createPerson(
@@ -165,8 +162,7 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
                 fusionado_en,row_version
             """)
             .single()
-            .execute()
-            .value
+            .executeValue()
 
         return row
     }
@@ -210,8 +206,7 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
                 fusionado_en,row_version
             """)
             .single()
-            .execute()
-            .value
+            .executeValue()
 
         return row
     }
@@ -261,10 +256,10 @@ actor GenealogyRepository: GenealogyRepositoryProtocol {
 
         // Mirrors the web contract: biologica + probable by default.
         for payload in pairs {
-            _ = try await client
+            try await client
                 .from("relaciones")
                 .upsert(payload, onConflict: "user_id,persona_id,pariente_id,tipo", ignoreDuplicates: true)
-                .execute()
+                .executeDiscardingResponse()
         }
     }
 
@@ -327,4 +322,18 @@ struct PersonBundle: Sendable {
     let documents: [DocumentRecord]
     let birthPlace: PlaceRecord?
     let deathPlace: PlaceRecord?
+}
+
+// Supabase 2.x builders are Sendable, but PostgrestResponse is not. Unwrap
+// responses outside the repository actor so only our Sendable model values
+// cross its boundary. Each call uses its own builder; no request is shared.
+private extension PostgrestBuilder {
+    nonisolated func executeValue<T: Decodable & Sendable>() async throws -> T {
+        let response: PostgrestResponse<T> = try await execute()
+        return response.value
+    }
+
+    nonisolated func executeDiscardingResponse() async throws {
+        _ = try await execute()
+    }
 }

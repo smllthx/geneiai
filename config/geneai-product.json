@@ -1,7 +1,17 @@
 {
+  "schemaVersion": 1,
+  "name": "GENEAI",
+  "repository": "smllthx/geneiai",
+  "publicOrigin": "https://geneiai.vercel.app",
+  "backendProjectRef": "camdtylwddleifaegzaf",
   "version": "3.0.3",
+  "build": 303,
   "publishedAt": "2026-09-22",
   "channel": "stable",
+  "appleBundleIdentifier": "com.genaia.app",
+  "legacyTauriBundleIdentifier": "com.geneai.geneai",
+  "apiContractVersion": 1,
+  "nativeDistributionReady": false,
   "changes": [
     "Navegación del árbol con zoom anclado al gesto, desplazamiento con inercia y controles fijos.",
     "Versión, origen público y contrato de producto compartidos entre web y fuentes Apple.",
@@ -10,6 +20,5 @@
     "Sincronización por lotes sin aplazamiento indefinido ante cambios continuos.",
     "Los eventos tardíos de una sesión cerrada ya no actualizan la sesión siguiente.",
     "Índices adicionales para las relaciones y la vinculación de personas y eventos con sus árboles."
-  ],
-  "nativeDistributionReady": false
+  ]
 }
