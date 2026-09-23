@@ -65,6 +65,15 @@
           "value": "no-store"
         }
       ]
+    },
+    {
+      "source": "/geneai-runtime.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ],
   "rewrites": [

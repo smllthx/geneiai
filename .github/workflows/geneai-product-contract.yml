@@ -1,0 +1,25 @@
+name: GENEAI shared product contract
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [chatgpt/geneai-unification-2026-09-22]
+permissions:
+  contents: read
+jobs:
+  shared-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check generated product files and refusal guardrails
+        run: |
+          node scripts/sync-product.mjs --check
+          node --test scripts/sync-product.test.mjs
+      - name: Test portable Apple configuration and packaging CLI
+        run: python3 -m unittest discover -s apple/GENEAI/tests -p 'test_*.py' -v

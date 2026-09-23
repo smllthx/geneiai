@@ -26,7 +26,7 @@ final class AppReleaseMonitor {
         checking = true; lastCheck = Date()
         defer { checking = false }
         do {
-            var request = URLRequest(url: URL(string: "https://geneiai.vercel.app/release.json")!, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+            var request = URLRequest(url: ProductContract.publicURL.appendingPathComponent("release.json"), cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
             request.httpMethod = "GET"
             let (data, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }

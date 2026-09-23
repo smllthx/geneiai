@@ -33,19 +33,19 @@ final class GeneaiWebBrowser: NSObject, ObservableObject, Identifiable, WKNaviga
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: accountID)
         configuration.userContentController.addUserScript(WKUserScript(
-            source: "if (location.origin === 'https://geneiai.vercel.app') Object.defineProperty(window, '__GENEAI_NATIVE_BROWSER__', {value: true});",
+            source: "if (location.origin === '\(ProductContract.publicURL.absoluteString)') Object.defineProperty(window, '__GENEAI_NATIVE_BROWSER__', {value: true});",
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
         self.init(configuration: configuration)
-        if let url = URL(string: route, relativeTo: URL(string: "https://geneiai.vercel.app")!) {
+        if let url = URL(string: route, relativeTo: ProductContract.publicURL) {
             webView.load(URLRequest(url: url))
         }
     }
 
     func reloadSafely() {
         guard authentication == nil else { errorMessage = "Termina la autorización antes de recargar."; return }
-        guard webView.url?.host == "geneiai.vercel.app" else { webView.reload(); return }
+        guard webView.url?.host == ProductContract.publicHost else { webView.reload(); return }
         webView.evaluateJavaScript("document.body.dataset.geneiaiEditing === '1' || !!document.querySelector('[data-geneiai-editing=\"true\"]')") { [weak self] result, error in
             Task { @MainActor in
                 guard let self else { return }
@@ -97,12 +97,12 @@ final class GeneaiWebBrowser: NSObject, ObservableObject, Identifiable, WKNaviga
     func webViewDidClose(_ webView: WKWebView) { onClose?() }
 
     private func authorize(_ url: URL) {
-        let session = ASWebAuthenticationSession(url: url, callback: .https(host: "geneiai.vercel.app", path: "/familysearch/callback")) { [weak self] callback, error in
+        let session = ASWebAuthenticationSession(url: url, callback: .https(host: ProductContract.publicHost, path: "/familysearch/callback")) { [weak self] callback, error in
             Task { @MainActor in
                 guard let self else { return }
                 self.authentication = nil
                 self.loading = false
-                if let callback, callback.scheme == "https", callback.host == "geneiai.vercel.app", callback.path == "/familysearch/callback" {
+                if let callback, callback.scheme == "https", callback.host == ProductContract.publicHost, callback.path == "/familysearch/callback" {
                     self.webView.load(URLRequest(url: callback))
                 } else if error != nil {
                     self.errorMessage = "La autorización no se completó. Puedes volver a intentarlo desde Importar."

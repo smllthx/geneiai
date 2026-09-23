@@ -1,7 +1,7 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "geneai",
   "private": true,
-  "version": "0.0.0",
+  "version": "3.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "familysearch:browser": "node tools/familysearch-browser/src/server.js",
-    "familysearch:browser:install": "npm --prefix tools/familysearch-browser install && npm --prefix tools/familysearch-browser exec -- playwright install chromium"
+    "familysearch:browser:install": "npm --prefix tools/familysearch-browser install && npm --prefix tools/familysearch-browser exec -- playwright install chromium",
+    "product:sync": "node scripts/sync-product.mjs --write",
+    "product:check": "node scripts/sync-product.mjs --check",
+    "test:product": "node --test scripts/sync-product.test.mjs",
+    "prebuild": "npm run product:check"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
+const productCheck = spawnSync(process.execPath, ['scripts/sync-product.mjs', '--check'], { stdio: 'inherit' });
+if (productCheck.error) throw productCheck.error;
+if (productCheck.status !== 0) process.exit(productCheck.status ?? 1);
+
 const shared = JSON.parse(readFileSync(new URL('../config/geneai-backend.json', import.meta.url), 'utf8'));
 const deployment = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
 for (const [name, expected] of Object.entries({

@@ -1,7 +1,7 @@
 import Foundation
 
 enum WebContract {
-    static let repository = "smllthx/geneiai"
+    static let repository = ProductContract.repository
 
     static func route(for feature: NativeFeature) -> String {
         feature.webRoute
