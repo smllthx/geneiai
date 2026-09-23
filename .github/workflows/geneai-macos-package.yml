@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - chatgpt/geneai-macos-packaging-2026-09-15
+      - chatgpt/geneai-unification-2026-09-22
     paths:
       - apple/GENEAI/**
       - config/geneai-backend.json
@@ -76,7 +77,7 @@ jobs:
             apple/dist/SHA256SUMS.txt
             apple/dist/environment.txt
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 14
           compression-level: 0
       - name: Store diagnostic logs
         if: always()
@@ -85,4 +86,4 @@ jobs:
           name: GENEAI-macOS-build-logs-${{ github.sha }}
           path: apple/dist/*.txt
           if-no-files-found: warn
-          retention-days: 3
+          retention-days: 14
