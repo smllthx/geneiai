@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
-  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell,
+  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -62,7 +62,7 @@ const utilityNav = [
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-type NavItem = { to: string; label: string; icon: any };
+type NavItem = { to: string; label: string; icon: LucideIcon };
 
 function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: NavItem[]; onNavigate?: () => void }) {
   const isMobile = useIsMobile();
@@ -77,7 +77,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
     refresh();
     window.addEventListener("genaia:nav-config", refresh);
     return () => window.removeEventListener("genaia:nav-config", refresh);
-  }, [groupKey, items.length]);
+  }, [groupKey, items]);
 
 
   const onDrop = (toIdx: number) => {
@@ -265,7 +265,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
     if (localStorage.getItem(k)) return;
     localStorage.setItem(k, "1");
     supabase.functions.invoke("notificar-aniversarios").catch(() => {});
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     const onAiError = (event: Event) => {
@@ -352,7 +352,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
-                <BrandLogo size={58} showText subtitle={user?.email ?? "Archivo familiar privado"} />
+                <BrandLogo size={58} showText subtitle={preview ? "Archivo de ejemplo" : user?.email ?? "Archivo familiar privado"} />
               </div>
               <div className="mobile-nav-groups">
                 <NavItems groupKey="mobile-primary" items={primaryNavBase} onNavigate={() => setMobileMenuOpen(false)} />
@@ -363,8 +363,8 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
                 <RefreshCw className="h-4 w-4" /> Actualizar datos
               </Button>
-              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" /> Cerrar sesión
+              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
+                <LogOut className="h-4 w-4" /> {preview ? "Abrir mi archivo" : "Cerrar sesión"}
               </Button>
             </SheetContent>
           </Sheet>
