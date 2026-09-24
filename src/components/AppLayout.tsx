@@ -66,6 +66,7 @@ type NavItem = { to: string; label: string; icon: any };
 
 function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: NavItem[]; onNavigate?: () => void }) {
   const isMobile = useIsMobile();
+  const previewHome = useLocation().pathname === "/diseno";
   const navigate = useNavigate();
   const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, filterByHidden(groupKey, items)));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -129,7 +130,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
               className={({ isActive }) =>
                 cn(
                   "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                  isActive
+                  (isActive || (previewHome && to === "/inicio"))
                     ? "nav-item-active font-semibold text-foreground"
                     : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
                 )
@@ -177,6 +178,7 @@ function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; la
     <div className="mt-3">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         onDoubleClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(

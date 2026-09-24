@@ -81,6 +81,7 @@ button, summary { -webkit-tap-highlight-color: transparent; }
 .home-primary:hover { filter: brightness(1.07); }
 .family-illustration { color: hsl(var(--primary) / .25); padding: 18px 18px 4px 0; min-width: 0; position: relative; }
 .family-illustration svg { width: 100%; height: auto; overflow: visible; }
+.family-illustration .tree-compact-illustration { display: none; }
 .tree-avatar rect { fill: hsl(var(--card) / .78); stroke: hsl(var(--card) / .95); stroke-width: 1.5; }
 .dark .tree-avatar rect { fill: hsl(224 30% 26% / .8); stroke: hsl(217 28% 51% / .4); }
 .tree-avatar circle, .tree-avatar path { stroke: hsl(var(--primary) / .6); stroke-width: 1.5; stroke-linecap: round; }
@@ -173,13 +174,15 @@ button, summary { -webkit-tap-highlight-color: transparent; }
   .home-add span { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
   .home-search { min-height: 53px; padding-left: 13px; margin-bottom: 20px; gap: 8px; border-radius: 18px; }
   .home-search input { font-size: 1rem; }
-  .home-tree-card { grid-template-columns: 1.4fr .9fr; }
+  .home-tree-card { grid-template-columns: minmax(0, 1fr) 108px; }
   .home-tree-copy { padding: 23px 0 24px 21px; }
   .home-section-label { font-size: 0.625rem; gap: 5px; white-space: nowrap; }
-  .home-tree-copy h2 { font-size: 2.1875rem; margin-top: 23px; }
+  .home-tree-copy h2 { font-size: 2rem; margin-top: 23px; }
   .home-tree-copy > p { font-size: 0.75rem; margin: 13px 0 20px; }
   .home-primary { font-size: 0.75rem; padding-inline: 14px; gap: 11px; }
-  .family-illustration { padding: 18px 8px 10px 0; transform: scale(1.12); transform-origin: center; }
+  .family-illustration { padding: 18px 7px 10px 0; }
+  .family-illustration .tree-desktop-illustration { display: none; }
+  .family-illustration .tree-compact-illustration { display: block; }
   .tree-illustration-caption { display: none; }
   .home-summary { padding: 17px 6px; }
   .home-summary strong { font-size: 1.4375rem; }

@@ -24,7 +24,7 @@ const number = new Intl.NumberFormat("es-CL");
 /** A decorative diagram, never presented as the user's actual family tree. */
 function TreeIllustration() {
   return <div className="family-illustration" aria-hidden="true">
-    <svg viewBox="0 0 390 230" fill="none">
+    <svg className="tree-desktop-illustration" viewBox="0 0 390 230" fill="none">
       <path d="M58 59V94Q58 108 72 108H122M164 59V94Q164 108 150 108H122M122 135V166Q122 180 138 180H196M228 59V94Q228 108 244 108H278M334 59V94Q334 108 318 108H278M278 135V166Q278 180 262 180H196V203" stroke="currentColor" strokeWidth="1.5" />
       {[58,164,228,334].map((x,i) => <g key={x} className={`tree-avatar tree-avatar-${i}`}>
         <rect x={x-23} y="15" width="46" height="46" rx="17" />
@@ -35,6 +35,11 @@ function TreeIllustration() {
         <circle cx={x} cy="113" r="7" /><path d={`M${x-13} 136q0-15 13-15t13 15`} />
       </g>)}
       <g className="tree-avatar tree-avatar-root"><rect x="172" y="190" width="48" height="32" rx="16" /><path d="m188 206 5 5 10-10" /></g>
+    </svg>
+    <svg className="tree-compact-illustration" viewBox="0 0 130 180" fill="none">
+      <path d="M29 53V76Q29 89 42 89H64M101 53V76Q101 89 88 89H64V115" stroke="currentColor" strokeWidth="1.5" />
+      {[29,101].map((x,i) => <g key={x} className={`tree-avatar tree-avatar-${i}`}><rect x={x-21} y="15" width="42" height="42" rx="16" /><circle cx={x} cy="31" r="5" /><path d={`M${x-9} 47q0-11 9-11t9 11`} /></g>)}
+      <g className="tree-avatar tree-avatar-mid"><rect x="40" y="109" width="49" height="49" rx="18" /><circle cx="64.5" cy="126" r="6" /><path d="M53 146q0-13 11.5-13T76 146" /></g>
     </svg>
     <span className="tree-illustration-caption">Personas · vínculos · memoria</span>
   </div>;
@@ -91,7 +96,7 @@ export default function DashboardView({ stats, recientes, vistasRecientes, sinPa
     <form className="home-search" role="search" onSubmit={submit}>
       <Search size={21} aria-hidden="true" />
       <label className="sr-only" htmlFor="home-query">Buscar en tu archivo familiar</label>
-      <input id="home-query" value={query} onChange={event => setQuery(event.target.value)} placeholder="Personas, lugares, documentos…" type="search" autoComplete="off" />
+      <input id="home-query" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar en tu archivo…" type="search" autoComplete="off" />
       <button type="submit" disabled={!query.trim()} aria-label="Buscar en el archivo"><ArrowRight size={19} /></button>
     </form>
 

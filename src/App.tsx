@@ -1,7 +1,7 @@
 import { routeLoaders } from "@/lib/routeLoaders";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -72,17 +72,28 @@ const PageFallback = () => (
   </div>
 );
 
+function SessionScope({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  // Only the fictional design gallery is independent of account connectivity.
+  // All account routes still mount AuthProvider and their existing route guard.
+  return pathname === "/diseno" ? <>{children}</> : <AuthProvider>{children}</AuthProvider>;
+}
+
+function AppServices() {
+  const { pathname } = useLocation();
+  if (pathname === "/diseno") return null;
+  return <><SelfHealer /><AppUpdateNotifier /><ExternalLinkBrowser /></>;
+}
+
 const App = () => (
   <AppErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <SelfHealer />
-        <AppUpdateNotifier />
-        <ExternalLinkBrowser />
         <BrowserRouter>
-          <AuthProvider>
+          <AppServices />
+          <SessionScope>
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -141,7 +152,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-          </AuthProvider>
+          </SessionScope>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
