@@ -171,8 +171,8 @@ export default function MigrationMap({ height = 320 }: { height?: number }) {
     <div className="overflow-hidden rounded-2xl" style={{ height }}>
       <MapContainer center={[20, 0]} zoom={2} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
         <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {rutas.map((r, i) => (
           <Polyline

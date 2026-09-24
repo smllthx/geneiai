@@ -1,44 +1,15 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SectionHeader, StatPill, GlassCard, EmptyState } from "@/components/glass";
-import { Button } from "@/components/ui/button";
-const MigrationMap = lazy(() => import("@/components/MigrationMap"));
-import FamilyTimeline from "@/components/FamilyTimeline";
-import PersonaName from "@/components/PersonaName";
-import GenealogistaIA from "@/components/GenealogistaIA";
+import DashboardView, { type DashboardStats } from "@/components/home/DashboardView";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId } from "@/lib/peopleData";
-import { toDisplayText } from "@/lib/safeText";
-import {
-  Plus, FileText, Search, Sparkles, Users, GitBranch, Compass, Image as ImageIcon, Dna, MapPin, Clock, UserX, ImageOff, History, ChevronRight, Lightbulb,
-} from "lucide-react";
-
-function DeferredMigrationMap() {
-  const host = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!host.current || !("IntersectionObserver" in window)) {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: "200px" });
-    observer.observe(host.current);
-    return () => observer.disconnect();
-  }, []);
-  const placeholder = <div className="grid h-80 place-items-center rounded-xl bg-muted text-sm text-muted-foreground" role="status">Cargando mapa…</div>;
-  return <div ref={host} className="min-h-80">{visible ? <Suspense fallback={placeholder}><MigrationMap height={320} /></Suspense> : placeholder}</div>;
-}
+const MigrationMap = lazy(() => import("@/components/MigrationMap"));
+const FamilyTimeline = lazy(() => import("@/components/FamilyTimeline"));
+const loadingSection = <p role="status" className="home-empty">Cargando…</p>;
 
 export default function Inicio() {
-  const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    personas: 0, lugares: 0, fotos: 0,
+  const [stats, setStats] = useState<DashboardStats>({
+    totalApellidos: 0, personas: 0, lugares: 0, fotos: 0,
     docsPendientes: 0, coincidencias: 0, hipotesis: 0, inferencias: 0, apellidos: [] as string[],
   });
   const [actividad, setActividad] = useState<any[]>([]);
@@ -48,6 +19,7 @@ export default function Inicio() {
   const [sinFotos, setSinFotos] = useState<any[]>([]);
   const [dataRevision, setDataRevision] = useState(0);
   const [loadError, setLoadError] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const refresh = () => setDataRevision((value) => value + 1);
@@ -85,7 +57,7 @@ export default function Inicio() {
       const activeHipotesis = (h.data ?? []).filter((row: any) => (row.personas ?? []).some((id: string) => personIds.has(id)));
       const activeInferencias = (i.data ?? []).filter((row: any) => personIds.has(row.person_id));
       setStats({
-        personas: allPersonas.length, lugares: l.count ?? 0, fotos: f.count ?? 0,
+        totalApellidos: ap.size, personas: allPersonas.length, lugares: l.count ?? 0, fotos: f.count ?? 0,
         docsPendientes: d.count ?? 0, coincidencias: activeCoincidencias.length,
         hipotesis: activeHipotesis.length, inferencias: activeInferencias.length,
         apellidos: [...ap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([x]) => x),
@@ -120,7 +92,7 @@ export default function Inicio() {
       }
     })().catch(() => {
       if (!cancelled) setLoadError(true);
-    });
+    }).finally(() => { if (!cancelled) setLoading(false); });
 
     const onChange = () => {
       const recentIds = getRecent().map((r) => r.id);
@@ -136,288 +108,11 @@ export default function Inicio() {
     };
   }, [dataRevision]);
 
-  const QuickAction = ({ icon: Icon, label, to }: any) => (
-    <Link to={to} className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-all hover:shadow-xl">
-      <div className="genealogy-symbol h-10 w-10 rounded-xl"><Icon className="h-5 w-5" /></div>
-      <span className="text-sm font-medium">{label}</span>
-    </Link>
-  );
-
-  return (
-    <div>
-      {loadError && <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 text-sm">
-        <p>No se pudieron actualizar los datos. Comprueba tu conexión.</p>
-        <Button variant="outline" className="min-h-11" onClick={() => setDataRevision((value) => value + 1)}>Reintentar</Button>
-      </div>}
-      <SectionHeader
-        eyebrow="Tu archivo familiar"
-        title="Inicio"
-        subtitle="Una mirada general al ecosistema familiar: lo registrado, lo nuevo y lo que falta investigar."
-        actions={<>
-          <Button onClick={() => navigate("/personas/nueva")}><Plus className="h-4 w-4" /> Nueva persona</Button>
-          <Button variant="outline" onClick={() => navigate("/buscar")}><Search className="h-4 w-4" /> Buscar</Button>
-        </>}
-      />
-
-      <div className="mb-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <GenealogistaIA
-          context="dashboard"
-          title="Prioridades inteligentes"
-          subtitle={`${stats.docsPendientes + stats.coincidencias + stats.hipotesis + stats.inferencias} elemento(s) esperando revisión entre documentos, coincidencias, hipótesis e inferencias.`}
-          metrics={[
-            { label: "Documentos", value: stats.docsPendientes, tone: stats.docsPendientes ? "warn" : "ok" },
-            { label: "Coincidencias", value: stats.coincidencias, tone: stats.coincidencias ? "warn" : "ok" },
-            { label: "Hipótesis", value: stats.hipotesis, tone: stats.hipotesis ? "info" : "neutral" },
-          ]}
-          actions={[
-            { label: "Revisar contradicciones", description: "Huecos, conflictos y próximos pasos.", to: "/investigacion?tab=insights", icon: <Sparkles className="h-4 w-4" />, kind: "primary" },
-            { label: "Buscar antepasado", description: "Registros, texto, imágenes y catálogo.", to: "/investigacion?tab=hub", icon: <Search className="h-4 w-4" /> },
-            { label: "Tareas IA", description: "Pendientes de confirmación humana.", to: "/tareas-ia", icon: <Lightbulb className="h-4 w-4" /> },
-          ]}
-        />
-
-        <GlassCard className="p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Buscar antepasado</p>
-          <div className="mt-3 grid gap-2">
-            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Nombres" />
-            <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Apellidos" />
-            <div className="grid grid-cols-2 gap-2">
-              <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Lugar" />
-              <input className="rounded-xl border bg-background px-3 py-2 text-sm outline-none" placeholder="Año" />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => navigate("/buscar")}><Search className="h-4 w-4" /> Buscar</Button>
-              <Button className="flex-1" onClick={() => navigate("/investigacion?tab=busqueda")}><Sparkles className="h-4 w-4" /> IA</Button>
-            </div>
-          </div>
-        </GlassCard>
-      </div>
-
-      {/* HERO árbol genealógico — protagonista visual */}
-      <Link
-        to="/arbol"
-        className="genealogy-visual-band group relative mb-6 block overflow-hidden rounded-3xl ring-1 ring-border/40 shadow-xl transition-all hover:shadow-2xl"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 0% 0%, hsl(var(--genealogy-route)/0.28), transparent 55%), radial-gradient(100% 90% at 100% 100%, hsl(var(--genealogy-record)/0.26), transparent 60%), linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)",
-        }}
-      >
-        <div className="relative z-10 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div className="max-w-xl">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">Tu legado</p>
-            <h2 className="font-display text-2xl font-semibold leading-tight md:text-4xl">
-              Árbol genealógico
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">
-              {stats.personas} personas · {stats.apellidos.length} apellidos · explora generaciones, ramas y migraciones de tu familia.
-            </p>
-            <div className="migration-route-accent mt-3 h-0.5 w-44 opacity-80" />
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary ring-1 ring-primary/25">
-                <GitBranch className="h-3 w-3" /> Abrir árbol
-              </span>
-              <Link to="/personas/nueva" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1 text-xs font-medium hover:bg-foreground/20">
-                <Plus className="h-3 w-3" /> Añadir persona
-              </Link>
-            </div>
-          </div>
-
-          {/* Mini árbol decorativo */}
-          <div className="relative h-32 w-full shrink-0 md:h-40 md:w-80">
-            <svg viewBox="0 0 320 160" className="h-full w-full" fill="none">
-              <defs>
-                <linearGradient id="branch" x1="0" x2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0.9" />
-                </linearGradient>
-              </defs>
-              {/* ramas */}
-              <path d="M160 150 L160 95 M160 95 L70 50 M160 95 L250 50 M70 50 L30 15 M70 50 L110 15 M250 50 L210 15 M250 50 L290 15" stroke="url(#branch)" strokeWidth="2" strokeLinecap="round" />
-              {/* nodos */}
-              {[
-                [160, 150, 9], [160, 95, 7], [70, 50, 6], [250, 50, 6],
-                [30, 15, 4], [110, 15, 4], [210, 15, 4], [290, 15, 4],
-              ].map(([cx, cy, r], i) => (
-                <circle key={i} cx={cx} cy={cy} r={r} fill="hsl(var(--primary))" className="opacity-90 transition-all group-hover:opacity-100" />
-              ))}
-            </svg>
-          </div>
-        </div>
-      </Link>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatPill label="Personas" value={stats.personas} />
-        <StatPill label="Fotos" value={stats.fotos} />
-        <StatPill label="Lugares" value={stats.lugares} />
-        <StatPill label="Coincidencias" value={stats.coincidencias} hint="por revisar" />
-        <StatPill label="Documentos" value={stats.docsPendientes} hint="pendientes" />
-        <StatPill label="Hipótesis" value={stats.hipotesis} hint="abiertas" />
-        <StatPill label="Inferencias" value={stats.inferencias} hint="por revisar" />
-        <StatPill label="Apellidos" value={stats.apellidos.length} />
-      </div>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <QuickAction icon={GitBranch} label="Ver árbol" to="/arbol" />
-        <QuickAction icon={Sparkles} label="Investigar" to="/investigacion" />
-        <QuickAction icon={Compass} label="Coincidencias" to="/coincidencias" />
-        <QuickAction icon={ImageIcon} label="Fotos" to="/fotos" />
-        <QuickAction icon={FileText} label="Documentos" to="/documentos" />
-        <QuickAction icon={Dna} label="ADN / Origen" to="/adn" />
-        <QuickAction icon={Users} label="Personas" to="/personas" />
-        <QuickAction icon={Plus} label="Importar / Exportar" to="/importar" />
-      </div>
-
-      {/* Vistas recientes */}
-      {vistasRecientes.length > 0 && (
-        <GlassCard className="mb-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-              <History className="h-4 w-4 text-primary" /> Vistas recientes
-            </h2>
-            <Link to="/personas" className="text-xs text-link hover:underline">Ver todas →</Link>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {vistasRecientes.map((x) => (
-              <Link
-                key={x.id}
-                to={`/personas/${x.id}`}
-                className="group flex w-32 shrink-0 flex-col items-center gap-2 rounded-2xl bg-foreground/5 p-3 transition-all hover:bg-foreground/10"
-              >
-                {x.foto_url ? (
-                  <img src={x.foto_url} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-border/40 group-hover:ring-primary/50" />
-                ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-foreground/10">
-                    <Users className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="w-full text-center text-xs font-bold leading-tight">
-                  {x.nombres} <br /> {x.apellidos}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </GlassCard>
-      )}
-
-      {/* Mapa migratorio (ancho completo) */}
-      <Link to="/lugares" className="mb-4 block">
-        <GlassCard className="transition-all hover:bg-foreground/[0.02]">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-              <MapPin className="h-4 w-4 text-primary" /> Mapa migratorio familiar
-            </h2>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <DeferredMigrationMap />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Puntos por lugar de nacimiento y defunción · líneas indican migraciones individuales.
-          </p>
-        </GlassCard>
-      </Link>
-
-      <div className="mb-4 grid gap-4 md:grid-cols-2">
-        <GlassCard>
-          <Link to="/linea-de-tiempo" className="mb-3 flex items-center justify-between hover:text-primary">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-              <Clock className="h-4 w-4 text-primary" /> Timeline familiar
-            </h2>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-          <div className="max-h-[420px] overflow-y-auto pr-2">
-            <FamilyTimeline />
-          </div>
-        </GlassCard>
-
-        <div className="grid gap-4">
-          <GlassCard>
-            <Link to="/personas" className="mb-3 flex items-center justify-between hover:text-primary">
-              <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-                <UserX className="h-4 w-4 text-accent" /> Personas sin padres registrados
-              </h2>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-            {sinPadres.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Todas las personas tienen al menos un padre/madre conectado.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {sinPadres.map((x) => (
-                  <li key={x.id}>
-                    <PersonaName persona={x} size="sm" />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </GlassCard>
-
-          <GlassCard>
-            <Link to="/fotos" className="mb-3 flex items-center justify-between hover:text-primary">
-              <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-                <ImageOff className="h-4 w-4 text-accent" /> Personas sin fotos
-              </h2>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-            {sinFotos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Todas las personas tienen al menos una foto.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {sinFotos.map((x) => (
-                  <li key={x.id}>
-                    <PersonaName persona={x} size="sm" />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </GlassCard>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <GlassCard>
-          <h2 className="mb-3 font-display text-lg font-semibold">Actividad reciente</h2>
-          {actividad.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aún sin actividad. Empieza creando una persona o importando un GEDCOM.</p>
-          ) : (
-            <ul className="divide-y divide-border/50">
-              {actividad.map((a) => (
-                <li key={a.id} className="py-2 text-sm">
-                  <div>{toDisplayText(a.descripcion) || "Actividad registrada"}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString("es")}</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassCard>
-
-        <GlassCard>
-          <h2 className="mb-3 font-display text-lg font-semibold">Personas editadas recientemente</h2>
-          {recientes.length === 0 ? (
-            <EmptyState icon={<Users className="h-5 w-5" />} title="Sin personas" description="Crea tu primera persona para empezar tu árbol."
-              action={<Button size="sm" onClick={() => navigate("/personas/nueva")}>Crear persona</Button>} />
-          ) : (
-            <ul className="divide-y divide-border/50">
-              {recientes.map((p) => (
-                <li key={p.id} className="py-2">
-                  <Link to={`/personas/${p.id}`} className="flex items-center gap-2 hover:opacity-80">
-                    {p.foto_url ? (
-                      <img src={p.foto_url} alt="" className="h-7 w-7 rounded-full object-cover" />
-                    ) : (
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <PersonaName persona={p} size="sm" asLink={false} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </GlassCard>
-
-        <GlassCard className="md:col-span-2">
-          <h2 className="mb-3 font-display text-lg font-semibold">Apellidos principales</h2>
-          {stats.apellidos.length === 0
-            ? <p className="text-sm text-muted-foreground">Aún sin apellidos registrados.</p>
-            : <div className="flex flex-wrap gap-2">{stats.apellidos.map((a) => <Link key={a} to={`/buscar?q=${encodeURIComponent(a)}`} className="glass-pill font-bold transition-colors hover:bg-primary/10 hover:text-primary">{a}</Link>)}</div>}
-        </GlassCard>
-      </div>
-    </div>
-  );
+  return <DashboardView
+    stats={stats} recientes={recientes} vistasRecientes={vistasRecientes}
+    sinPadres={sinPadres} sinFotos={sinFotos} actividad={actividad}
+    loading={loading} loadError={loadError} onRetry={() => setDataRevision(value => value + 1)}
+    map={<Suspense fallback={loadingSection}><MigrationMap height={280} /></Suspense>}
+    timeline={<Suspense fallback={loadingSection}><FamilyTimeline /></Suspense>}
+  />;
 }

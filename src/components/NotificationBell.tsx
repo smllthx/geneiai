@@ -82,7 +82,7 @@ export default function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
+        <Button variant="ghost" size="icon" aria-label="Notificaciones" className="toolbar-control relative h-11 w-11 rounded-full">
           <Bell className="h-4 w-4" />
           {total > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{total}</span>

@@ -11,6 +11,7 @@ import AppLayout from "@/components/AppLayout";
 import ExternalLinkBrowser from "@/components/ExternalLinkBrowser";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import Login from "./pages/Login";
+const DesignPreview = lazy(() => import("./pages/DesignPreview"));
 const Inicio = lazy(routeLoaders.Inicio);
 import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
 
@@ -85,6 +86,7 @@ const App = () => (
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/diseno" element={<DesignPreview />} />
                 <Route path="/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/familysearch/callback" element={<ProtectedRoute><FamilySearchCallback /></ProtectedRoute>} />
                 <Route path="/p/:id" element={<PersonaPublica />} />

@@ -15,8 +15,8 @@ export default {
     extend: {
       fontFamily: {
         serif: ['"Instrument Serif"', "Georgia", "serif"],
-        sans: ['Inter', '-apple-system', '"SF Pro Display"', "system-ui", "sans-serif"],
-        display: ['Inter', '-apple-system', '"SF Pro Display"', "system-ui", "sans-serif"],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"Helvetica Neue"', 'system-ui', 'sans-serif'],
+        display: ['-apple-system', 'BlinkMacSystemFont', '"Helvetica Neue"', 'system-ui', 'sans-serif'],
       },
       colors: {
         link: "hsl(var(--link))",
