@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" class="dark">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -9,8 +9,17 @@
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#07101a" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0a0e1a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f5fb" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        const appearance = localStorage.getItem('genai:appearance-v1') || 'system';
+        const dark = appearance === 'dark' || (appearance === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#111723' : '#f3f5fb';
+      } catch (_) {}
+    </script>
 
     <!-- iOS standalone (Add to Home Screen) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

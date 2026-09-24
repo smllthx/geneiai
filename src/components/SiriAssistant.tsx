@@ -12,7 +12,7 @@ const QUICK = [
   { label: "Ver coincidencias", to: "/coincidencias" },
 ];
 
-export default function SiriAssistant() {
+export default function SiriAssistant({ inline = false }: { inline?: boolean }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const navigate = useNavigate();
@@ -32,10 +32,8 @@ export default function SiriAssistant() {
       <DialogTrigger asChild>
       <button
         aria-label="Asistente"
-        className="assistant-trigger fixed z-30 grid h-14 w-14 place-items-center rounded-full shadow-[0_12px_40px_-8px_hsl(var(--mesh-2)/0.6)] ring-1 ring-border/40 transition-transform hover:scale-105 active:scale-95"
+        className={inline ? "toolbar-control toolbar-assistant grid h-11 w-11 shrink-0 place-items-center rounded-full" : "assistant-trigger glass-strong fixed z-30 grid h-12 w-12 place-items-center rounded-full"}
       >
-        <span className="siri-orb absolute inset-0 rounded-full" />
-        <span className="glass absolute inset-1 rounded-full" />
         <Sparkles className="relative h-5 w-5 text-foreground" />
       </button>
       </DialogTrigger>

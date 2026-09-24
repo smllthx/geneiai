@@ -160,6 +160,12 @@ export default function SelfHealer() {
     applyHeal(diag.suggested_action);
   };
 
+  useEffect(() => {
+    const report = () => setManualOpen(true);
+    window.addEventListener("geneai:report-problem", report);
+    return () => window.removeEventListener("geneai:report-problem", report);
+  }, []);
+
   const sendManual = async () => {
     const text = manualText.trim();
     if (!text) return;
@@ -173,17 +179,6 @@ export default function SelfHealer() {
 
   return (
     <>
-      {/* FAB reportar */}
-      <button
-        type="button"
-        aria-label="Reportar problema"
-        onClick={() => setManualOpen(true)}
-        className="glass fixed right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full ring-1 ring-border/40 shadow-lg transition-transform hover:scale-105"
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 13.75rem)" }}
-      >
-        <Bug className="h-4 w-4 text-amber-400" />
-      </button>
-
       {/* Panel reportar manual */}
       {manualOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/60 backdrop-blur-sm md:items-center">

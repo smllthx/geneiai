@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ const ALL = {
 } as const;
 
 export default function MobileBottomNav() {
+  const previewHome = useLocation().pathname === "/diseno";
   const navRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const nav = navRef.current;
@@ -52,7 +53,7 @@ export default function MobileBottomNav() {
     <nav
       ref={navRef}
       aria-label="Navegación principal"
-      className="mobile-bottom-nav glass-strong fixed z-30 grid rounded-2xl p-1.5 ring-1 ring-border/40"
+      className="mobile-bottom-nav glass-strong fixed z-30 grid rounded-full p-1.5"
       style={{ gridTemplateColumns: `repeat(${Math.max(items.length, 1)}, minmax(0, 1fr))` }}
     >
       {items.map(({ to, label, icon: Icon }) => (
@@ -61,8 +62,8 @@ export default function MobileBottomNav() {
           to={to}
           className={({ isActive }) =>
             cn(
-              "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1.5 text-xs font-medium transition-colors",
-              isActive ? "text-primary" : "text-foreground/60",
+              "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-full px-0.5 py-1.5 text-xs font-medium transition-colors",
+              (isActive || (previewHome && to === "/inicio")) ? "mobile-tab-active text-primary" : "text-foreground/60",
             )
           }
         >

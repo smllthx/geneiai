@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
   Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
-  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick,
+  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -35,15 +35,17 @@ const primaryNavBase = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/arbol", label: "Árbol", icon: GitBranch },
   { to: "/personas", label: "Personas", icon: Users },
-  { to: "/apellidos", label: "Apellidos", icon: ListOrdered },
-  { to: "/familias", label: "Familias", icon: Heart },
+  { to: "/investigacion", label: "Investigar", icon: Sparkles },
+];
+const archiveNav = [
   { to: "/fotos", label: "Recuerdos", icon: ImageIcon },
   { to: "/documentos", label: "Documentos", icon: FileText },
+  { to: "/apellidos", label: "Apellidos", icon: ListOrdered },
+  { to: "/familias", label: "Familias", icon: Heart },
   { to: "/calendario", label: "Calendario", icon: Calendar },
 ];
 const investigationNav = [
   { to: "/asistente", label: "Genealogista IA", icon: Bot },
-  { to: "/investigacion", label: "Investigación", icon: Sparkles },
   { to: "/importadas-pendientes", label: "Importadas pendientes", icon: Link2 },
   { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },
   { to: "/tareas-ia", label: "Tareas IA", icon: ClipboardCheck },
@@ -60,10 +62,11 @@ const utilityNav = [
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-type NavItem = { to: string; label: string; icon: any };
+type NavItem = { to: string; label: string; icon: LucideIcon };
 
 function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: NavItem[]; onNavigate?: () => void }) {
   const isMobile = useIsMobile();
+  const previewHome = useLocation().pathname === "/diseno";
   const navigate = useNavigate();
   const [ordered, setOrdered] = useState<NavItem[]>(() => loadOrder(groupKey, filterByHidden(groupKey, items)));
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -74,7 +77,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
     refresh();
     window.addEventListener("genaia:nav-config", refresh);
     return () => window.removeEventListener("genaia:nav-config", refresh);
-  }, [groupKey, items.length]);
+  }, [groupKey, items]);
 
 
   const onDrop = (toIdx: number) => {
@@ -127,8 +130,8 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
               className={({ isActive }) =>
                 cn(
                   "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/12 font-semibold text-foreground"
+                  (isActive || (previewHome && to === "/inicio"))
+                    ? "nav-item-active font-semibold text-foreground"
                     : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
                 )
               }
@@ -138,7 +141,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
             </NavLink>
             <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${label}`}>
+                <button type="button" className="nav-row-options grid h-9 w-8 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${label}`}>
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -175,6 +178,7 @@ function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; la
     <div className="mt-3">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         onDoubleClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -184,7 +188,7 @@ function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; la
           );
         }}
         title="Doble clic para configurar esta sección"
-        className="flex w-full items-center justify-between min-h-11 rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center justify-between min-h-11 rounded-lg px-3 py-2 text-xs font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground"
       >
         <span>{label}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
@@ -194,11 +198,13 @@ function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; la
   );
 }
 
-export default function AppLayout() {
+export default function AppLayout({ preview = false, children }: { preview?: boolean; children?: ReactNode }) {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
-  const { user, signOut } = useAuth();
+  const auth = useAuth();
+  const user = preview ? null : auth.user;
+  const signOut = auth.signOut;
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, location.search, isMobile]);
@@ -259,7 +265,7 @@ export default function AppLayout() {
     if (localStorage.getItem(k)) return;
     localStorage.setItem(k, "1");
     supabase.functions.invoke("notificar-aniversarios").catch(() => {});
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     const onAiError = (event: Event) => {
@@ -280,16 +286,15 @@ export default function AppLayout() {
       {!isMobile && !isWindowFrame && !sidebarCollapsed && <aside
         className={cn(
           "app-sidebar sticky top-0 flex h-dvh min-h-0 shrink-0 flex-col p-3",
-          sidebarCollapsed ? "w-0 -translate-x-4 overflow-hidden p-0 opacity-0 pointer-events-none" : "w-72 opacity-100",
+          sidebarCollapsed ? "w-0 -translate-x-4 overflow-hidden p-0 opacity-0 pointer-events-none" : "w-64 opacity-100",
         )}
         aria-hidden={sidebarCollapsed}
       >
-        <div className="glass-strong flex h-full flex-col rounded-3xl">
-          <div className="px-5 pt-5 pb-3">
+        <div className="glass-strong sidebar-surface flex h-full flex-col rounded-3xl">
+          <div className="sidebar-brand px-4 pt-5 pb-6">
             <div className="flex items-center gap-3">
-              <BrandLogo className="min-w-0 flex-1" size={44} showText subtitle="Archivo familiar privado" />
+              <BrandLogo className="min-w-0 flex-1" size={34} showText subtitle="Historias que conectan" />
               <div className="ml-auto flex items-center gap-1">
-                {!sidebarCollapsed && <NotificationBell />}
                 <button
                   onClick={() => setSidebarCollapsed(true)}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
@@ -303,16 +308,17 @@ export default function AppLayout() {
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
             <NavItems groupKey="primary" items={primaryNavBase} />
-            <NavGroup groupKey="investigation" label="Investigación" items={investigationNav} />
+            <NavGroup groupKey="archive" label="Archivo familiar" items={archiveNav} />
+            <NavGroup groupKey="investigation" label="Investigación avanzada" items={investigationNav} />
             <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
-            <p className="mb-2 truncate text-xs text-muted-foreground">{user?.email}</p>
+            <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? "Archivo de ejemplo" : user?.email}</p>
             <Button variant="ghost" size="sm" className="mb-1 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
               <RefreshCw className="h-4 w-4" /> Actualizar datos
             </Button>
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" /> Cerrar sesión
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
+              <LogOut className="h-4 w-4" /> {preview ? "Abrir mi archivo" : "Cerrar sesión"}
             </Button>
           </div>
         </div>
@@ -346,56 +352,56 @@ export default function AppLayout() {
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
-                <BrandLogo size={58} showText subtitle={user?.email ?? "Archivo familiar privado"} />
+                <BrandLogo size={58} showText subtitle={preview ? "Archivo de ejemplo" : user?.email ?? "Archivo familiar privado"} />
               </div>
               <div className="mobile-nav-groups">
                 <NavItems groupKey="mobile-primary" items={primaryNavBase} onNavigate={() => setMobileMenuOpen(false)} />
+                <NavGroup groupKey="mobile-archive" label="Archivo familiar" items={archiveNav} onNavigate={() => setMobileMenuOpen(false)} />
                 <NavGroup groupKey="mobile-investigation" label="Investigación y pistas" items={investigationNav} onNavigate={() => setMobileMenuOpen(false)} />
                 <NavGroup groupKey="mobile-utility" label="Herramientas y cuenta" items={utilityNav} onNavigate={() => setMobileMenuOpen(false)} />
               </div>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
                 <RefreshCw className="h-4 w-4" /> Actualizar datos
               </Button>
-              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" /> Cerrar sesión
+              <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
+                <LogOut className="h-4 w-4" /> {preview ? "Abrir mi archivo" : "Cerrar sesión"}
               </Button>
             </SheetContent>
           </Sheet>
-          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" onClick={goBack} aria-label="Volver atrás">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <NavLink to="/inicio" aria-label="GENEAI, inicio" className="mobile-brand min-w-0 flex-1">
             <BrandLogo className="min-w-0" size={36} showText />
           </NavLink>
           <div className="flex items-center gap-1">
-            <UniversalPersonSearch compact />
-            <NotificationBell />
+            {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+            <AdaptiveViewport inline />
+            {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : <NotificationBell />}
           </div>
         </div>}
         <main className={cn("app-main min-w-0 flex-1", isWindowFrame && "app-window-main")}>
-          {!isMobile && !isWindowFrame && <div className="mb-4 flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-xl" onClick={goBack}>
-              <ArrowLeft className="h-4 w-4" /> Volver
-            </Button>
-            <UniversalPersonSearch className="max-w-52" />
-            {sidebarCollapsed && <NotificationBell />}
+          {!isMobile && !isWindowFrame && <div className="desktop-toolbar">
+            <div className="flex min-w-0 items-center gap-2">
+              {location.pathname !== "/inicio" && !preview && <Button variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-full" onClick={goBack}><ArrowLeft className="h-4 w-4" /><span className="sr-only">Volver</span></Button>}
+              <span className="toolbar-context">{preview ? "Archivo de ejemplo" : "Mi archivo familiar"}</span>
+            </div>
+            <div className="toolbar-capsule glass-strong">
+              {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+              <SiriAssistant inline />
+              {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : <NotificationBell />}
+              <span className="toolbar-divider" />
+              <AdaptiveViewport inline />
+            </div>
           </div>}
           <Suspense fallback={<div role="status" className="grid min-h-[40vh] place-items-center text-muted-foreground">Cargando sección…</div>}>
-            <Outlet />
+            {children ?? <Outlet />}
           </Suspense>
         </main>
       </div>
 
-      {!isWindowFrame && <SiriAssistant />}
-      <BackgroundJobs />
+      {!preview && <BackgroundJobs />}
       {isMobile && !isWindowFrame && <MobileBottomNav />}
-      {!isWindowFrame && <AdaptiveViewport />}
-      <NetworkStatusModal />
-      <OfflineContextKeeper />
-      <GlobalDataSync />
-      <OriginBackgroundSync />
+      {!preview && <><NetworkStatusModal /><OfflineContextKeeper /><GlobalDataSync /><OriginBackgroundSync /></>}
       <KeyboardAwareScroller />
-      {!isWindowFrame && <AppWindowLayer />}
+      {!isWindowFrame && !preview && <AppWindowLayer />}
     </div>
   );
 }
