@@ -143,26 +143,6 @@ export default function PersonasList() {
         </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          title={`Investigar a ${p.nombres} ${p.apellidos} con IA usando toda su información`}
-          onClick={async (e) => {
-            e.stopPropagation();
-            const t = toast.loading(`IA investigando a ${p.nombres} ${p.apellidos}…`);
-            try {
-              const { data, error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: p.id } });
-              toast.dismiss(t);
-              if (error) throw error;
-              if (data?.error) throw new Error(data.error);
-              toast.success(`+${data.hallazgos?.length ?? 0} hallazgo(s) — revísalos en Búsqueda IA`, {
-                action: { label: "Ver", onClick: () => navigate("/busqueda-ia") },
-              });
-            } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error"); }
-          }}
-        >
-          <Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">IA</span>
-        </Button>
         <CertezaBadge value={p.certeza} />
       </div>
     </div>

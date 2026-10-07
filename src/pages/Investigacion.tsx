@@ -7,6 +7,7 @@ import { ResearchLogPanel } from '@/components/ResearchWorkflowPanel';
 
 const SearchPage = lazy(() => import("./Buscar"));
 const pages = {
+  cerebros: { label: 'Análisis de personas y árbol', Component: lazy(() => import('./ResearchBrains')) },
   hub: { label: 'Archivo y catálogos', Component: () => <SearchPage embedded /> },
   externas: { label: 'Consultas externas guardadas', Component: lazy(() => import('./InvestigacionExterna')) },
   asistente: { label: 'Genealogista IA', Component: lazy(() => import('./Asistente')) },
@@ -25,7 +26,7 @@ const pages = {
 type PageKey = keyof typeof pages;
 const groups: { key: string; label: string; pages: PageKey[] }[] = [
   { key: 'buscar', label: 'Buscar', pages: ['hub', 'externas'] },
-  { key: 'ia', label: 'IA', pages: ['asistente', 'busqueda', 'agente', 'paralelo'] },
+  { key: 'ia', label: 'IA', pages: ['cerebros', 'asistente', 'busqueda', 'agente', 'paralelo'] },
   { key: 'revisar', label: 'Revisar', pages: ['pistas', 'hipotesis', 'inferencias', 'insights', 'tareas', 'sugerencias', 'importadas'] },
   { key: 'historial', label: 'Historial', pages: ['bitacora'] },
 ];

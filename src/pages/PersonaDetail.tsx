@@ -18,7 +18,6 @@ import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { calcularParentesco, construirCaminoParentesco } from "@/lib/parentesco";
-import PersonaSmartInsights from "@/components/PersonaSmartInsights";
 import { generateExternalSearches } from "@/lib/external-searches";
 import { generateInferences } from "@/lib/inferences/engine";
 import QuickAddRelative from "@/components/QuickAddRelative";
@@ -46,7 +45,6 @@ import CoincidenciasWebButton from "@/components/CoincidenciasWebButton";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
 import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
-import GenealogistaIA from "@/components/GenealogistaIA";
 import EvidenceCenter from "@/components/EvidenceCenter";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -417,28 +415,6 @@ export default function PersonaDetail() {
       </div>
 
       {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
-
-      {!isNew && <PersonaSmartInsights persona={p} eventos={eventos} fam={fam} />}
-
-      {!isNew && (
-        <GenealogistaIA
-          context="persona"
-          title="Genealogista IA de la ficha"
-          personName={fullName}
-          subtitle="Analiza la ficha, documentos, relaciones y eventos. Propone hipótesis y evidencia, pero los cambios quedan pendientes de confirmación."
-          metrics={[
-            { label: "Fuentes", value: docs.length, tone: docs.length ? "ok" : "warn" },
-            { label: "Hipótesis", value: hipos.length, tone: hipos.length ? "info" : "neutral" },
-            { label: "Coincidencias", value: coincidencias.length, tone: coincidencias.length ? "warn" : "ok" },
-          ]}
-          actions={[
-            { label: "Buscar evidencia", description: "Internet, registros y fuentes probables.", onClick: buscarMasConIa, icon: <Search className="h-4 w-4" />, kind: "primary" },
-            { label: "Generar biografía", description: "Texto editable desde datos confirmados.", onClick: generarBiografia, icon: <Sparkles className="h-4 w-4" /> },
-            { label: "Detectar inconsistencias", description: "Fechas, relaciones y datos incompletos.", onClick: lanzarInsightsSegundoPlano, icon: <AlertTriangle className="h-4 w-4" />, kind: "warning" },
-          ]}
-          className="mb-4"
-        />
-      )}
 
       {!isNew && (
         <EvidenceCenter

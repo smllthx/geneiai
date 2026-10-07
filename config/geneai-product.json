@@ -4,8 +4,8 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.4",
-  "build": 304,
+  "version": "3.0.5",
+  "build": 305,
   "publishedAt": "2026-10-07",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
@@ -13,16 +13,10 @@
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Retratos visibles en personas, fichas y árbol; las fotos elegidas se vinculan también a la galería.",
-    "La subida de fotos permite elegir persona y aplicar la imagen como retrato.",
-    "Investigación agrupada en Buscar, IA, Revisar e Historial con enlaces anteriores compatibles.",
-    "Un solo menú compartido entre escritorio, móvil y ajustes; álbumes por persona sin secciones repetidas.",
-    "Formulario de investigación conectado con enlaces por nombre, lugar, año y criterios del catálogo.",
-    "Catálogo de FamilySearch desde lugares y fichas de personas, junto con accesos a MyHeritage y Ancestry.",
-    "Búsqueda de todas las páginas del archivo, con caché por cuenta y árbol y errores explícitos.",
-    "Navegación con transiciones y precarga de secciones principales, sin pantallas vacías con mensajes de carga.",
-    "Formulario compacto y modos de búsqueda desplazables para iPhone, iPad y Mac.",
-    "Los criterios de búsqueda se conservan en las URLs y se transfieren a la consulta IA.",
-    "Web y fuentes Apple conservan la misma identidad, origen público y conexión de datos."
+    "Paneles de investigación trasladados a Investigar → IA → Análisis de personas y árbol.",
+    "Personas y fichas sin paneles de investigación; selección de persona centralizada en Investigar.",
+    "Árbol principal con visor de tamaño fijo y zoom por pellizco anclado a los dedos.",
+    "Controles del árbol estáticos mientras el contenido se amplía, reduce o desplaza.",
+    "Gestos compartidos entre las cuatro vistas del árbol; edición de relaciones conservada."
   ]
 }

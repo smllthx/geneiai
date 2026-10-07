@@ -10,8 +10,8 @@ import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import TreeInsights from "@/components/TreeInsights";
-import GenealogistaIA from "@/components/GenealogistaIA";
+import TreeCanvas, { TreeZoomControls } from "@/components/tree/TreeCanvas";
+import { createTreeViewport } from "@/components/tree/treeViewport";
 import { toast } from "sonner";
 import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
@@ -321,7 +321,7 @@ function ArbolContent() {
   const [center, setCenter] = useState<string>("");
   const [probandLocked, setProbandLocked] = useState(false);
   const [generaciones, setGeneraciones] = useState(4);
-  const [zoom, setZoom] = useState(1);
+  const [viewport] = useState(createTreeViewport);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [vista, setVista] = useState<Vista>(() => {
@@ -341,7 +341,7 @@ function ArbolContent() {
   const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
   const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
   const initialTreeLoaded = useRef(false);
-  const treeScrollRef = useRef<HTMLDivElement | null>(null);
+
 
   const { user: authUser } = useAuth();
   const rtKey = useRealtimeReload(["personas", "relaciones", "documentos"], authUser?.id ?? null);
@@ -468,27 +468,6 @@ function ArbolContent() {
     reload();
 
   };
-
-  const centerTreeViewport = () => {
-    const el = treeScrollRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
-      });
-    });
-  };
-
-  useEffect(() => {
-    const id = window.setTimeout(centerTreeViewport, 120);
-    return () => window.clearTimeout(id);
-  }, [persona?.id, vista, generaciones, reloadKey, panel]);
-
-  useEffect(() => {
-    const handleResize = () => centerTreeViewport();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const crearRelacion = async (sourceId: string, targetId: string, tipo: RelTipo) => {
     if (sourceId === targetId) return toast.error("No puedes relacionar a una persona consigo misma.");
@@ -774,31 +753,6 @@ function ArbolContent() {
         </p>
       )}
 
-      {persona && <TreeInsights personaId={persona.id} personaNombre={`${persona.nombres} ${persona.apellidos}`} />}
-
-      {persona && (
-        <div className="px-3 md:px-6">
-          <GenealogistaIA
-            context="arbol"
-            title="Genealogista IA del árbol"
-            personName={`${persona.nombres} ${persona.apellidos}`}
-            subtitle="Revisa ramas débiles, coherencia, duplicados y tareas del árbol activo. Los vínculos sugeridos deben confirmarse antes de guardarse."
-            metrics={[
-              { label: "Personas", value: personas.length, tone: "neutral" },
-              { label: "Relaciones", value: rels.length, tone: rels.length ? "ok" : "warn" },
-              { label: "Tareas", value: tasks.filter((t) => t.estado !== "completada").length, tone: tasks.some((t) => t.estado !== "completada") ? "warn" : "ok" },
-            ]}
-            actions={[
-              { label: "Verificar coherencia", description: "Fechas imposibles y parentescos dudosos.", onClick: verificarCoherencia, icon: <ShieldCheck className="h-4 w-4" />, kind: "primary" },
-              { label: "Lanzar agentes", description: "Crea tareas por ramas y personas incompletas.", onClick: agentesEnParalelo, icon: <Rocket className="h-4 w-4" /> },
-              { label: "Actualizar árbol", description: "Recarga relaciones y personas del árbol activo.", onClick: refreshTree, icon: <RefreshCw className="h-4 w-4" /> },
-            ]}
-            compact
-            className="mb-4"
-          />
-        </div>
-      )}
-
       {/* Floating tools panel — agrupa todo lo demás */}
       <Sheet>
         <SheetTrigger asChild>
@@ -817,12 +771,7 @@ function ArbolContent() {
           <div className="space-y-5 p-4">
             <section>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Vista</p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} aria-label="Alejar"><ZoomOut className="h-4 w-4" /></Button>
-                <div className="flex-1 text-center text-xs tabular-nums text-muted-foreground">{Math.round(zoom * 100)}%</div>
-                <Button variant="outline" size="icon" onClick={() => setZoom((z) => Math.min(1.6, z + 0.1))} aria-label="Acercar"><ZoomIn className="h-4 w-4" /></Button>
-                <Button variant="outline" size="icon" onClick={() => { setZoom(1); centerTreeViewport(); }} aria-label="Centrar"><Crosshair className="h-4 w-4" /></Button>
-              </div>
+              <TreeZoomControls viewport={viewport} />
               <Button variant={fullscreen ? "default" : "outline"} size="sm" className="mt-2 w-full justify-start" onClick={() => setFullscreen((v) => !v)}>
                 {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
@@ -950,8 +899,8 @@ function ArbolContent() {
       ) : !persona ? (
         <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
-        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
-          <div className="mx-auto origin-top px-4 transition-transform md:px-6" style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}>
+        <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
+          <div className="px-4 md:px-6">
             <div className="mb-3 flex justify-center">
               <PartnershipStrip p={persona} compact />
             </div>
@@ -961,21 +910,20 @@ function ArbolContent() {
             <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> línea paterna ·{" "}
             <span className="inline-block h-2 w-2 rounded-full bg-pink-500" /> línea materna
           </p>
-        </div>
+        </TreeCanvas>
       ) : vista === "dinastica" ? (
-        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
-          <div className="mx-auto origin-top px-4 transition-transform md:px-6" style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}>
+        <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
+          <div className="px-4 md:px-6">
             <div className="mb-4 flex justify-center">
               <PartnershipStrip p={persona} compact />
             </div>
             <DynastyView personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
           </div>
-        </div>
+        </TreeCanvas>
       ) : vista === "lineas" ? (
-        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
+        <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
           <div
-            className="mx-auto flex flex-col items-center gap-5 origin-top px-4 transition-transform md:px-6"
-            style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}
+            className="flex flex-col items-center gap-5 px-4 md:px-6"
           >
             {(() => {
               const { padre, madre } = padresDe(persona.id);
@@ -996,12 +944,11 @@ function ArbolContent() {
               );
             })()}
           </div>
-        </div>
+        </TreeCanvas>
       ) : (
-        <div ref={treeScrollRef} className="w-full overflow-x-auto pb-24 md:pb-8">
+        <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
           <div
-            className="mx-auto flex flex-col items-center gap-5 origin-top px-4 transition-transform md:px-6"
-            style={{ transform: `scale(${zoom})`, width: "max-content", minWidth: "100%" }}
+            className="flex flex-col items-center gap-5 px-4 md:px-6"
           >
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Ascendencia paterna y materna
@@ -1041,7 +988,7 @@ function ArbolContent() {
               Ver ficha completa →
             </Link>
           </div>
-        </div>
+        </TreeCanvas>
       )}
 
       {/* Diálogo: elegir tipo de relación tras drop */}

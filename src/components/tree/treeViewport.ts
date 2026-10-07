@@ -207,7 +207,7 @@ export function createTreeViewport() {
     else if (offsets[event.key]) { cancelGesture(); update({ ...camera, x: camera.x + offsets[event.key].x, y: camera.y + offsets[event.key].y }); }
   };
   const visibility = () => { if (document.hidden) cancelGesture(); };
-  const preventDrag = (event: DragEvent) => event.preventDefault();
+  const preventDrag = (event: DragEvent) => { if (!editable(event.target)) event.preventDefault(); };
 
   return {
     getScale: () => camera.scale,
