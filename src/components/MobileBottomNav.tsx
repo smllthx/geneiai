@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { prefetchRoute } from "@/lib/routePrefetch";
 import { getMobileItems } from "@/lib/navConfig";
 
 const ALL = {
@@ -60,6 +61,9 @@ export default function MobileBottomNav() {
         <NavLink
           key={to}
           to={to}
+          onPointerEnter={() => prefetchRoute(to)}
+          onTouchStart={() => prefetchRoute(to)}
+          onFocus={() => prefetchRoute(to)}
           className={({ isActive }) =>
             cn(
               "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-full px-0.5 py-1.5 text-xs font-medium transition-colors",

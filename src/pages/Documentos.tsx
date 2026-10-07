@@ -203,12 +203,15 @@ export default function Documentos() {
         title="Documentos y fuentes"
         subtitle="Organiza actas, fotos y archivos. Filtra por tipo, persona o fecha y transcribe con IA."
         actions={
+          <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild><Link to="/fuentes">Citas y referencias</Link></Button>
           <Button
             variant="outline"
             onClick={crearSugerenciasDocumentales}
           >
             <ScanLine className="h-4 w-4" /> Extraer personas → Sugerencias
           </Button>
+          </div>
         }
       />
 

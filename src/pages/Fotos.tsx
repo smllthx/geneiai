@@ -15,6 +15,9 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "reac
 import "leaflet/dist/leaflet.css";
 import { localPhotoAnalysis } from "@/lib/offlineAi";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+import { savePersonPortrait } from "@/lib/portraits";
 import { toDisplayText } from "@/lib/safeText";
 
 type FotoRow = {
@@ -28,6 +31,8 @@ type Lugar = { id: string; ciudad: string | null; pais: string | null; lat: numb
 type FotoTag = { id: string; foto_id: string; persona_id: string; x: number; y: number; w: number; h: number };
 
 export default function Fotos() {
+  const { user } = useAuth();
+  const photoChanges = useRealtimeReload(["fotos", "personas"], user?.id);
   const [fotos, setFotos] = useState<FotoRow[]>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [lugares, setLugares] = useState<Lugar[]>([]);
@@ -36,6 +41,8 @@ export default function Fotos() {
   const [titulo, setTitulo] = useState("");
   const [desc, setDesc] = useState("");
   const [fechaAprox, setFechaAprox] = useState("");
+  const [uploadPerson, setUploadPerson] = useState("");
+  const [asPortrait, setAsPortrait] = useState(true);
   const [busy, setBusy] = useState(false);
   const [detalle, setDetalle] = useState<FotoRow | null>(null);
 
@@ -58,7 +65,7 @@ export default function Fotos() {
       setLugares([]);
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [photoChanges]);
 
   const subir = async () => {
     if (!file) return;
@@ -73,11 +80,12 @@ export default function Fotos() {
       const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
       const { data: inserted, error: insErr } = await supabase.from("fotos").insert(withTreeScope({
         user_id: user.id, url: publicUrl, storage_path: path,
-        titulo, descripcion: desc, fecha_aprox: fechaAprox,
+        titulo, descripcion: desc, fecha_aprox: fechaAprox, personas_ids: uploadPerson ? [uploadPerson] : [],
       }, treeId)).select().single();
       if (insErr) throw insErr;
-      toast.success("Foto subida");
-      setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setOpen(false);
+      if (uploadPerson && asPortrait) await savePersonPortrait(uploadPerson, publicUrl);
+      toast.success(uploadPerson && asPortrait ? "Foto subida y retrato actualizado" : "Foto subida");
+      setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setUploadPerson(""); setAsPortrait(true); setOpen(false);
       load();
 
       // Análisis contextual local en segundo plano; no bloquea la subida.
@@ -148,6 +156,8 @@ export default function Fotos() {
         <DialogHeader><DialogTitle>Subir nueva foto</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <div><Label>Persona de la foto (opcional)</Label><Select value={uploadPerson || "none"} onValueChange={value => setUploadPerson(value === "none" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sin vincular</SelectItem>{personas.map(person => <SelectItem key={person.id} value={person.id}>{person.nombres} {person.apellidos}</SelectItem>)}</SelectContent></Select></div>
+          {uploadPerson && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={asPortrait} onChange={event => setAsPortrait(event.target.checked)} /> Usar como retrato en la ficha y el árbol</label>}
           <div><Label>Título</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
           <div><Label>Descripción</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
           <div><Label>Fecha aproximada</Label><Input value={fechaAprox} onChange={(e) => setFechaAprox(e.target.value)} placeholder="hacia 1920" /></div>
@@ -161,8 +171,8 @@ export default function Fotos() {
     <div>
       <SectionHeader
         eyebrow="Galería familiar"
-        title="Fotos"
-        subtitle="Estilo Apple Photos: galería, memorias automáticas, álbumes por persona, mapa de lugares."
+        title="Recuerdos"
+        subtitle="Fotos, retratos y álbumes que cuentan tu historia familiar."
         actions={subirAccion}
       />
 
@@ -173,8 +183,7 @@ export default function Fotos() {
           <TabsList className="glass-strong rounded-2xl p-1">
             <TabsTrigger value="galeria"><ImageIcon className="h-3.5 w-3.5" /> Galería</TabsTrigger>
             <TabsTrigger value="memorias"><Sparkles className="h-3.5 w-3.5" /> Memorias</TabsTrigger>
-            <TabsTrigger value="albumes"><Album className="h-3.5 w-3.5" /> Álbumes</TabsTrigger>
-            <TabsTrigger value="personas"><Users className="h-3.5 w-3.5" /> Personas</TabsTrigger>
+            <TabsTrigger value="albumes"><Album className="h-3.5 w-3.5" /> Por persona</TabsTrigger>
             <TabsTrigger value="lugares"><MapPin className="h-3.5 w-3.5" /> Lugares</TabsTrigger>
           </TabsList>
 
@@ -226,20 +235,6 @@ export default function Fotos() {
                 ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="personas" className="mt-4">
-            <div className="flex flex-wrap gap-2">
-              {personas.map((p) => {
-                const n = fotos.filter((f) => (f.personas_ids ?? []).includes(p.id)).length;
-                if (n === 0) return null;
-                return (
-                  <Link key={p.id} to={`/personas/${p.id}`} className="glass-pill">
-                    {p.nombres} {p.apellidos.split(" ")[0]} · {n}
-                  </Link>
-                );
-              })}
-            </div>
           </TabsContent>
 
           <TabsContent value="lugares" className="mt-4 space-y-4">
@@ -377,11 +372,11 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
   const useAsPortrait = async () => {
     if (!portraitPerson) return toast.error("Elige una persona primero");
     setPortraitBusy(true);
-    const { error } = await supabase.from("personas").update({ foto_url: foto.url }).eq("id", portraitPerson);
-    setPortraitBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Retrato actualizado en toda la ficha");
-    window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "personas", personId: portraitPerson } }));
+    try {
+      await savePersonPortrait(portraitPerson, foto.url, foto.id);
+      toast.success("Retrato actualizado en la ficha, personas y árbol");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo guardar el retrato"); }
+    finally { setPortraitBusy(false); }
   };
 
   const eliminar = async () => {

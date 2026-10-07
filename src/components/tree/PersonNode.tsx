@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyPerson } from "./types";
@@ -59,7 +60,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
       <div className="flex gap-3">
         {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary ring-1 ring-primary/20">
           {person.avatarUrl ? (
-            <img loading="lazy" decoding="async" src={person.avatarUrl} alt={fullName} className="h-full w-full object-cover" />
+            <PersonPortrait src={person.avatarUrl} name={fullName} className="h-full w-full object-cover" />
           ) : person.initials ? (
             person.initials
           ) : (

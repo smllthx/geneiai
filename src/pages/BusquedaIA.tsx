@@ -40,9 +40,9 @@ export default function BusquedaIA() {
       if (personaParam && data?.some((person: any) => person.id === personaParam)) {
         setTab("persona");
         setPid(personaParam);
-      } else if (queryParam) {
+      } else if (queryParam || params.get("lugar") || params.get("nombres") || params.get("apellidos")) {
         setTab("manual");
-        setManual((current) => ({ ...current, palabras: queryParam }));
+        setManual((current) => ({ ...current, nombres: params.get("nombres") || "", apellidos: params.get("apellidos") || "", lugar: params.get("lugar") || "", anos: params.get("anio") || "", palabras: params.get("palabras") || queryParam }));
         if (data?.[0]) setPid(data[0].id);
       } else if (data?.[0]) {
         setPid(data[0].id);

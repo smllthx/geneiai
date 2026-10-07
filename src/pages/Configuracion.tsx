@@ -656,7 +656,7 @@ export default function Configuracion() {
               Registra tu app en <a href="https://www.familysearch.org/developers/" target="_blank" rel="noopener noreferrer" className="underline text-link">familysearch.org/developers</a> (tipo Browser/Public — no requiere Client Secret). Redirect URI a usar: <code className="text-xs">{window.location.origin}/familysearch/callback</code>
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Para guardar tu <strong>Client ID</strong> y el <strong>Secret</strong>, usa la sección Credenciales. Se almacenan cifradas en el servidor y nunca quedan expuestas al navegador.
+              Para guardar tu <strong>Client ID</strong> y el <strong>Secret</strong>, <a href="/credenciales" className="text-primary underline">abre Credenciales</a>. Se almacenan cifradas en el servidor y nunca quedan expuestas al navegador.
             </p>
           </div>
 

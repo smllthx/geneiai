@@ -1,3 +1,4 @@
+import SectionPlaceholder from '@/components/SectionPlaceholder';
 import { createContext, Fragment, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session, User } from '@supabase/supabase-js';
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       </section>
     </main>
   );
-  if (loading) return <div role="status" className="grid min-h-[100dvh] place-items-center text-muted-foreground">Conectando con GENEAI…</div>;
+  if (loading) return <SectionPlaceholder session />;
 
   return (
     <AuthContext.Provider value={{ user: session?.user ?? null, session, loading, signOut }}>

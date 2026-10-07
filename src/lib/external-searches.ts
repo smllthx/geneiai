@@ -1,4 +1,5 @@
 // Generador de búsquedas externas (sin scraping). Sólo construye queries y URLs.
+import { buildResearchLinks } from "@/lib/researchSearch";
 import type { Tables } from "@/integrations/supabase/types";
 type P = Tables<"personas">;
 
@@ -10,9 +11,9 @@ export interface ExternalSearch {
 }
 
 const enc = encodeURIComponent;
-const yearOf = (d: string | null): number | null => (d ? new Date(d).getUTCFullYear() : null);
+const yearOf = (d: string | null): number | null => { const year = d ? new Date(d).getUTCFullYear() : NaN; return Number.isFinite(year) ? year : null; };
 
-export function generateExternalSearches(p: P): ExternalSearch[] {
+export function generateExternalSearches(p: P, place?: string): ExternalSearch[] {
   const out: ExternalSearch[] = [];
   const nombres = p.nombres ?? "";
   const apellidos = p.apellidos ?? "";
@@ -20,27 +21,8 @@ export function generateExternalSearches(p: P): ExternalSearch[] {
   const def = yearOf(p.defuncion_fecha) ?? null;
   const apellido1 = apellidos.split(/\s+/)[0] ?? "";
 
-  // FamilySearch Tree
-  out.push({
-    plataforma: "FamilySearch — Tree",
-    objetivo: `Buscar a ${nombres} ${apellidos} en el árbol`,
-    query: `${nombres} ${apellidos}`,
-    url: `https://www.familysearch.org/search/tree/results?q.givenName=${enc(nombres)}&q.surname=${enc(apellidos)}${nac ? `&q.birthLikePlace.from=&q.birthLikeDate.from=${nac - 5}&q.birthLikeDate.to=${nac + 5}` : ""}`,
-  });
-  // FamilySearch Records
-  out.push({
-    plataforma: "FamilySearch — Records",
-    objetivo: "Buscar registros documentales",
-    query: `${nombres} ${apellidos}`,
-    url: `https://www.familysearch.org/search/record/results?q.givenName=${enc(nombres)}&q.surname=${enc(apellidos)}${nac ? `&q.birthLikeDate.from=${nac - 5}&q.birthLikeDate.to=${nac + 5}` : ""}`,
-  });
-  // MyHeritage
-  out.push({
-    plataforma: "MyHeritage — SuperSearch",
-    objetivo: "Búsqueda preparada en MyHeritage",
-    query: `${nombres} ${apellidos}`,
-    url: `https://www.myheritage.es/research?formId=master&formMode=&qname=Name+fnmo.${enc(nombres)}+lnmo.${enc(apellidos)}${nac ? `&qevents-event/-/start=Event+et.birth+ed.${nac}+ev.5` : ""}`,
-  });
+  const criteria = { givenName: nombres, surname: apellidos, place, year: nac ? String(nac) : undefined };
+  out.push(...buildResearchLinks(criteria).map(link => ({ plataforma: link.label, objetivo: link.description, query: [nombres, apellidos, place, nac].filter(Boolean).join(" "), url: link.url })));
   // Google general
   const gQuery = `"${nombres} ${apellido1}"${nac ? ` ${nac - 5}..${nac + 5}` : ""} genealogía`;
   out.push({
@@ -68,7 +50,7 @@ export function generateExternalSearches(p: P): ExternalSearch[] {
       plataforma: `FamilySearch — variante "${alt}"`,
       objetivo: `Probar variante ortográfica del apellido`,
       query: `${nombres} ${alt}`,
-      url: `https://www.familysearch.org/search/record/results?q.givenName=${enc(nombres)}&q.surname=${enc(alt)}`,
+      url: buildResearchLinks({ ...criteria, surname: alt }).find(link => link.id === "fs-records")!.url,
     });
   }
   if (def) {

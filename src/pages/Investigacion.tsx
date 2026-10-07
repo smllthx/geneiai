@@ -1,69 +1,58 @@
-import { lazy, Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
-import { SectionHeader } from "@/components/glass";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import GenealogistaIA from "@/components/GenealogistaIA";
-import { ResearchLogPanel } from "@/components/ResearchWorkflowPanel";
+import { lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { SectionHeader } from '@/components/glass';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SectionPlaceholder from '@/components/SectionPlaceholder';
+import { ResearchLogPanel } from '@/components/ResearchWorkflowPanel';
 
-const Agente = lazy(() => import("./Agente"));
-const AgentesParalelo = lazy(() => import("./AgentesParalelo"));
-const InvestigacionExterna = lazy(() => import("./InvestigacionExterna"));
-const PersonasImportadasPendientes = lazy(() => import("./PersonasImportadasPendientes"));
-const Pistas = lazy(() => import("./Pistas"));
-const Hipotesis = lazy(() => import("./Hipotesis"));
-const Inferencias = lazy(() => import("./Inferencias"));
-const BusquedaIA = lazy(() => import("./BusquedaIA"));
-const Insights = lazy(() => import("./Insights"));
-const Buscar = lazy(() => import("./Buscar"));
-
-function BitacoraInvestigacion() {
-  return <ResearchLogPanel />;
-}
-
-const TABS = [
-  { v: "hub", l: "Buscar", C: Buscar },
-  { v: "bitacora", l: "Bitácora", C: BitacoraInvestigacion },
-  { v: "agente", l: "Agente IA", C: Agente },
-  { v: "importadas", l: "Importadas pendientes", C: PersonasImportadasPendientes },
-  { v: "busqueda", l: "Búsqueda IA", C: BusquedaIA },
-  { v: "insights", l: "Insights", C: Insights },
-  { v: "paralelo", l: "Paralelo", C: AgentesParalelo },
-  { v: "externas", l: "Web externa", C: InvestigacionExterna },
-  { v: "pistas", l: "Pistas", C: Pistas },
-  { v: "hipotesis", l: "Hipótesis", C: Hipotesis },
-  { v: "inferencias", l: "Inferencias", C: Inferencias },
+const SearchPage = lazy(() => import("./Buscar"));
+const pages = {
+  hub: { label: 'Archivo y catálogos', Component: () => <SearchPage embedded /> },
+  externas: { label: 'Consultas externas guardadas', Component: lazy(() => import('./InvestigacionExterna')) },
+  asistente: { label: 'Genealogista IA', Component: lazy(() => import('./Asistente')) },
+  busqueda: { label: 'Búsqueda con IA', Component: lazy(() => import('./BusquedaIA')) },
+  agente: { label: 'Agente guiado', Component: lazy(() => import('./Agente')) },
+  paralelo: { label: 'Agentes paralelos', Component: lazy(() => import('./AgentesParalelo')) },
+  pistas: { label: 'Pistas', Component: lazy(() => import('./Pistas')) },
+  hipotesis: { label: 'Hipótesis', Component: lazy(() => import('./Hipotesis')) },
+  inferencias: { label: 'Inferencias', Component: lazy(() => import('./Inferencias')) },
+  insights: { label: 'Resumen del árbol', Component: lazy(() => import('./Insights')) },
+  tareas: { label: 'Tareas IA', Component: lazy(() => import('./TareasIA')) },
+  sugerencias: { label: 'Sugerencias y relaciones', Component: lazy(() => import('./Sugerencias')) },
+  importadas: { label: 'Importadas pendientes', Component: lazy(() => import('./PersonasImportadasPendientes')) },
+  bitacora: { label: 'Bitácora', Component: ResearchLogPanel },
+};
+type PageKey = keyof typeof pages;
+const groups: { key: string; label: string; pages: PageKey[] }[] = [
+  { key: 'buscar', label: 'Buscar', pages: ['hub', 'externas'] },
+  { key: 'ia', label: 'IA', pages: ['asistente', 'busqueda', 'agente', 'paralelo'] },
+  { key: 'revisar', label: 'Revisar', pages: ['pistas', 'hipotesis', 'inferencias', 'insights', 'tareas', 'sugerencias', 'importadas'] },
+  { key: 'historial', label: 'Historial', pages: ['bitacora'] },
 ];
 
 export default function Investigacion() {
   const [params, setParams] = useSearchParams();
-  const current = params.get("tab") ?? "hub";
-
-  return (
-    <div>
-      <SectionHeader
-        eyebrow="Centro de investigación"
-        title="Investigación familiar"
-        subtitle="ChatGPT, búsquedas externas, pistas, hipótesis, agentes e inferencias en un solo lugar."
-      />
-      <GenealogistaIA
-        context="investigacion"
-        title="Genealogista IA"
-        subtitle="Escribe, busca, revisa y confirma. La IA puede proponer relaciones, duplicados, eventos y fuentes; la app no aplica cambios importantes sin tu validación."
-        compact
-        className="mb-4"
-      />
-      <Tabs value={current} onValueChange={(v) => setParams({ tab: v })}>
-        <TabsList className="mb-4 flex h-auto flex-wrap">
-          {TABS.map((t) => <TabsTrigger key={t.v} value={t.v}>{t.l}</TabsTrigger>)}
-        </TabsList>
-        {TABS.map((t) => (
-          <TabsContent key={t.v} value={t.v} className="mt-0">
-            <Suspense fallback={<div className="text-muted-foreground text-sm">Cargando…</div>}>
-              <t.C />
-            </Suspense>
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
-  );
+  const requested = params.get('tab') ?? 'hub';
+  const current: PageKey = Object.prototype.hasOwnProperty.call(pages, requested) ? requested as PageKey : 'hub';
+  const group = groups.find(group => group.pages.includes(current))!;
+  const ActivePage = pages[current].Component;
+  const changePage = (page: PageKey) => {
+    const next = new URLSearchParams(params); next.set('tab', page); setParams(next);
+  };
+  return <div>
+    <SectionHeader eyebrow="Centro de investigación" title="Investigación familiar" subtitle="Busca fuentes, trabaja con IA y revisa cada hallazgo en un solo lugar." />
+    <Tabs value={group.key} onValueChange={key => changePage(groups.find(group => group.key === key)!.pages[0])}>
+      <TabsList className="research-tabs mb-4 grid h-auto w-full max-w-lg grid-cols-4 p-1">
+        {groups.map(group => <TabsTrigger key={group.key} value={group.key} className="min-h-11">{group.label}</TabsTrigger>)}
+      </TabsList>
+      <TabsContent value={group.key} className="mt-0">
+        {group.pages.length > 1 && <label className="mb-5 flex flex-wrap items-center gap-3 text-sm font-medium">{group.label === 'Revisar' ? 'Qué revisar' : 'Herramienta'}
+          <select aria-label="Herramienta de investigación" value={current} onChange={event => changePage(event.target.value as PageKey)} className="min-h-11 max-w-full rounded-xl border bg-card px-3 text-base">
+            {group.pages.map(key => <option key={key} value={key}>{pages[key].label}</option>)}
+          </select>
+        </label>}
+        <Suspense fallback={<SectionPlaceholder />}><ActivePage /></Suspense>
+      </TabsContent>
+    </Tabs>
+  </div>;
 }

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import PersonPortrait from "@/components/PersonPortrait";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, EyeOff, Sparkles, GitMerge, ListOrdered, Link2, RefreshCw } from "lucide-react";
+import { Plus, MoreHorizontal, EyeOff, Sparkles, GitMerge, ListOrdered, Link2, RefreshCw } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";
@@ -42,7 +44,7 @@ export default function PersonasList() {
       const treeId = await getActiveTreeId();
       if (controller.signal.aborted) return;
       const [people, rels] = await Promise.all([
-        fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,sexo,nacionalidad,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,certeza,arbol_id", { treeId, signal: controller.signal }),
+        fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,sexo,nacionalidad,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,certeza,foto_url,arbol_id", { treeId, signal: controller.signal }),
         fetchAllRelations<any>("persona_id,pariente_id,tipo", { treeId, signal: controller.signal }),
       ]);
       if (controller.signal.aborted) return;
@@ -120,7 +122,9 @@ export default function PersonasList() {
   const renderPersonRow = (p: any) => (
     <div key={p.id}
       className="archivo-card flex min-h-[78px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:border-primary/40">
-      <button onClick={() => navigate(`/personas/${p.id}`)} className="min-w-0 flex-1 text-left">
+      <button onClick={() => navigate(`/personas/${p.id}`)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <PersonPortrait src={p.foto_url} name={`${p.nombres} ${p.apellidos}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
+        <div className="min-w-0">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span className="font-bold text-foreground">{p.nombres}</span>
           <span className="font-bold text-foreground">{p.apellidos}</span>
@@ -135,6 +139,7 @@ export default function PersonasList() {
         <div className="mt-1 text-xs text-muted-foreground">
           {p.nac_fecha ? `n. ${new Date(p.nac_fecha).getUTCFullYear()}` : p.nac_rango_ini ? `n. ${p.nac_rango_ini}–${p.nac_rango_fin}` : "nacimiento s/d"}
           {p.defuncion_fecha && ` — †${new Date(p.defuncion_fecha).getUTCFullYear()}`}
+        </div>
         </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
@@ -156,7 +161,7 @@ export default function PersonasList() {
             } catch (err: any) { toast.dismiss(t); toast.error(err.message ?? "Error"); }
           }}
         >
-          <Sparkles className="h-3.5 w-3.5" /> IA
+          <Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">IA</span>
         </Button>
         <CertezaBadge value={p.certeza} />
       </div>
@@ -169,34 +174,16 @@ export default function PersonasList() {
         title="Personas"
         subtitle="Toda persona del archivo. Cada una con su código único de identificación."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/apellidos")}
-              title="Ver personas agrupadas por apellido"
-            >
-              <ListOrdered className="h-4 w-4" /> Apellidos
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/fusionar")}
-              title="Detectar y fusionar personas duplicadas"
-            >
-              <GitMerge className="h-4 w-4" /> Detectar duplicados
-            </Button>
-            <Button
-              variant="outline"
-              onClick={generarSugerenciasApellido}
-              title="Sugerir conexiones familiares por apellidos compartidos"
-            >
-              <Link2 className="h-4 w-4" /> Sugerir relaciones
-            </Button>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Actualizar
-            </Button>
-            <Button onClick={() => navigate("/personas/nueva")}>
-              <Plus className="h-4 w-4" /> Nueva persona
-            </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/personas/nueva")}><Plus className="h-4 w-4" /> Nueva persona</Button>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline"><MoreHorizontal className="h-4 w-4" /> Herramientas</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => navigate("/apellidos")}><ListOrdered className="mr-2 h-4 w-4" /> Agrupar por apellido</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/fusionar")}><GitMerge className="mr-2 h-4 w-4" /> Detectar duplicados</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void generarSugerenciasApellido()}><Link2 className="mr-2 h-4 w-4" /> Sugerir relaciones</DropdownMenuItem>
+                <DropdownMenuItem disabled={loading} onSelect={() => void load()}><RefreshCw className="mr-2 h-4 w-4" /> Actualizar</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />

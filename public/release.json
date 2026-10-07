@@ -1,15 +1,19 @@
 {
-  "version": "3.0.3",
-  "publishedAt": "2026-09-22",
+  "version": "3.0.4",
+  "publishedAt": "2026-10-07",
   "channel": "stable",
   "changes": [
-    "Navegación del árbol con zoom anclado al gesto, desplazamiento con inercia y controles fijos.",
-    "Versión, origen público y contrato de producto compartidos entre web y fuentes Apple.",
-    "Integración de las correcciones de empaquetado macOS y compatibilidad del código Swift.",
-    "Validación automática que impide compilar con versiones o configuraciones divergentes.",
-    "Sincronización por lotes sin aplazamiento indefinido ante cambios continuos.",
-    "Los eventos tardíos de una sesión cerrada ya no actualizan la sesión siguiente.",
-    "Índices adicionales para las relaciones y la vinculación de personas y eventos con sus árboles."
+    "Retratos visibles en personas, fichas y árbol; las fotos elegidas se vinculan también a la galería.",
+    "La subida de fotos permite elegir persona y aplicar la imagen como retrato.",
+    "Investigación agrupada en Buscar, IA, Revisar e Historial con enlaces anteriores compatibles.",
+    "Un solo menú compartido entre escritorio, móvil y ajustes; álbumes por persona sin secciones repetidas.",
+    "Formulario de investigación conectado con enlaces por nombre, lugar, año y criterios del catálogo.",
+    "Catálogo de FamilySearch desde lugares y fichas de personas, junto con accesos a MyHeritage y Ancestry.",
+    "Búsqueda de todas las páginas del archivo, con caché por cuenta y árbol y errores explícitos.",
+    "Navegación con transiciones y precarga de secciones principales, sin pantallas vacías con mensajes de carga.",
+    "Formulario compacto y modos de búsqueda desplazables para iPhone, iPad y Mac.",
+    "Los criterios de búsqueda se conservan en las URLs y se transfieren a la consulta IA.",
+    "Web y fuentes Apple conservan la misma identidad, origen público y conexión de datos."
   ],
   "nativeDistributionReady": false
 }

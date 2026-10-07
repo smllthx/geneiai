@@ -244,3 +244,23 @@ button, summary { -webkit-tap-highlight-color: transparent; }
 
 /* Typography follows text-size preferences without shrinking touch targets. */
 @media (max-width: 374px) { .mobile-brand .font-display { display: none; } }
+
+/* Research: compact choices leave the actual search visible on iPhone. */
+.research-modes { display: flex; overflow-x: auto; overscroll-behavior-inline: contain; gap: 8px; padding: 2px 2px 8px; scrollbar-width: thin; }
+.research-mode { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 48px; padding: 10px 12px; border-radius: 15px; }
+.research-mode > svg { margin: 0; width: 17px; height: 17px; }
+.research-mode > p:last-child { display: none; }
+.research-mode > p { font-size: .8125rem; white-space: nowrap; }
+.research-source { display: block; min-width: 0; transition: border-color .15s, box-shadow .15s; }
+.research-source:hover, .research-source:focus-visible { border-color: hsl(var(--primary) / .5); box-shadow: var(--surface-shadow); }
+.research-form { background: hsl(var(--card) / .88); border-radius: 24px; }
+.research-form input, .research-form select { scroll-margin-block: calc(var(--app-header-height) + 2rem); }
+.section-placeholder { width: 100%; max-width: 1024px; margin-inline: auto; padding: 1rem 0; }
+.session-placeholder { padding: max(2rem, env(safe-area-inset-top)) 1.5rem; max-width: 720px; }
+.placeholder-line { height: 16px; border-radius: 8px; background: hsl(var(--foreground) / .06); }
+.placeholder-card { height: 150px; border-radius: 24px; background: hsl(var(--card) / .66); border: 1px solid hsl(var(--border) / .55); }
+@media (max-width: 639px) {
+  .research-tabs { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; max-width: 100%; padding: 5px; }
+  .research-tabs button { flex-shrink: 0; min-height: 44px; }
+  .research-workspace h1 { font-size: 1.65rem; letter-spacing: -.035em; }
+}

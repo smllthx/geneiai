@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import ExternalLinkBrowser from "@/components/ExternalLinkBrowser";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
+import SectionPlaceholder from "@/components/SectionPlaceholder";
 import Login from "./pages/Login";
 const DesignPreview = lazy(() => import("./pages/DesignPreview"));
 const Inicio = lazy(routeLoaders.Inicio);
@@ -66,11 +67,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const PageFallback = () => (
-  <div className="grid min-h-[40vh] place-items-center">
-    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-  </div>
-);
+const PageFallback = () => <SectionPlaceholder session />;
 
 function SessionScope({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
@@ -91,7 +88,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AppServices />
           <SessionScope>
             <Suspense fallback={<PageFallback />}>

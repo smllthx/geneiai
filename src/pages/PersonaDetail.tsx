@@ -26,7 +26,8 @@ import { toDisplayText } from "@/lib/safeText";
 import AgregarInfoSheet from "@/components/AgregarInfoSheet";
 import PersonaHero from "@/components/PersonaHero";
 import { Link } from "react-router-dom";
-import LugarSelect, { useLugares } from "@/components/LugarSelect";
+import { savePersonPortrait } from "@/lib/portraits";
+import LugarSelect, { useLugares, lugarLabel } from "@/components/LugarSelect";
 import { notify } from "@/lib/notifications";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe } from "@/lib/kinship";
 import RelativeRowActions from "@/components/RelativeRowActions";
@@ -758,14 +759,14 @@ export default function PersonaDetail() {
                     const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
                     if (upErr) throw upErr;
                     const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
-                    const { error: insErr } = await supabase.from("fotos").insert({
+                    const { error: insErr } = await supabase.from("fotos").insert(withTreeScope({
                       user_id: u.id, url: publicUrl, storage_path: path,
                       titulo: `${p.nombres} ${p.apellidos}`,
                       personas_ids: [id],
-                    });
+                    }, p.arbol_id ?? null));
                     if (insErr) throw insErr;
                     if (!p.foto_url) {
-                      await supabase.from("personas").update({ foto_url: publicUrl }).eq("id", id);
+                      await savePersonPortrait(id, publicUrl);
                       setP({ ...p, foto_url: publicUrl });
                     }
                     const { data: ft } = await supabase.from("fotos").select("*").contains("personas_ids", [id]).order("created_at", { ascending: false });
@@ -806,12 +807,11 @@ export default function PersonaDetail() {
                     {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
                     {f.fecha_aprox && <p className="truncate text-[10px] text-muted-foreground">{f.fecha_aprox}</p>}
                     <Button size="sm" variant={p.foto_url === f.url ? "secondary" : "outline"} className="h-7 w-full text-[11px]" onClick={async () => {
-                      const { error } = await supabase.from("personas").update({ foto_url: f.url }).eq("id", id!);
-                      if (error) toast.error(error.message);
-                      else {
+                      try {
+                        await savePersonPortrait(id!, f.url, f.id);
                         setP({ ...p, foto_url: f.url });
-                        toast.success("Retrato actualizado. Se verá en el árbol.");
-                      }
+                        toast.success("Retrato actualizado en la ficha, personas y árbol.");
+                      } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo guardar el retrato"); }
                     }}>
                       <ImageIcon className="mr-1 h-3 w-3" /> {p.foto_url === f.url ? "Retrato actual" : "Usar como retrato"}
                     </Button>
@@ -862,7 +862,7 @@ export default function PersonaDetail() {
             {!isNew && <AISuggestionsPanel personId={id!} />}
             <div>
               <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Búsquedas externas sugeridas</h3>
-              <BusquedasSugeridas persona={p} disabled={isNew} />
+              <BusquedasSugeridas persona={p} lugar={lugarLabel(lugares.find(l => l.id === p.nac_lugar_id))} disabled={isNew} />
             </div>
             <div>
               <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">Hipótesis</h3>
@@ -1356,9 +1356,9 @@ function EventosPanel({ personaId, eventos, reload, disabled }: any) {
 type AgentDef = { key: string; label: string; fn: string; body: Record<string, unknown> };
 type AgentState = { status: "idle" | "running" | "done" | "error"; ms?: number; result?: any; error?: string };
 
-function BusquedasSugeridas({ persona, disabled }: any) {
+function BusquedasSugeridas({ persona, lugar, disabled }: any) {
   if (disabled) return <p className="text-sm text-muted-foreground">Guarda la persona primero.</p>;
-  const sugs = generateExternalSearches(persona);
+  const sugs = generateExternalSearches(persona, lugar);
   const [running, setRunning] = useState(false);
 
   const agents: AgentDef[] = [
@@ -1455,7 +1455,7 @@ function BusquedasSugeridas({ persona, disabled }: any) {
           <code className="block break-all rounded bg-muted px-2 py-1 text-xs">{s.query}</code>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(s.query); toast.success("Copiado"); }}>Copiar</Button>
-            <Button size="sm" asChild><a href={s.url} target="_blank" rel="noopener noreferrer"><Globe className="h-3.5 w-3.5" /> Abrir</a></Button>
+            <Button size="sm" asChild><a href={s.url} target="_blank" rel="noopener noreferrer" data-external-browser="true"><Globe className="h-3.5 w-3.5" /> Abrir</a></Button>
           </div>
         </CardContent></Card>
       ))}</div>

@@ -1,3 +1,6 @@
+import PersonPortrait from "@/components/PersonPortrait";
+import { savePersonPortrait } from "@/lib/portraits";
+import { withTreeScope } from "@/lib/peopleData";
 import { useRef, useState } from "react";
 import { User, Camera, Loader2 } from "lucide-react";
 import CertezaBadge from "@/components/CertezaBadge";
@@ -63,8 +66,9 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
       const { error: upErr } = await supabase.storage.from("fotos").upload(path, cropped, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
-      const { error: updErr } = await supabase.from("personas").update({ foto_url: publicUrl }).eq("id", p.id);
-      if (updErr) throw updErr;
+      const { error: photoError } = await supabase.from("fotos").insert(withTreeScope({ user_id: user.id, url: publicUrl, storage_path: path, titulo: `Retrato de ${p.nombres} ${p.apellidos}`, personas_ids: [p.id] }, p.arbol_id ?? null));
+      if (photoError) throw photoError;
+      await savePersonPortrait(p.id, publicUrl);
       toast.success("Retrato actualizado");
       onUpdated?.({ foto_url: publicUrl });
       setCropFile(null); setCropUrl(null);
@@ -87,7 +91,7 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
           className={`group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-card/70 ring-2 ${ring} md:h-28 md:w-28`}
         >
           {p?.foto_url ? (
-            <img src={p.foto_url} alt={`${p.nombres ?? ""} ${p.apellidos ?? ""}`} className="h-full w-full object-cover" />
+            <PersonPortrait src={p.foto_url} name={`${p.nombres ?? ""} ${p.apellidos ?? ""}`} className="h-full w-full object-cover" />
           ) : (
             <User className="h-12 w-12 text-muted-foreground" />
           )}

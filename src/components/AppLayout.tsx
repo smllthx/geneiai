@@ -10,6 +10,7 @@ import {
   PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SectionPlaceholder from "@/components/SectionPlaceholder";
 import SiriAssistant from "@/components/SiriAssistant";
 import BackgroundJobs from "@/components/BackgroundJobs";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -25,42 +26,18 @@ import AppWindowLayer from "@/components/AppWindowLayer";
 import UniversalPersonSearch from "@/components/UniversalPersonSearch";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden, toggleHidden } from "@/lib/navConfig";
+import { navigationGroups } from "@/lib/navigation";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
-const primaryNavBase = [
-  { to: "/inicio", label: "Inicio", icon: Home },
-  { to: "/arbol", label: "Árbol", icon: GitBranch },
-  { to: "/personas", label: "Personas", icon: Users },
-  { to: "/investigacion", label: "Investigar", icon: Sparkles },
-];
-const archiveNav = [
-  { to: "/fotos", label: "Recuerdos", icon: ImageIcon },
-  { to: "/documentos", label: "Documentos", icon: FileText },
-  { to: "/apellidos", label: "Apellidos", icon: ListOrdered },
-  { to: "/familias", label: "Familias", icon: Heart },
-  { to: "/calendario", label: "Calendario", icon: Calendar },
-];
-const investigationNav = [
-  { to: "/asistente", label: "Genealogista IA", icon: Bot },
-  { to: "/importadas-pendientes", label: "Importadas pendientes", icon: Link2 },
-  { to: "/sugerencias", label: "Tareas y pistas", icon: LightbulbIcon },
-  { to: "/tareas-ia", label: "Tareas IA", icon: ClipboardCheck },
-  { to: "/adn", label: "ADN y origen", icon: Dna },
-  { to: "/cuadros-ia", label: "Cuadros IA", icon: ImageIcon },
-  { to: "/fuentes", label: "Fuentes", icon: BookOpen },
-  { to: "/coincidencias", label: "Coincidencias", icon: Compass },
-  { to: "/parecidos", label: "Rasgos y parecidos", icon: Scan },
-];
-const utilityNav = [
-  { to: "/importar", label: "Importar / Exportar", icon: Upload },
-  { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
-  { to: "/credenciales", label: "Credenciales", icon: KeyRound },
-  { to: "/configuracion", label: "Configuración", icon: Settings },
-];
+const [primaryGroup, archiveGroup, discoveryGroup, utilityGroup] = navigationGroups;
+const primaryNavBase = primaryGroup.items;
+const archiveNav = archiveGroup.items;
+const investigationNav = discoveryGroup.items;
+const utilityNav = utilityGroup.items;
 
 type NavItem = { to: string; label: string; icon: LucideIcon };
 
@@ -207,6 +184,10 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
   const signOut = auth.signOut;
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => {
+    if (preview) return;
+    ["/inicio", "/personas", "/arbol", "/investigacion", "/buscar"].forEach(path => prefetchRoute(path));
+  }, [preview]);
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, location.search, isMobile]);
   useLayoutEffect(() => {
     const header = headerRef.current;
@@ -309,7 +290,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
           <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
             <NavItems groupKey="primary" items={primaryNavBase} />
             <NavGroup groupKey="archive" label="Archivo familiar" items={archiveNav} />
-            <NavGroup groupKey="investigation" label="Investigación avanzada" items={investigationNav} />
+            <NavGroup groupKey="investigation" label="Descubrimientos" items={investigationNav} />
             <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
           </nav>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
@@ -357,7 +338,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               <div className="mobile-nav-groups">
                 <NavItems groupKey="mobile-primary" items={primaryNavBase} onNavigate={() => setMobileMenuOpen(false)} />
                 <NavGroup groupKey="mobile-archive" label="Archivo familiar" items={archiveNav} onNavigate={() => setMobileMenuOpen(false)} />
-                <NavGroup groupKey="mobile-investigation" label="Investigación y pistas" items={investigationNav} onNavigate={() => setMobileMenuOpen(false)} />
+                <NavGroup groupKey="mobile-investigation" label="Descubrimientos" items={investigationNav} onNavigate={() => setMobileMenuOpen(false)} />
                 <NavGroup groupKey="mobile-utility" label="Herramientas y cuenta" items={utilityNav} onNavigate={() => setMobileMenuOpen(false)} />
               </div>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
@@ -391,7 +372,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               <AdaptiveViewport inline />
             </div>
           </div>}
-          <Suspense fallback={<div role="status" className="grid min-h-[40vh] place-items-center text-muted-foreground">Cargando sección…</div>}>
+          <Suspense fallback={<SectionPlaceholder />}>
             {children ?? <Outlet />}
           </Suspense>
         </main>

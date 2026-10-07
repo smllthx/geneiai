@@ -82,13 +82,14 @@ export function setHidden(group: string, hidden: string[]) {
 }
 
 export function toggleHidden(group: string, path: string) {
+  group = group.replace(/^mobile-/, "");
   const cur = new Set(getHidden(group));
   if (cur.has(path)) cur.delete(path); else cur.add(path);
   setHidden(group, [...cur]);
 }
 
 export function filterByHidden<T extends { to: string }>(group: string, items: T[]): T[] {
-  const hidden = new Set(getHidden(group));
+  const hidden = new Set(getHidden(group.replace(/^mobile-/, "")));
   return items.filter((i) => !hidden.has(i.to));
 }
 

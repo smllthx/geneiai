@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,7 @@ export const PersonCard = memo(function PersonCard({
       <div className="flex flex-col items-center px-2 pb-2 pt-2.5">
         <div className={cn("mb-1.5 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/70 dark:ring-foreground/10", avatarBg)}>
           {p.foto_url ? (
-            <img src={p.foto_url} alt={`${p.nombres} ${p.apellidos}`} className="h-full w-full object-cover" loading="lazy" />
+            <PersonPortrait src={p.foto_url} name={`${p.nombres} ${p.apellidos}`} className="h-full w-full object-cover" />
           ) : (
             <span className={cn("font-serif text-3xl font-bold leading-none", avatarFg)} aria-label={isF ? "Mujer" : isM ? "Hombre" : "Sexo no registrado"}>
               {sexSymbol}
