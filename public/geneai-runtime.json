@@ -4,7 +4,7 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "apiContractVersion": 1,
   "channel": "stable",
   "nativeDistributionReady": false

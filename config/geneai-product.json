@@ -4,8 +4,8 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.5",
-  "build": 305,
+  "version": "3.0.6",
+  "build": 306,
   "publishedAt": "2026-10-07",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
@@ -13,10 +13,10 @@
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Paneles de investigación trasladados a Investigar → IA → Análisis de personas y árbol.",
-    "Personas y fichas sin paneles de investigación; selección de persona centralizada en Investigar.",
-    "Árbol principal con visor de tamaño fijo y zoom por pellizco anclado a los dedos.",
-    "Controles del árbol estáticos mientras el contenido se amplía, reduce o desplaza.",
-    "Gestos compartidos entre las cuatro vistas del árbol; edición de relaciones conservada."
+    "Ficha reordenada: datos vitales primero, herramientas compactas y pestañas desplazables.",
+    "Fecha y lugar de entierro visibles en Información esencial, incluidos eventos importados.",
+    "Datos vitales en orden de vida: nacimiento, bautismo, matrimonio, defunción y entierro.",
+    "Fuentes y evidencia en su pestaña; nombres en otros idiomas dentro de Biografía.",
+    "Herramientas de IA agrupadas en Investigación y hechos adicionales sin duplicar datos vitales."
   ]
 }

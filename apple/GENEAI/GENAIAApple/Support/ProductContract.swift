@@ -3,7 +3,7 @@ import Foundation
 
 enum ProductContract {
     static let repository = "smllthx/geneiai"
-    static let version = "3.0.5"
+    static let version = "3.0.6"
     static let publicURL = URL(string: "https://geneiai.vercel.app")!
     static let publicHost = "geneiai.vercel.app"
 }

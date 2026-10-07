@@ -46,6 +46,7 @@ import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";
 import AIBiographyPanel from "@/components/ai/AIBiographyPanel";
 import EvidenceCenter from "@/components/EvidenceCenter";
+import PersonVitalFacts from "@/components/PersonVitalFacts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ND = <span className="text-muted-foreground italic">Dato no registrado</span>;
@@ -298,18 +299,6 @@ export default function PersonaDetail() {
     const lugar = lugarId ? lugaresById.get(lugarId) : null;
     return lugar ? [lugar.ciudad, lugar.provincia, lugar.region, lugar.pais].filter(Boolean).join(", ") : null;
   };
-  const vitalValue = (fecha?: string | null, lugarId?: string | null, fallback?: string | null) => {
-    const fechaTxt = fmtDate(fecha) ?? fallback ?? null;
-    const lugarTxt = lugarTexto(lugarId);
-    if (!fechaTxt && !lugarTxt) return null;
-    return (
-      <>
-        {fechaTxt && <div>{fechaTxt}</div>}
-        {lugarTxt && <div>{lugarTxt}</div>}
-      </>
-    );
-  };
-
   const buscarMasConIa = async () => {
     const t = toast.loading("Agente IA buscando más sobre esta persona…");
     try {
@@ -417,40 +406,9 @@ export default function PersonaDetail() {
       {!isNew && <PersonaHero p={p} onUpdated={(patch) => setP({ ...p, ...patch })} />}
 
       {!isNew && (
-        <EvidenceCenter
-          className="mb-4"
-          sourceCount={docs.length}
-          eventCount={eventos.length}
-          hypothesisCount={hipos.length}
-          items={[
-            ...docs.slice(0, 4).map((d) => ({
-              id: d.id,
-              title: d.titulo ?? "Documento sin título",
-              detail: d.resumen ?? d.transcripcion ?? d.cita ?? "Documento vinculado a esta persona.",
-              status: d.estado ?? "probable",
-              source: d.repositorio ?? d.tipo,
-              to: `/documentos/${d.id}`,
-            })),
-            ...eventos.slice(0, 2).map((ev) => ({
-              id: ev.id,
-              title: ev.tipo ? `${ev.tipo}` : "Evento vital",
-              detail: [fmtDate(ev.fecha), lugaresById.get(ev.lugar_id)?.nombre, toDisplayText(ev.descripcion)].filter(Boolean).join(" · "),
-              status: ev.certeza ?? "probable",
-              source: "Ficha genealógica",
-            })),
-          ]}
-        />
-      )}
-
-      {!isNew && (
         <Card className="archivo-card mb-4 overflow-hidden">
-          <CardHeader className="border-b border-border/60 pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" /> Herramientas de ficha
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Button className="justify-start lg:col-span-2" onClick={() => navigate(`/arbol?centro=${id}`)}>
+          <CardContent className="flex flex-wrap gap-2 p-3">
+            <Button size="sm" className="justify-start" onClick={() => navigate(`/arbol?centro=${id}`)}>
               <GitBranch className="h-4 w-4" /> Ver árbol
             </Button>
             {user && !editMode && <Button variant="outline" className="justify-start" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar ficha</Button>}
@@ -460,14 +418,6 @@ export default function PersonaDetail() {
               const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
               setEventos(data ?? []);
             }} trigger={<Button variant="outline" className="justify-start"><Sparkles className="h-4 w-4" /> Agregar dato</Button>} />
-            <Button variant="outline" className="justify-start" onClick={buscarMasConIa}><Sparkles className="h-4 w-4" /> Buscar evidencia</Button>
-            <Button variant="outline" className="justify-start" onClick={investigarConIa}><Sparkles className="h-4 w-4" /> Investigar</Button>
-            <Button variant="outline" className="justify-start" onClick={lanzarInsightsSegundoPlano}><Sparkles className="h-4 w-4" /> Insights</Button>
-            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("ascendientes")}><Sparkles className="h-4 w-4" /> Ascendientes</Button>
-            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("descendientes")}><Sparkles className="h-4 w-4" /> Descendientes</Button>
-            <Button variant="outline" className="justify-start" onClick={generarBiografia}><Sparkles className="h-4 w-4" /> Biografía</Button>
-            <Button variant="outline" className="justify-start" onClick={generarContextoHistorico}><Sparkles className="h-4 w-4" /> Contexto</Button>
-            <CoincidenciasWebButton personaId={id!} />
             <PersonaExports personaId={id!} personaNombre={`${p.nombres} ${p.apellidos}`} />
           </CardContent>
         </Card>
@@ -484,7 +434,7 @@ export default function PersonaDetail() {
       )}
 
       <Tabs defaultValue="detalles">
-        <TabsList className="archivo-card -mx-3 mb-3 flex h-auto w-auto flex-wrap justify-start gap-1 p-2 md:mx-0 md:rounded-2xl">
+        <div className="mb-4 min-w-0 overflow-x-auto rounded-2xl border bg-card/60"><TabsList aria-label="Secciones de la ficha" className="flex h-auto w-max min-w-full flex-nowrap justify-start gap-1 bg-transparent p-2">
           {[
             ["detalles", "Detalles"],
             ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
@@ -505,18 +455,34 @@ export default function PersonaDetail() {
               {l}
             </TabsTrigger>
           ))}
-        </TabsList>
+        </TabsList></div>
 
         <TabsContent value="detalles">
           {!isNew && !editMode && (
-            <Card className="archivo-card mb-3 overflow-hidden rounded-none border-x-0 md:rounded-2xl md:border-x">
-              <CardHeader className="border-b border-border/70 bg-foreground/5 py-3"><CardTitle className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Información esencial</CardTitle></CardHeader>
-              <CardContent className="grid gap-0 p-0 text-sm">
-                <Field label="Nombre" value={fullName} />
-                <Field label="Nacimiento" value={vitalValue(p.nac_fecha, p.nac_lugar_id, p.nac_fecha_aprox)} />
-                <Field label="Defunción" value={vitalValue(p.defuncion_fecha, p.defuncion_lugar_id, p.viva === "si" ? "Vive" : null)} />
-                <Field label="Bautismo" value={vitalValue(p.bautismo_fecha, p.bautismo_lugar_id)} />
-                <Field label="Matrimonio" value={vitalValue(p.matrimonio_fecha, p.matrimonio_lugar_id)} />
+            <PersonVitalFacts person={p} name={fullName} events={eventos} placeLabel={lugarTexto} />
+          )}
+          {!isNew && !editMode && eventos.some(e => !["nacimiento", "bautismo", "matrimonio", "defuncion", "entierro"].includes(e.tipo)) && (
+            <Card className="archivo-card mb-3">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="font-serif text-lg">Otros hechos</CardTitle>
+                <AgregarInfoSheet personaId={id!} onAdded={async () => {
+                  const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
+                  setEventos(data ?? []);
+                }} trigger={<Button size="sm" variant="ghost"><Sparkles className="h-3.5 w-3.5" /> Agregar</Button>} />
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {eventos.filter(e => !["nacimiento", "bautismo", "matrimonio", "defuncion", "entierro"].includes(e.tipo)).map((e: any) => (
+                    <li key={e.id} className="py-2 text-sm flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium capitalize">{e.tipo}</div>
+                        <div className="text-xs text-muted-foreground">{fmtDate(e.fecha) ?? e.fecha_aprox ?? "Sin fecha"}{e.lugar_original ? ` · ${e.lugar_original}` : ""}</div>
+                        {toDisplayText(e.descripcion) && <div className="mt-0.5 text-xs">{toDisplayText(e.descripcion)}</div>}
+                      </div>
+                      <CertezaBadge value={e.certeza} />
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}
@@ -528,36 +494,6 @@ export default function PersonaDetail() {
                 <Field label="Nacionalidad / origen" value={p.nacionalidad} />
                 <Field label="Ocupación" value={p.ocupacion} />
                 <Field label="Religión" value={p.religion} />
-              </CardContent>
-            </Card>
-          )}
-          {!isNew && !editMode && (
-            <div className="mb-3">
-              <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
-            </div>
-          )}
-          {!isNew && !editMode && eventos.length > 0 && (
-            <Card className="archivo-card mb-3">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="font-serif text-lg">Otros hechos vitales</CardTitle>
-                <AgregarInfoSheet personaId={id!} onAdded={async () => {
-                  const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
-                  setEventos(data ?? []);
-                }} trigger={<Button size="sm" variant="ghost"><Sparkles className="h-3.5 w-3.5" /> Agregar</Button>} />
-              </CardHeader>
-              <CardContent>
-                <ul className="divide-y divide-border">
-                  {eventos.map((e: any) => (
-                    <li key={e.id} className="py-2 text-sm flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-medium capitalize">{e.tipo}</div>
-                        <div className="text-xs text-muted-foreground">{fmtDate(e.fecha) ?? e.fecha_aprox ?? "Sin fecha"}{e.lugar_original ? ` · ${e.lugar_original}` : ""}</div>
-                        {toDisplayText(e.descripcion) && <div className="mt-0.5 text-xs">{toDisplayText(e.descripcion)}</div>}
-                      </div>
-                      <CertezaBadge value={e.certeza} />
-                    </li>
-                  ))}
-                </ul>
               </CardContent>
             </Card>
           )}
@@ -834,6 +770,16 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="investigacion">
+          {!isNew && <details className="mb-4 rounded-2xl border bg-card p-4"><summary className="cursor-pointer text-sm font-semibold">Herramientas de investigación</summary><div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" className="justify-start" onClick={buscarMasConIa}><Sparkles className="h-4 w-4" /> Buscar evidencia</Button>
+            <Button variant="outline" className="justify-start" onClick={investigarConIa}><Sparkles className="h-4 w-4" /> Investigar</Button>
+            <Button variant="outline" className="justify-start" onClick={lanzarInsightsSegundoPlano}><Sparkles className="h-4 w-4" /> Insights</Button>
+            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("ascendientes")}><Sparkles className="h-4 w-4" /> Ascendientes</Button>
+            <Button variant="outline" className="justify-start" onClick={() => investigarAuto("descendientes")}><Sparkles className="h-4 w-4" /> Descendientes</Button>
+            <Button variant="outline" className="justify-start" onClick={generarBiografia}><Sparkles className="h-4 w-4" /> Biografía</Button>
+            <Button variant="outline" className="justify-start" onClick={generarContextoHistorico}><Sparkles className="h-4 w-4" /> Contexto</Button>
+            <CoincidenciasWebButton personaId={id!} />
+          </div></details>}
           <div className="space-y-4">
             {!isNew && <AISuggestionsPanel personId={id!} />}
             <div>
@@ -876,6 +822,33 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="fuentes">
+      {!isNew && (
+        <EvidenceCenter
+          className="mb-4"
+          sourceCount={docs.length}
+          eventCount={eventos.length}
+          hypothesisCount={hipos.length}
+          items={[
+            ...docs.slice(0, 4).map((d) => ({
+              id: d.id,
+              title: d.titulo ?? "Documento sin título",
+              detail: d.resumen ?? d.transcripcion ?? d.cita ?? "Documento vinculado a esta persona.",
+              status: d.estado ?? "probable",
+              source: d.repositorio ?? d.tipo,
+              to: `/documentos/${d.id}`,
+            })),
+            ...eventos.slice(0, 2).map((ev) => ({
+              id: ev.id,
+              title: ev.tipo ? `${ev.tipo}` : "Evento vital",
+              detail: [fmtDate(ev.fecha), lugaresById.get(ev.lugar_id)?.nombre, toDisplayText(ev.descripcion)].filter(Boolean).join(" · "),
+              status: ev.certeza ?? "probable",
+              source: "Ficha genealógica",
+            })),
+          ]}
+        />
+      )}
+
+
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
               Fuentes y documentos vinculados (actas, censos, padrones, fotografías escaneadas).
@@ -942,6 +915,12 @@ export default function PersonaDetail() {
         </TabsContent>
 
         <TabsContent value="notas">
+          {!isNew && !editMode && (
+            <div className="mb-3">
+              <NombresMultilingues nombres={p.nombres} apellidos={p.apellidos} origen={p.nacionalidad} nacionalidad={p.nacionalidad} />
+            </div>
+          )}
+
           {!isNew && <div className="mb-4"><AIBiographyPanel personId={id!} currentNotes={p.notas} /></div>}
           <Card className="archivo-card">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -1466,9 +1445,9 @@ function Field({ label, value }: { label: string; value: any }) {
   const empty = value === null || value === undefined || value === "";
   const country = !empty && label.toLowerCase().includes("nacionalidad") ? String(value).toLowerCase() : "";
   return (
-    <div className="border-b border-border/70 px-6 py-4">
+    <div className="border-b border-border/70 px-5 py-3">
       <div className="text-sm font-semibold text-muted-foreground">{label}</div>
-      <div className="mt-1 text-xl font-bold leading-snug text-foreground">
+      <div className="mt-1 text-base font-medium leading-snug text-foreground">
         {empty ? (
           <span className="text-muted-foreground">Dato no registrado</span>
         ) : country ? (
