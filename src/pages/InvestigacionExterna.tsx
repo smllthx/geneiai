@@ -1,3 +1,4 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,16 +13,17 @@ import { notify } from "@/lib/notifications";
 import { toDisplayText } from "@/lib/safeText";
 
 export default function InvestigacionExterna() {
+  const peopleRevision = usePeopleRevision();
   const [personas, setPersonas] = useState<any[]>([]);
   const [pid, setPid] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    supabase.from("personas").select("id, nombres, apellidos, foto_url").order("apellidos").then(({ data }) => {
-      setPersonas(data ?? []); if (data?.[0]) setPid(data[0].id);
+    supabase.from("personas").select("id, nombres, apellidos, foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva").order("apellidos").then(({ data }) => {
+      setPersonas(data ?? []); setPid(prev => data?.some(person => person.id === prev) ? prev : data?.[0]?.id ?? "");
     });
-  }, []);
+  }, [peopleRevision]);
 
   const investigar = async () => {
     if (!pid) return;

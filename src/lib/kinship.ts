@@ -1,3 +1,4 @@
+import { birthSortYear, type BirthFields } from "@/lib/personDates";
 // Unified kinship helpers — single source of truth for family relationships across
 // the tree, the person detail view, and any other panel that needs to derive
 // parents/children/spouses/siblings from the `relaciones` table.
@@ -22,13 +23,9 @@ const cleanTipo = (tipo?: string | null) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-export const yearOf = (p?: { nac_fecha?: string | null; nac_rango_ini?: number | null }) => {
-  if (!p) return 9999;
-  if (p.nac_fecha) return new Date(p.nac_fecha).getUTCFullYear();
-  return p.nac_rango_ini ?? 9999;
-};
+export const yearOf = (p?: BirthFields) => (p && birthSortYear(p)) ?? 9999;
 
-export const sortByBirth = <T extends { nac_fecha?: string | null; nac_rango_ini?: number | null }>(a: T, b: T) =>
+export const sortByBirth = <T extends BirthFields>(a: T, b: T) =>
   yearOf(a) - yearOf(b);
 
 /** Sky for paternal line, pink for maternal line — consistent across all views. */
@@ -144,6 +141,13 @@ export function padresDe(pid: string, rels: RelRow[], byId: Map<string, PersonaL
   const list = [...ids].map((i) => byId.get(i)).filter(Boolean) as PersonaLite[];
   let padre = [...fatherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => sexOf(p) === "masculino") ?? list.find((p) => sexOf(p) !== "femenino");
   let madre = [...motherIds].map((i) => byId.get(i)).find(Boolean) ?? list.find((p) => sexOf(p) === "femenino") ?? list.find((p) => p !== padre);
+
+  // An explicitly recorded parent can have unknown or inconsistent sex.
+  // Keep that person's recorded role instead of placing them in both slots.
+  if (padre && madre?.id === padre.id) {
+    if (motherIds.has(madre.id) && !fatherIds.has(madre.id)) padre = list.find(p => p.id !== madre?.id);
+    else madre = list.find(p => p.id !== padre?.id);
+  }
 
   // Visual/inference fallback: GEDCOM imports often preserve spouses but miss
   // the direct mother/father edge for children. If one parent exists, show that

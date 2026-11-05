@@ -74,3 +74,20 @@ it('refreshes the shared profile once and leaves an idle foreground tab alone', 
   expect(sync.invalidate).toHaveBeenCalledTimes(1);
   window.removeEventListener('genaia:data-changed', changed);
 });
+
+it("coalesces a saved person, a sibling window and Realtime, without notifying another account", () => {
+  render(<GlobalDataSync />);
+  act(() => {
+    window.dispatchEvent(new StorageEvent("storage", { key: "geneai:person-write:other", newValue: "1" }));
+    window.dispatchEvent(new CustomEvent("geneai:person-write", { detail: "other" }));
+    vi.advanceTimersByTime(1000);
+  });
+  expect(sync.invalidate).not.toHaveBeenCalled();
+  act(() => {
+    window.dispatchEvent(new CustomEvent("geneai:person-write", { detail: "same-user" }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "geneai:person-write:same-user", newValue: "2" }));
+    sync.callbacks.get("personas")?.();
+    vi.advanceTimersByTime(1000);
+  });
+  expect(sync.invalidate).toHaveBeenCalledTimes(1);
+});

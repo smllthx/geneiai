@@ -1,3 +1,5 @@
+import { useTreeGenerations } from "./GenerationControl";
+import { birthLabel, lifeDates } from "@/lib/personDates";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -157,6 +159,7 @@ export default function GenealogyTreeView() {
   const [centerId, setCenterId] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<GenealogyPerson | null>(null);
+  const [generations, setGenerations] = useTreeGenerations();
   const [filters, setFilters] = useState<TreeFilters>(defaultFilters);
   const [viewMode, setViewMode] = useState<TreeViewMode>("portrait");
   const [options, setOptions] = useState<TreeOptions>(defaultOptions);
@@ -178,8 +181,8 @@ export default function GenealogyTreeView() {
       return true;
     });
     const visiblePeople = people.filter((p) => p.id === centerId || ((options.showNoSources || p.sourcesCount > 0) && (options.showIncompleteBranches || !p.incomplete)));
-    return buildGenealogyLayout(visiblePeople, visibleRelationships, centerId);
-  }, [people, relationships, centerId, options.showAlternativeParents, options.showAlternativeSpouses, options.showNoSources, options.showIncompleteBranches]);
+    return buildGenealogyLayout(visiblePeople, visibleRelationships, centerId, generations);
+  }, [people, relationships, centerId, generations, options.showAlternativeParents, options.showAlternativeSpouses, options.showNoSources, options.showIncompleteBranches]);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set());
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -206,16 +209,14 @@ export default function GenealogyTreeView() {
     }
     const pairs = new Set<string>();
     for (const children of parentToChildren.values()) {
-      const ids = Array.from(children);
-      for (let i = 0; i < ids.length; i += 1) {
-        for (let j = i + 1; j < ids.length; j += 1) pairs.add([ids[i], ids[j]].sort().join(":"));
-      }
+      const ids = Array.from(children).sort((a, b) => (nodesById.get(a)?.position.x ?? 0) - (nodesById.get(b)?.position.x ?? 0));
+      for (let i = 1; i < ids.length; i++) pairs.add([ids[i - 1], ids[i]].sort().join(":"));
     }
     return Array.from(pairs).map((pair) => {
       const [source, target] = pair.split(":");
       return { id: `sibling:${pair}`, source, target };
     });
-  }, [edges]);
+  }, [edges, nodesById]);
 
   useEffect(() => {
     let active = true;
@@ -229,7 +230,7 @@ export default function GenealogyTreeView() {
       }
       const treeId = await getActiveTreeId(user.id);
       const [personas, rels, placesResult, docsResult, profileResult] = await Promise.all([
-        fetchAllPeople<any>("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza", { treeId }),
+        fetchAllPeople<any>("id,nombres,apellidos,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,nac_lugar_id,foto_url,certeza", { treeId }),
         fetchAllRelations<any>("id,persona_id,pariente_id,tipo,notas", { treeId }),
         supabase.from("lugares").select("id,ciudad,provincia,region,pais").eq("user_id", user.id).limit(1000),
         supabase.from("documentos").select("personas_mencionadas").eq("user_id", user.id).limit(1000),
@@ -251,7 +252,7 @@ export default function GenealogyTreeView() {
         }
       }
       const convertedPeople: GenealogyPerson[] = personas.map((person: any) => {
-        const birth = yearOf(person.nac_fecha) ?? (person.nac_rango_ini ? String(person.nac_rango_ini) : undefined);
+        const birth = birthLabel(person) || undefined;
         const death = yearOf(person.defuncion_fecha) ?? (person.viva === "si" ? "Vive" : undefined);
         const place = places.get(person.nac_lugar_id);
         const sourcesCount = sourceCounts.get(person.id) ?? 0;
@@ -259,6 +260,7 @@ export default function GenealogyTreeView() {
           id: person.id,
           givenNames: person.nombres,
           surnames: person.apellidos,
+          lifespan: lifeDates(person),
           birth,
           death,
           mainPlace: placeLabel(place) || "Lugar por completar",
@@ -357,7 +359,7 @@ export default function GenealogyTreeView() {
           onZoomOut={viewport.zoomOut}
         />
 
-        <TreeOptionsPanel open={optionsOpen} options={options} onChange={setOptions} onClose={() => setOptionsOpen(false)} />
+        <TreeOptionsPanel generations={generations} onGenerationsChange={setGenerations} open={optionsOpen} options={options} onChange={setOptions} onClose={() => setOptionsOpen(false)} />
 
         <div className="absolute bottom-4 left-4 z-10 hidden rounded-2xl border border-border bg-card/90 p-3 shadow-sm backdrop-blur sm:block">
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Mini mapa</p>
@@ -385,10 +387,10 @@ export default function GenealogyTreeView() {
           <div className="tree-alternate-surface absolute inset-0 overflow-hidden">
             <div className="absolute inset-0 origin-center [&>div]:overflow-visible" style={{ transform: "translate3d(var(--tree-x, 0px), var(--tree-y, 0px), 0) scale(var(--tree-scale, 0.88))", willChange: "transform" }}>
               {viewMode === "fan" && (
-                <FanChartView nodes={displayNodes} edges={edges} centerId={centerId} onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)} />
+                <FanChartView generations={generations} nodes={displayNodes} edges={edges} centerId={centerId} onSelect={(id) => setSelected(displayNodes.find((node) => node.id === id)?.data.person ?? null)} />
               )}
               {viewMode === "descendancy" && (
-                <DescendancyView
+                <DescendancyView generations={generations}
                   nodes={displayNodes}
                   relationships={relationships}
                   centerId={centerId}
@@ -397,7 +399,7 @@ export default function GenealogyTreeView() {
                 />
               )}
               {viewMode === "founder" && (
-                <FounderLineageView
+                <FounderLineageView generations={generations}
                   nodes={displayNodes}
                   relationships={relationships}
                   centerId={centerId}

@@ -1,13 +1,12 @@
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
-  Home, GitBranch, Users, Heart, FileText, Image as ImageIcon, Sparkles, Lightbulb as LightbulbIcon,
-  Compass, Dna, BookOpen, Settings, LogOut, Upload, Bot, ChevronDown, KeyRound, Scan, Menu, Lightbulb, ChevronLeft, ChevronRight, Merge, Calendar, GripVertical, ListOrdered, Link2, RefreshCw, ClipboardCheck,
-  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell, type LucideIcon,
+  LogOut, ChevronDown, Menu, ChevronLeft, ChevronRight, GripVertical, RefreshCw, ExternalLink,
+  PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SectionPlaceholder from "@/components/SectionPlaceholder";
@@ -27,22 +26,14 @@ import GalleryPortraitProvider from "@/components/GalleryPortraitProvider";
 import UniversalPersonSearch from "@/components/UniversalPersonSearch";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden, toggleHidden } from "@/lib/navConfig";
-import { navigationGroups } from "@/lib/navigation";
+import { navigationGroups, type NavItem, type NavSection } from "@/lib/navigation";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
-const [primaryGroup, archiveGroup, discoveryGroup, utilityGroup] = navigationGroups;
-const primaryNavBase = primaryGroup.items;
-const archiveNav = archiveGroup.items;
-const investigationNav = discoveryGroup.items;
-const utilityNav = utilityGroup.items;
-
-type NavItem = { to: string; label: string; icon: LucideIcon };
-
-function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: NavItem[]; onNavigate?: () => void }) {
+function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey: string; items: NavItem[]; direct?: boolean; customize: boolean; onNavigate?: () => void }) {
   const isMobile = useIsMobile();
   const previewHome = useLocation().pathname === "/diseno";
   const navigate = useNavigate();
@@ -88,10 +79,17 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
     <div className="space-y-1">
       {ordered.map((item, idx) => {
         const { to, label, icon: Icon } = item;
+        if (item.external) return (
+          <a key={to} href={to} target="_blank" rel="noopener noreferrer" data-external-browser="true"
+            onClick={onNavigate} aria-label={`${label} (MyHeritage, nueva pestaña)`}
+            className={cn("flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 hover:bg-foreground/5", direct ? "font-semibold" : "text-sm")}>
+            <Icon className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1">{label}<small className="block text-xs font-normal text-muted-foreground">MyHeritage</small></span><ExternalLink size={14} aria-hidden="true" />
+          </a>
+        );
         return (
         <div
           key={to}
-          draggable={!isMobile}
+          draggable={customize && !isMobile}
           onDragStart={() => setDragIdx(idx)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => onDrop(idx)}
@@ -101,23 +99,23 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
             <NavLink
               to={to}
               onClick={onNavigate}
-              onDoubleClick={(event) => { event.preventDefault(); setOptions(to); }}
               onMouseEnter={() => prefetchRoute(to)}
               onFocus={() => prefetchRoute(to)}
-              title="Doble clic para opciones de esta función"
+              end
               className={({ isActive }) =>
                 cn(
                   "flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                  direct && "font-semibold",
                   (isActive || (previewHome && to === "/inicio"))
                     ? "nav-item-active font-semibold text-foreground"
                     : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground",
                 )
               }
             >
-              {!isMobile && <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />}
+              {customize && !isMobile && <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />}
               <Icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 break-words">{label}</span>
             </NavLink>
-            <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
+            {customize && <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
               <DropdownMenuTrigger asChild>
                 <button type="button" className="nav-row-options grid h-9 w-8 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${label}`}>
                   <PanelRightOpen className="h-4 w-4" />
@@ -138,7 +136,7 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
                   <Settings2 className="mr-2 h-4 w-4 shrink-0" /> Configurar menús
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
           </div>
         </div>
         );
@@ -148,32 +146,35 @@ function NavItems({ groupKey, items, onNavigate }: { groupKey: string; items: Na
   );
 }
 
-function NavGroup({ groupKey, label, items, onNavigate }: { groupKey: string; label: string; items: NavItem[]; onNavigate?: () => void }) {
+function SectionMenu({ onNavigate }: { onNavigate?: () => void }) {
   const { pathname } = useLocation();
-  const containsActive = items.some((i) => pathname.startsWith(i.to));
-  const [open, setOpen] = useState(containsActive);
-  return (
-    <div className="mt-3">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        onDoubleClick={(event) => {
-          event.preventDefault();
-          window.dispatchEvent(
-            new CustomEvent("geneai:open-window", {
-              detail: { id: `/configuracion#${groupKey}`, title: `Configurar ${label}`, path: "/configuracion" },
-            }),
-          );
-        }}
-        title="Doble clic para configurar esta sección"
-        className="flex w-full items-center justify-between min-h-11 rounded-lg px-3 py-2 text-xs font-semibold tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <span>{label}</span>
-        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && <div className="mt-1"><NavItems groupKey={groupKey} items={items} onNavigate={onNavigate} /></div>}
-    </div>
-  );
+  const active = navigationGroups.find(section => section.items.some(item =>
+    !item.external && (pathname === item.to || pathname.startsWith(item.to + "/"))
+  ))?.key;
+  const [open, setOpen] = useState<string | undefined>(active);
+  const menuId = useId();
+  const [customize, setCustomize] = useState(false);
+  useEffect(() => { setOpen(active); }, [active]);
+  return <nav aria-label="Secciones de GENEAI" className="space-y-1">
+    {navigationGroups.map(({key, label, items, direct, icon: Icon}: NavSection) =>
+      direct ? <NavItems key={key} groupKey={key} items={items} customize={customize} direct onNavigate={onNavigate} /> :
+        <div key={key} className="border-t border-border/50">
+          <button type="button" onClick={() => setOpen(current => current === key ? undefined : key)}
+            aria-expanded={open === key} aria-controls={`${menuId}-${key}`}
+            className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-foreground/5">
+            <Icon className="h-5 w-5 shrink-0" /><span className="flex-1">{label}</span>
+            <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open === key && "rotate-180")} />
+          </button>
+          <div id={`${menuId}-${key}`} hidden={open !== key} className="ml-3 border-l border-border/60 pl-1">
+            {open === key && <NavItems groupKey={key} items={items} customize={customize} onNavigate={onNavigate} />}
+          </div>
+        </div>
+    )}
+    <button type="button" className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs text-muted-foreground hover:bg-foreground/5"
+      aria-pressed={customize} onClick={() => setCustomize(!customize)}>
+      <Settings2 size={15} /> {customize ? "Terminar de organizar" : "Organizar menú"}
+    </button>
+  </nav>;
 }
 
 export default function AppLayout({ preview = false, children }: { preview?: boolean; children?: ReactNode }) {
@@ -271,12 +272,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               </div>
             </div>
           </div>
-          <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
-            <NavItems groupKey="primary" items={primaryNavBase} />
-            <NavGroup groupKey="archive" label="Archivo familiar" items={archiveNav} />
-            <NavGroup groupKey="investigation" label="Descubrimientos" items={investigationNav} />
-            <NavGroup groupKey="utility" label="Herramientas" items={utilityNav} />
-          </nav>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2"><SectionMenu /></div>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
             <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? "Archivo de ejemplo" : user?.email}</p>
             <Button variant="ghost" size="sm" className="mb-1 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
@@ -319,12 +315,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               <div className="mb-4 flex items-center gap-3 pr-8">
                 <BrandLogo size={58} showText subtitle={preview ? "Archivo de ejemplo" : user?.email ?? "Archivo familiar privado"} />
               </div>
-              <div className="mobile-nav-groups">
-                <NavItems groupKey="mobile-primary" items={primaryNavBase} onNavigate={() => setMobileMenuOpen(false)} />
-                <NavGroup groupKey="mobile-archive" label="Archivo familiar" items={archiveNav} onNavigate={() => setMobileMenuOpen(false)} />
-                <NavGroup groupKey="mobile-investigation" label="Descubrimientos" items={investigationNav} onNavigate={() => setMobileMenuOpen(false)} />
-                <NavGroup groupKey="mobile-utility" label="Herramientas y cuenta" items={utilityNav} onNavigate={() => setMobileMenuOpen(false)} />
-              </div>
+              <SectionMenu onNavigate={() => setMobileMenuOpen(false)} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
                 <RefreshCw className="h-4 w-4" /> Actualizar datos
               </Button>
@@ -339,7 +330,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
           <div className="flex items-center gap-1">
             {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
             <AdaptiveViewport inline />
-            {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : <NotificationBell />}
+            {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
           </div>
         </div>}
         <main className={cn("app-main min-w-0 flex-1", isWindowFrame && "app-window-main")}>
@@ -351,7 +342,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             <div className="toolbar-capsule glass-strong">
               {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
               <SiriAssistant inline />
-              {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : <NotificationBell />}
+              {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
               <span className="toolbar-divider" />
               <AdaptiveViewport inline />
             </div>

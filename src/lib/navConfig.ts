@@ -1,3 +1,5 @@
+import { navigationGroups } from "./navigation";
+
 // Configuración persistente de menús (sidebar y barra inferior móvil).
 // Incluye presets y lista de elementos ocultos por grupo. Emite un evento
 // `genaia:nav-config` cuando cambia para que las navs se refresquen en vivo.
@@ -13,36 +15,29 @@ export const DEFAULT_MOBILE: string[] = ["/inicio", "/arbol", "/personas", "/inv
 
 // Qué se oculta en cada preset (paths). El preset "pro" no oculta nada.
 const PRESET_HIDDEN: Record<NavPreset, Record<string, string[]>> = {
-  basico: {
-    primary: ["/calendario", "/familias"],
-    investigation: ["/coincidencias", "/adn", "/parecidos", "/fuentes", "/busqueda-ia", "/insights"],
-    utility: ["/credenciales", "/fusionar", "/investigacion?tab=paralelo"],
-    mobile: [],
-  },
-  avanzado: {
-    primary: [],
-    investigation: ["/busqueda-ia", "/insights"],
-    utility: ["/investigacion?tab=paralelo"],
-    mobile: [],
-  },
-  pro: {
-    primary: [],
-    investigation: ["/busqueda-ia", "/insights"],
-    utility: ["/investigacion?tab=paralelo"],
-    mobile: [],
-  },
-  personalizado: { primary: [], investigation: [], utility: [], mobile: [] },
+  basico: { archive: ["/lugares", "/linea-de-tiempo"], utility: ["/fusionar", "/credenciales", "/configurar-app"] },
+  avanzado: { utility: ["/credenciales", "/configurar-app"] },
+  pro: {},
+  personalizado: {},
 };
 
 function migrateNavDefaults() {
   try {
-    if (localStorage.getItem(NAV_VERSION_KEY) === "genaia-sections-2026-05-28") return;
-    localStorage.setItem(PRESET_KEY, "avanzado");
-    Object.entries(PRESET_HIDDEN.avanzado).forEach(([group, hidden]) => {
-      localStorage.setItem(HIDDEN_KEY(group), JSON.stringify(hidden));
-    });
-    localStorage.setItem(MOBILE_KEY, JSON.stringify(DEFAULT_MOBILE));
-    localStorage.setItem(NAV_VERSION_KEY, "genaia-sections-2026-05-28");
+    if (localStorage.getItem(NAV_VERSION_KEY) === "geneai-family-menu-v2") return;
+    const preset = (localStorage.getItem(PRESET_KEY) || "avanzado") as NavPreset;
+    if (preset !== "personalizado") {
+      for (const group of navigationGroups) {
+        localStorage.setItem(HIDDEN_KEY(group.key), JSON.stringify(PRESET_HIDDEN[preset]?.[group.key] ?? []));
+      }
+    } else {
+      const hidden = new Set(["primary", "archive", "investigation", "utility"].flatMap(key =>
+        JSON.parse(localStorage.getItem(HIDDEN_KEY(key)) || "[]") as string[]
+      ));
+      for (const group of navigationGroups) {
+        localStorage.setItem(HIDDEN_KEY(group.key), JSON.stringify(group.items.map(item => item.to).filter(path => hidden.has(path))));
+      }
+    }
+    localStorage.setItem(NAV_VERSION_KEY, "geneai-family-menu-v2");
   } catch {}
 }
 
@@ -56,8 +51,8 @@ export function setPreset(p: NavPreset) {
     localStorage.setItem(PRESET_KEY, p);
     if (p !== "personalizado") {
       const map = PRESET_HIDDEN[p];
-      Object.entries(map).forEach(([group, hidden]) => {
-        localStorage.setItem(HIDDEN_KEY(group), JSON.stringify(hidden));
+      navigationGroups.forEach(group => {
+        localStorage.setItem(HIDDEN_KEY(group.key), JSON.stringify(map[group.key] ?? []));
       });
     }
     window.dispatchEvent(new CustomEvent("genaia:nav-config"));

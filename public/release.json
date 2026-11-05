@@ -1,13 +1,12 @@
 {
-  "version": "3.0.7",
+  "version": "3.0.8",
   "publishedAt": "2026-11-05",
   "channel": "stable",
   "changes": [
-    "Los retratos acompañan a las personas en el inicio, el árbol, las búsquedas y las fichas.",
-    "El árbol dedica más espacio a las personas y el abanico muestra sus nombres y apellidos completos.",
-    "La sincronización responde a los cambios del archivo. Las novedades se consultan desde Configuración.",
-    "Las claves de IA se aplican al guardar y las fichas se actualizan sin reiniciar la página.",
-    "Puedes conectar tu árbol a ChatGPT o Claude con OAuth y revocar cada conexión desde Configuración."
+    "Los cambios guardados en una ficha se reflejan en los listados y el árbol abiertos.",
+    "Las vistas comparten las fechas de nacimiento exactas, aproximadas y por intervalo.",
+    "El árbol permite elegir la cantidad de generaciones o mostrar todas las registradas.",
+    "El menú reúne Árbol Genealógico, Descubrimientos, ADN, Fotos e Investigación."
   ],
   "nativeDistributionReady": false
 }

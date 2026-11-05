@@ -41,7 +41,7 @@ export default function Investigacion() {
     const next = new URLSearchParams(params); next.set('tab', page); setParams(next);
   };
   return <div>
-    <SectionHeader eyebrow="Centro de investigación" title="Investigación familiar" subtitle="Busca fuentes, trabaja con IA y revisa cada hallazgo en un solo lugar." />
+    <SectionHeader title="Investigación" subtitle="Busca fuentes, trabaja con IA y revisa cada hallazgo en un solo lugar." />
     <Tabs value={group.key} onValueChange={key => changePage(groups.find(group => group.key === key)!.pages[0])}>
       <TabsList className="research-tabs mb-4 grid h-auto w-full max-w-lg grid-cols-4 p-1">
         {groups.map(group => <TabsTrigger key={group.key} value={group.key} className="min-h-11">{group.label}</TabsTrigger>)}

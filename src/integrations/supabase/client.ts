@@ -1,3 +1,4 @@
+import { announcePersonWrite } from "../../lib/personChanges";
 import { createClient } from '@supabase/supabase-js';
 import { resolvePublicBackendConfig } from '../../../shared/backendIdentity';
 import type { Database } from './types';
@@ -21,6 +22,8 @@ const SUPABASE_PUBLISHABLE_KEY = backendConfig.publishableKey;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+let invokingUser: string | null | undefined;
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   global: {
     fetch: async (input, init) => {
@@ -31,7 +34,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       source?.addEventListener('abort', onAbort, { once: true });
       const isFunction = String(input).includes('/functions/v1/');
       const timer = window.setTimeout(() => controller.abort(), isFunction ? 120_000 : 30_000);
-      try { return await fetch(input, { ...init, signal: controller.signal }); }
+      const account = invokingUser;
+      try {
+        const response = await fetch(input, { ...init, signal: controller.signal });
+        if (response.ok && account && account === invokingUser && ["POST", "PATCH", "DELETE"].includes(init?.method ?? "")
+          && String(input).split("?")[0] === `${SUPABASE_URL}/rest/v1/personas`) {
+          announcePersonWrite(account);
+        }
+        return response;
+      }
       finally { window.clearTimeout(timer); source?.removeEventListener('abort', onAbort); }
     },
   },
@@ -46,7 +57,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 const originalInvoke = supabase.functions.invoke.bind(supabase.functions);
 const inFlightInvokes = new Map<string, Promise<any>>();
 let sessionGeneration = 0;
-let invokingUser: string | null | undefined;
 supabase.auth.onAuthStateChange((_event, session) => {
   const nextUser = session?.user.id ?? null;
   if (invokingUser === nextUser) return;

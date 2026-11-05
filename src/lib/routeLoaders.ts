@@ -1,5 +1,7 @@
 // Shared by React.lazy and intent-based navigation preloading.
 export const routeLoaders = {
+  TreeReports: () => import("@/pages/TreeReports"),
+  Inbox: () => import("@/components/NotificationBell"),
   Inicio: () => import("@/pages/Inicio"),
   PersonasList: () => import("@/pages/PersonasList"),
   Apellidos: () => import("@/pages/Apellidos"),
@@ -45,6 +47,10 @@ export const routeLoaders = {
 const routes: Record<string, () => Promise<unknown>> = {
   "/oauth/consent": routeLoaders.OAuthConsent,
   "/inicio": routeLoaders.Inicio,
+  "/bandeja-de-entrada": routeLoaders.Inbox,
+  "/consistencia": routeLoaders.TreeReports,
+  "/informe-de-relaciones": routeLoaders.TreeReports,
+  "/estimacion-etnica": routeLoaders.ADN,
   "/arbol": routeLoaders.Arbol,
   "/arbol-moderno": routeLoaders.ArbolModerno,
   "/personas": routeLoaders.PersonasList,

@@ -1,8 +1,8 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Suscribe a postgres_changes en las tablas indicadas, filtrando por user_id
- * cuando se provee. Devuelve un contador `reloadKey` que aumenta cada vez que
+ * Observa los cambios locales y remotos publicados por GlobalDataSync. Devuelve un contador `reloadKey` que aumenta cada vez que
  * llega un cambio, con un pequeño debounce para evitar tormentas de updates.
  *
  * Ejemplo:
@@ -38,4 +38,11 @@ export function useRealtimeReload(tables: string[], userId?: string | null, debo
   }, [tables.join("|"), userId, debounceMs]);
 
   return reloadKey;
+}
+
+
+/** Refresh a signed-in view that displays people without remounting the view. */
+export function usePeopleRevision() {
+  const { user } = useAuth();
+  return useRealtimeReload(["personas"], user?.id);
 }

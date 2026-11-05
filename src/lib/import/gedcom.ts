@@ -7,6 +7,9 @@ export type ImportPersona = {
   apellidos: string;
   sexo?: "M" | "F" | null;
   nac_fecha?: string | null;
+  nac_fecha_aprox?: string | null;
+  nac_rango_ini?: number | null;
+  nac_rango_fin?: number | null;
   nac_lugar?: string | null;
   defuncion_fecha?: string | null;
   defuncion_lugar?: string | null;
@@ -60,6 +63,17 @@ function normDate(s: string): string | null {
   return null;
 }
 
+/** Preserve the precision of a birth record. A year alone is a known year, not January 1. */
+export function importedBirth(raw: string) {
+  const value = raw.trim();
+  if (!value) return {};
+  if (/^\d{3,4}$/.test(value)) return { nac_rango_ini: Number(value), nac_rango_fin: Number(value) };
+  const exact = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value
+    : /^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(value) ? normDate(value) : null;
+  if (exact) return { nac_fecha: exact };
+  return { nac_fecha_aprox: value };
+}
+
 function splitName(fullName: string): { nombres: string; apellidos: string } {
   const m = fullName.match(/^(.*?)\/([^/]*)\/(.*)$/);
   if (m) {
@@ -95,7 +109,6 @@ export function parseGedcom(text: string): ImportResult {
       const baptDateRaw = v(child(bapm, "DATE"));
 
       const extraNotes: string[] = [];
-      if (birthDateRaw && !normDate(birthDateRaw)) extraNotes.push(`Nac. (texto): ${birthDateRaw}`);
       if (deathDateRaw && !normDate(deathDateRaw)) extraNotes.push(`Def. (texto): ${deathDateRaw}`);
       if (noteText) extraNotes.push(noteText);
 
@@ -104,7 +117,7 @@ export function parseGedcom(text: string): ImportResult {
         nombres,
         apellidos,
         sexo: sex === "M" || sex === "F" ? sex : null,
-        nac_fecha: normDate(birthDateRaw),
+        ...importedBirth(birthDateRaw),
         nac_lugar: v(child(birt, "PLAC")) || null,
         defuncion_fecha: normDate(deathDateRaw),
         defuncion_lugar: v(child(deat, "PLAC")) || null,

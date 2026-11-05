@@ -27,16 +27,17 @@ function tipoDe(fuente: string | null): "arbol" | "adn" {
   return "adn";
 }
 
-export default function ADN() {
+export default function ADN({ ethnicity = false }: { ethnicity?: boolean }) {
   const [items, setItems] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [region, setRegion] = useState("");
   const [pct, setPct] = useState("");
   const [fuente, setFuente] = useState("");
   const [rama, setRama] = useState("");
-  const [origenTipo, setOrigenTipo] = useState<"arbol" | "adn">("arbol");
+  const [origenTipo, setOrigenTipo] = useState<"arbol" | "adn">(ethnicity ? "adn" : "arbol");
   const [vista, setVista] = useState<"lista" | "mapa">("lista");
-  const [filtro, setFiltro] = useState<Tipo>("todos");
+  const [summaryFilter, setFiltro] = useState<Tipo>("todos");
+  const filtro = ethnicity ? "adn" : summaryFilter;
   const [draft, setDraft] = useState<ImportDraft | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [importando, setImportando] = useState(false);
@@ -79,7 +80,7 @@ export default function ADN() {
 
   const agregar = async () => {
     const user = (await supabase.auth.getUser()).data.user!;
-    const fuenteFinal = fuente || (origenTipo === "arbol" ? "Cálculo por árbol" : "Manual (ADN)");
+    const fuenteFinal = fuente || (!ethnicity && origenTipo === "arbol" ? "Cálculo por árbol" : "Manual (ADN)");
     const { error } = await supabase.from("dna_estimates").insert({
       user_id: user.id, region, porcentaje: parseFloat(pct) || 0, fuente: fuenteFinal, rama,
     });
@@ -140,6 +141,7 @@ export default function ADN() {
   const arbolTotal = arbolItems.reduce((s, i) => s + Number(i.porcentaje), 0);
   const adnTotal = adnItems.reduce((s, i) => s + Number(i.porcentaje), 0);
 
+  const sameSource = new Set(itemsFiltrados.map(item => item.fuente)).size <= 1;
   const dataPie = useMemo(() => {
     return itemsFiltrados.map((i) => ({ name: i.region, value: Number(i.porcentaje), fuente: i.fuente }));
   }, [itemsFiltrados]);
@@ -153,8 +155,8 @@ export default function ADN() {
     <div>
       <SectionHeader
         eyebrow="ADN y origen ancestral"
-        title="Origen documental y ADN"
-        subtitle="Une el origen calculado por lugares del árbol con resultados externos de ADN. Se recalcula en segundo plano cuando cambian personas, relaciones o lugares."
+        title={ethnicity ? "Estimación Étnica" : "Resumen de ADN"}
+        subtitle={ethnicity ? "Explora las regiones y porcentajes que guardaste de tus pruebas de ADN." : "Consulta tus informes de ADN y los lugares de nacimiento registrados en tu árbol."}
         actions={
           <div className="flex flex-wrap gap-2">
             <input
@@ -167,9 +169,9 @@ export default function ADN() {
             <Button variant="outline" aria-describedby="dna-import-formats" disabled={importando} onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4" /> Importar test ADN
             </Button>
-            <Button variant="outline" disabled={syncing} onClick={calcularPorArbol}>
+            {!ethnicity && <Button variant="outline" disabled={syncing} onClick={calcularPorArbol}>
               {syncing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />} Recalcular árbol
-            </Button>
+            </Button>}
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nuevo origen</Button></DialogTrigger>
               <DialogContent>
@@ -178,7 +180,7 @@ export default function ADN() {
                   <div>
                     <Label>Tipo</Label>
                     <div className="mt-1 flex gap-2">
-                      <Button size="sm" variant={origenTipo === "arbol" ? "default" : "outline"} onClick={() => setOrigenTipo("arbol")}>
+                      <Button disabled={ethnicity} size="sm" variant={origenTipo === "arbol" ? "default" : "outline"} onClick={() => setOrigenTipo("arbol")}>
                         <GitBranch className="h-3.5 w-3.5" /> Por árbol
                       </Button>
                       <Button size="sm" variant={origenTipo === "adn" ? "default" : "outline"} onClick={() => setOrigenTipo("adn")}>
@@ -220,11 +222,11 @@ export default function ADN() {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Estimación referencial</AlertTitle>
         <AlertDescription>
-          El origen documental sale de lugares de nacimiento registrados; el ADN se ingresa desde pruebas externas. No se infieren razas ni origen biológico desde rostros o fotos.
+          El origen documental se calcula con los lugares de nacimiento del árbol. Los porcentajes de ADN provienen de los informes que importas.
         </AlertDescription>
       </Alert>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+      {!ethnicity && <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <GlassCard className="text-center">
           <GitBranch className="mx-auto mb-1 h-5 w-5 text-primary" />
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Por árbol genealógico</div>
@@ -237,15 +239,15 @@ export default function ADN() {
           <div className="font-display text-3xl font-bold">{adnTotal.toFixed(1)}%</div>
           <div className="text-xs text-muted-foreground">{adnItems.length} regiones</div>
         </GlassCard>
-      </div>
+      </div>}
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {(["todos", "arbol", "adn"] as Tipo[]).map((t) => (
+        {!ethnicity && (["todos", "arbol", "adn"] as Tipo[]).map((t) => (
           <Button key={t} size="sm" variant={filtro === t ? "default" : "outline"} onClick={() => setFiltro(t)}>
             {t === "todos" ? "Todos" : t === "arbol" ? "Por árbol" : "Por ADN"}
           </Button>
         ))}
-        <span className="ml-auto self-center text-xs text-muted-foreground">Total filtrado: {total.toFixed(1)}%</span>
+        <span className="ml-auto self-center text-xs text-muted-foreground">{sameSource ? `Total de la fuente: ${total.toFixed(1)}%` : `${itemsFiltrados.length} regiones de varias fuentes`}</span>
         <Button variant={vista === "lista" ? "default" : "outline"} size="sm" onClick={() => setVista("lista")}>
           <List className="h-4 w-4" /> Lista
         </Button>
@@ -259,11 +261,11 @@ export default function ADN() {
           description="Importa tu test de ADN o agrega manualmente las regiones por rama." />
       ) : (
         <>
-          {dataPie.length > 0 && (
+          {dataPie.length > 0 && sameSource && (
             <GlassCard className="mb-4">
               <div className="mb-2 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="font-serif text-base font-semibold">Composición étnica</span>
+                <span className="font-serif text-base font-semibold">{filtro === "arbol" ? "Distribución documental" : "Distribución por región"}</span>
               </div>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">

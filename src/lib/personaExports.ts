@@ -1,29 +1,15 @@
+import { birthLabel, lifeDates } from "@/lib/personDates";
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { personaCode } from "./personaCode";
 import { padresDe, hijosDe, conyugesDe, hermanosDe } from "./kinship";
 
-const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
 const fullName = (p: any) => `${p?.nombres ?? ""} ${p?.apellidos ?? ""}`.trim() || "(sin nombre)";
 const lifespan = (p: any) => {
-  const yN = yearOf(p?.nac_fecha) ?? p?.nac_rango_ini ?? null;
-  const yD = yearOf(p?.defuncion_fecha) ?? null;
-  if (!yN && !yD) return "";
-  return ` (${yN ?? "?"}–${yD ?? (p?.viva === "si" ? "Vive" : "?")})`;
+  const dates = lifeDates(p);
+  return dates ? ` (${dates})` : "";
 };
-const formatDate = (d?: string | null) => {
-  if (!d) return "";
-  try {
-    return new Date(d).toLocaleDateString("es", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  } catch {
-    return d;
-  }
-};
+
 
 async function loadContext(personaId: string) {
   const [{ data: personas }, { data: rels }, { data: eventos }, { data: docs }, { data: lugares }] = await Promise.all([
@@ -180,7 +166,7 @@ export async function exportFamiliaPDF(personaId: string, conFuentes = false) {
   section("Datos personales");
   writeLine("Nombre", fullName(persona));
   writeLine("Sexo", persona.sexo ?? "—");
-  writeLine("Nacimiento", `${persona.nac_fecha ?? persona.nac_fecha_aprox ?? "?"}`);
+  writeLine("Nacimiento", birthLabel(persona, true) || "Sin fecha registrada");
   writeLine("Defunción", `${persona.defuncion_fecha ?? "—"}`);
   writeLine("Ocupación", persona.ocupacion ?? "—");
   writeLine("Nacionalidad", persona.nacionalidad ?? "—");
@@ -384,7 +370,7 @@ export async function exportCertificadoNacimientoPDF(personaId: string) {
   const padres = padresDe(personaId, rels as any, byId).all;
   const padre = padres.find((x: any) => x.sexo === "masculino");
   const madre = padres.find((x: any) => x.sexo === "femenino");
-  const nacimiento = formatDate(persona.nac_fecha) || persona.nac_fecha_aprox || "Dato no registrado";
+  const nacimiento = birthLabel(persona, true) || "Dato no registrado";
   const lugarNacimiento = lugarTexto(lugaresById, persona.nac_lugar_id, persona.nac_lugar) || "Dato no registrado";
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();

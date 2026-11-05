@@ -1,3 +1,5 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { birthLabel, lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link2, Loader2, Search, Sparkles, UserCheck, X } from "lucide-react";
@@ -54,6 +56,7 @@ function possibleLinks(person: any, all: any[]) {
 }
 
 export default function PersonasImportadasPendientes() {
+  const peopleRevision = usePeopleRevision();
   const [loading, setLoading] = useState(true);
   const [people, setPeople] = useState<any[]>([]);
   const [rels, setRels] = useState<any[]>([]);
@@ -62,7 +65,6 @@ export default function PersonasImportadasPendientes() {
   const [life, setLife] = useState("todos");
 
   const load = async () => {
-    setLoading(true);
     const [{ data: personas }, { data: relaciones }] = await Promise.all([
       supabase.from("personas").select("*").order("apellidos"),
       supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
@@ -72,7 +74,7 @@ export default function PersonasImportadasPendientes() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [peopleRevision]);
 
   const linkedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -88,7 +90,7 @@ export default function PersonasImportadasPendientes() {
     if (review === "no_corresponde") return false;
     if (linkedIds.has(p.id)) return false;
     const query = q.trim().toLowerCase();
-    if (query && !`${p.nombres} ${p.apellidos} ${p.nac_fecha ?? ""} ${p.defuncion_fecha ?? ""} ${p.notas ?? ""}`.toLowerCase().includes(query)) return false;
+    if (query && !`${p.nombres} ${p.apellidos} ${birthLabel(p)} ${p.defuncion_fecha ?? ""} ${p.notas ?? ""}`.toLowerCase().includes(query)) return false;
     if (sex !== "todos" && String(p.sexo ?? "desconocido").toLowerCase() !== sex) return false;
     if (life === "vivo" && p.viva !== "si") return false;
     if (life === "fallecido" && !(p.viva === "no" || p.defuncion_fecha)) return false;
@@ -186,7 +188,7 @@ export default function PersonasImportadasPendientes() {
                           <Badge>{sourceOf(person)}</Badge>
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Nacida/o: {person.nac_fecha ?? person.nac_rango_ini ?? "?"} · Fallecida/o: {person.defuncion_fecha ?? (person.viva === "si" ? "Vive" : "?")}
+                          {lifeDates(person) || "Sin fechas registradas"}
                         </p>
                         <p className="text-sm text-muted-foreground">Sexo: {person.sexo || "Desconocido"} · Estado: {person.viva || "Desconocido"}</p>
                         <div className="mt-3 flex flex-wrap gap-2">

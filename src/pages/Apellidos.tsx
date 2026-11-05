@@ -1,3 +1,5 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,27 +21,13 @@ import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
-const year = (value?: string | null) => {
-  if (!value) return null;
-  const parsed = new Date(value).getUTCFullYear();
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const lifeSpan = (p: any) => {
-  const born = year(p.nac_fecha) ?? p.nac_rango_ini;
-  const died = year(p.defuncion_fecha);
-  if (born && died) return `${born}-${died}`;
-  if (born) return `${born}-`;
-  if (died) return `-${died}`;
-  return "Sin fechas";
-};
-
 const surnameKey = (p: any) => {
   const value = String(p.apellidos ?? "").trim();
   return value || "Sin apellido";
 };
 
 export default function Apellidos() {
+  const peopleRevision = usePeopleRevision();
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<any[]>([]);
   const [q, setQ] = useState("");
@@ -50,7 +38,7 @@ export default function Apellidos() {
       try {
         const treeId = await getActiveTreeId();
         const data = await fetchAllPeople(
-          "id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais),nacionalidad,certeza,viva,foto_url,updated_at",
+          "id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais),nacionalidad,certeza,viva,foto_url,updated_at",
           { treeId },
         );
         setPersonas(data.map(p => ({ ...p, nac_lugar: [p.lugar?.ciudad, p.lugar?.pais].filter(Boolean).join(", ") })).sort((a, b) =>
@@ -61,7 +49,7 @@ export default function Apellidos() {
         setPersonas([]);
       }
     })();
-  }, []);
+  }, [peopleRevision]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -187,7 +175,7 @@ export default function Apellidos() {
                               </span>
                             </button>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">{lifeSpan(p)}</TableCell>
+                          <TableCell className="whitespace-nowrap">{lifeDates(p) || "Sin fechas"}</TableCell>
                           <TableCell className="max-w-[18rem] truncate">{[p.nac_lugar, p.nacionalidad].filter(Boolean).join(" · ") || "Sin dato"}</TableCell>
                           <TableCell className="font-mono text-xs">{personaCode(p.id)}</TableCell>
                           <TableCell><CertezaBadge value={p.certeza} /></TableCell>

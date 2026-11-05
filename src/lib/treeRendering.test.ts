@@ -1,19 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { ancestorLayers } from './treeRendering';
+import { familyLayers } from './treeRendering';
 import { padresDe, hijosDe, hermanosDe, conyugesDe, type RelRow } from './kinship';
 import { buildGenealogyLayout } from '@/components/tree/genealogyLayout';
 
 describe('large and cyclic trees', () => {
-  it('bounds the all-generations setting without allocating exponentially', () => {
-    const layers = ancestorLayers('root', 999, (id) => [`${id}F`, `${id}M`]);
-    expect(layers.flat()).toHaveLength(127);
-    expect(layers).toHaveLength(7);
+  it('walks any requested depth, including all known generations, without allocating missing people', () => {
+    const parent = (id: string) => Number(id) < 1200 ? [null, String(Number(id) + 1)] : [];
+    expect(familyLayers('0', 13, parent)).toHaveLength(14);
+    const layers = familyLayers('0', Infinity, parent);
+    expect(layers).toHaveLength(1201);
+    expect(layers.flat()).toHaveLength(1201);
+    expect(layers[1200][0].id).toBe('1200');
   });
-  it('stops cycles and empty branches while retaining repeated ancestors on independent paths', () => {
-    expect(ancestorLayers('a', 999, (id) => id === 'a' ? ['b', null] : ['a', null])).toEqual([['a'], ['b', null]]);
-    expect(ancestorLayers('a', 999, () => [])).toEqual([['a']]);
-    const layers = ancestorLayers('a', 3, (id) => id === 'a' ? ['b', 'c'] : id === 'b' || id === 'c' ? ['shared', null] : []);
-    expect(layers[2]).toEqual(['shared', null, 'shared', null]);
+  it('stops cycles and retains shared ancestors without expanding their lineage twice', () => {
+    const relatives: Record<string, string[]> = { a: ['b', 'c'], b: ['shared'], c: ['shared'], shared: ['a', 'known'] };
+    const layers = familyLayers('a', Infinity, id => relatives[id] ?? []);
+    expect(layers.map(row => row.map(node => node.id))).toEqual([['a'], ['b','c'], ['shared','shared'], ['known']]);
+    expect(layers[2].map(node => node.repeated)).toEqual([false, true]);
+    expect(layers[2].map(node => node.rootSide)).toEqual([0, 1]);
+  });
+  it('handles dense pedigree collapse in proportion to the recorded links', () => {
+    const parents = (id: string) => {
+      const depth = Number(id.split('-')[0]);
+      return depth < 100 ? [`${depth+1}-father`, `${depth+1}-mother`] : [];
+    };
+    const layers = familyLayers('0-root', Infinity, parents);
+    expect(layers).toHaveLength(101);
+    expect(layers.flat().length).toBeLessThan(401);
+  });
+  it('includes distant recorded ancestors and descendants in the modern layout', () => {
+    const people = Array.from({ length: 401 }, (_, i) => ({ id: String(i), givenNames: 'Fixture', surnames: String(i), sourcesCount: 0, incomplete: true, researchStatus: 'pendiente' as const, lineage: 'central' as const, initials: 'F' }));
+    const rels = people.slice(1).map((person, index) => ({ id: person.id, from: person.id, to: String(index), type: 'madre' as const }));
+    expect(buildGenealogyLayout(people, rels, '200', 10).nodes).toHaveLength(21);
+    const { nodes, edges } = buildGenealogyLayout(people, rels, '200', Infinity);
+    expect(nodes).toHaveLength(401);
+    expect(edges).toHaveLength(400);
   });
   it('indexes once and preserves direct, inverse and inferred kinship', () => {
     const people = ['child', 'sibling', 'father', 'mother'].map((id) => ({ id, nombres: id, apellidos: 'Fixture', sexo: id === 'mother' ? 'femenino' : 'masculino' }));

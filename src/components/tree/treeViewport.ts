@@ -87,8 +87,8 @@ export function createTreeViewport() {
       return INITIAL;
     }
     const height = Math.max(1, element.clientHeight - 48);
-    const fit = Math.min((element.clientWidth - 16) / fan.offsetWidth, height / fan.offsetHeight);
-    minScale = Math.max(0.01, Math.min(fit, TREE_MIN_SCALE));
+    const fit = Math.min(Math.max(1, element.clientWidth - 16) / fan.offsetWidth, height / fan.offsetHeight);
+    minScale = Math.min(fit, TREE_MIN_SCALE);
     const overviewIsReadable = element.clientWidth >= 600 && fit >= 0.45;
     const scale = clamp(fit, readable && !overviewIsReadable ? INITIAL.scale : minScale, 1.25);
     // In a dense tree keep the central person on screen at a readable zoom.

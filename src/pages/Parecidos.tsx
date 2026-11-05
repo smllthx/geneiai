@@ -1,3 +1,4 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +16,7 @@ type Persona = { id: string; nombres: string; apellidos: string; foto_url: strin
 type Rasgo = { id: string; persona_id: string; foto_url: string; rasgos: any; resumen: string | null; created_at: string };
 
 export default function Parecidos() {
+  const peopleRevision = usePeopleRevision();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [rasgos, setRasgos] = useState<Rasgo[]>([]);
   const [relaciones, setRelaciones] = useState<any[]>([]);
@@ -24,7 +26,7 @@ export default function Parecidos() {
 
   const load = async () => {
     const [{ data: p }, { data: r }, { data: rel }] = await Promise.all([
-      supabase.from("personas").select("id, nombres, apellidos, foto_url").order("apellidos"),
+      supabase.from("personas").select("id, nombres, apellidos, foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva").order("apellidos"),
       supabase.from("rasgos_faciales").select("*").order("created_at", { ascending: false }),
       supabase.from("relaciones").select("persona_id, pariente_id, tipo"),
     ]);
@@ -34,7 +36,7 @@ export default function Parecidos() {
     if (!selected && p && p.length) setSelected(p[0].id);
     if (!compareWith && p && p.length > 1) setCompareWith(p[1].id);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [peopleRevision]);
 
   const rasgosByPersona = useMemo(() => {
     const m: Record<string, Rasgo> = {};

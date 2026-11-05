@@ -1,3 +1,4 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -21,6 +22,7 @@ type Hallazgo = {
 };
 
 export default function BusquedaIA() {
+  const peopleRevision = usePeopleRevision();
   const [params] = useSearchParams();
   const [tab, setTab] = useState<"persona" | "manual" | "url">("persona");
   const [personas, setPersonas] = useState<any[]>([]);
@@ -32,24 +34,28 @@ export default function BusquedaIA() {
   const [historial, setHistorial] = useState<any[]>([]);
 
   useEffect(() => {
-    (async () => {
-      const treeId = await getActiveTreeId();
-      const data = await fetchAllPeople("id,nombres,apellidos,foto_url", { treeId });
-      setPersonas(data ?? []);
-      const personaParam = params.get("persona");
-      const queryParam = params.get("q") || sessionStorage.getItem("geneai:ai-search-query") || "";
-      if (personaParam && data?.some((person: any) => person.id === personaParam)) {
-        setTab("persona");
-        setPid(personaParam);
-      } else if (queryParam || params.get("lugar") || params.get("nombres") || params.get("apellidos")) {
-        setTab("manual");
-        setManual((current) => ({ ...current, nombres: params.get("nombres") || "", apellidos: params.get("apellidos") || "", lugar: params.get("lugar") || "", anos: params.get("anio") || "", palabras: params.get("palabras") || queryParam }));
-        if (data?.[0]) setPid(data[0].id);
-      } else if (data?.[0]) {
-        setPid(data[0].id);
-      }
-    })();
-    cargarHistorial();
+    const controller = new AbortController();
+    fetchAllPeople("id,nombres,apellidos,foto_url", { signal: controller.signal })
+      .then(rows => {
+        if (controller.signal.aborted) return;
+        setPersonas(rows);
+        setPid(previous => rows.some(person => person.id === previous) ? previous : rows[0]?.id ?? "");
+      })
+      .catch(() => { if (!controller.signal.aborted) toast.error("No se pudieron consultar las personas."); });
+    return () => controller.abort();
+  }, [peopleRevision]);
+
+  useEffect(() => {
+    const personId = params.get("persona");
+    const query = params.get("q") || sessionStorage.getItem("geneai:ai-search-query") || "";
+    if (personId) {
+      setTab("persona");
+      setPid(personId);
+    } else if (query || params.get("lugar") || params.get("nombres") || params.get("apellidos")) {
+      setTab("manual");
+      setManual({ nombres: params.get("nombres") || "", apellidos: params.get("apellidos") || "", lugar: params.get("lugar") || "", anos: params.get("anio") || "", palabras: params.get("palabras") || query });
+    }
+    void cargarHistorial();
   }, [params]);
 
   const cargarHistorial = async () => {

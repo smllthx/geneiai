@@ -1,5 +1,5 @@
 import PersonPortrait from "@/components/PersonPortrait";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,18 +35,23 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
   const [people, setPeople] = useState<UniversalPerson[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const activeLoad = useRef<AbortController>();
   const loadPeople = async () => {
+    activeLoad.current?.abort();
+    const controller = new AbortController();
+    activeLoad.current = controller;
     setLoading(true);
     try {
       const data = await fetchAllPeople<UniversalPerson>(
         "id,nombres,apellidos,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nacionalidad,arbol_id,foto_url",
-        { treeId: null },
+        { treeId: null, signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
       setPeople(data.slice().sort(comparePeopleAlphabetically));
     } catch (error: any) {
-      toast.error(error?.message ?? "No pude cargar el índice de personas");
+      if (!controller.signal.aborted) toast.error(error?.message ?? "No pude cargar el índice de personas");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
@@ -60,10 +65,10 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
       const table = (event as CustomEvent).detail?.table;
       if (table && table !== "personas") return;
       if (open) void loadPeople();
-      else setPeople([]);
+      else { activeLoad.current?.abort(); setPeople([]); }
     };
     window.addEventListener("genaia:data-changed", refresh);
-    return () => window.removeEventListener("genaia:data-changed", refresh);
+    return () => { activeLoad.current?.abort(); window.removeEventListener("genaia:data-changed", refresh); };
   }, [open]);
 
   useEffect(() => {

@@ -34,7 +34,7 @@ export default function Inicio() {
     (async () => {
       const treeId = await getActiveTreeId(userId);
       const [allPersonas, l, fotos, d, c, h, i, a, allRels] = await Promise.all([
-        fetchAllPeople<any>("id,nombres,apellidos,foto_url,updated_at", { treeId }),
+        fetchAllPeople<any>("id,nombres,apellidos,foto_url,updated_at,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", { treeId }),
         supabase.from("lugares").select("id", { count: "exact", head: true }),
         applyTreeScope(supabase.from("fotos").select("personas_ids", { count: "exact" }) as any, treeId),
         applyTreeScope(supabase.from("documentos").select("id", { count: "exact", head: true }).eq("estado", "pendiente") as any, treeId),

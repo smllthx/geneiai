@@ -1,3 +1,4 @@
+import { lifeDates, birthSortYear } from "@/lib/personDates";
 import { matchesCode, personaCode } from "@/lib/personaCode";
 import { norm, rankResults } from "@/lib/search/fuzzy";
 
@@ -18,6 +19,7 @@ export type SearchablePerson = {
   nac_rango_ini?: number | null;
   nac_rango_fin?: number | null;
   defuncion_fecha?: string | null;
+  viva?: string | null;
   notas?: string | null;
 };
 
@@ -51,7 +53,7 @@ export function personFullName(person: SearchablePerson) {
 export function personIndexKey(person: SearchablePerson) {
   const surname = String(person.apellidos ?? "").trim();
   const names = String(person.nombres ?? "").trim();
-  return `${surname || names} ${surname ? names : ""} ${person.nac_fecha ?? person.nac_rango_ini ?? ""}`.trim();
+  return `${surname || names} ${surname ? names : ""} ${birthSortYear(person) ?? ""}`.trim();
 }
 
 export function personIndexLetter(person: SearchablePerson) {
@@ -67,9 +69,7 @@ export function comparePeopleAlphabetically(a: SearchablePerson, b: SearchablePe
 }
 
 export function personSearchSubtitle(person: SearchablePerson) {
-  const born = person.nac_fecha ?? person.nac_fecha_aprox ?? person.nac_rango_ini;
-  const died = person.defuncion_fecha;
-  const life = born || died ? `${born ?? "?"}–${died ?? ""}` : "Fechas sin registrar";
+  const life = lifeDates(person) || "Fechas sin registrar";
   const code = person.codigo || personaCode(person.id);
   return `${life} · ${code}`;
 }

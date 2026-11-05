@@ -52,7 +52,7 @@ export default function MenusConfig() {
       </CardHeader>
       <CardContent className="space-y-5">
         <div>
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Preset</Label>
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Estilo de menú</Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {(Object.keys(PRESET_LABELS) as NavPreset[]).filter(p => p !== "personalizado").map((p) => (
               <Button
@@ -70,7 +70,7 @@ export default function MenusConfig() {
             )}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Los presets ocultan o muestran opciones de golpe. Si tocás un switch, pasa a "Personalizado".
+            Elige cuántas herramientas mostrar o activa cada acceso por separado.
           </p>
         </div>
 

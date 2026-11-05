@@ -1,6 +1,8 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { birthLabel, lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Brain, Calendar, Edit3, FileText, GitBranch, GitCompare, Heart, History, Image, Loader2, MapPinned, Network, NotebookText, Printer, Route, Search, Star, Trash2, Users, WandSparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -39,7 +41,7 @@ function PersonMini({ person }: { person: any }) {
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-slate-900">{fullName(person)}</p>
-        <p className="text-xs text-slate-500">{year(person.nac_fecha) ?? "s/f"}-{year(person.defuncion_fecha) ?? (person.viva === "si" ? "Vive" : "")}</p>
+        <p className="text-xs text-slate-500">{lifeDates(person)}</p>
       </div>
     </Link>
   );
@@ -47,7 +49,7 @@ function PersonMini({ person }: { person: any }) {
 
 function ProfileHeader({ persona, sourcesCount, incomplete, onAi }: { persona: any; sourcesCount: number; incomplete: boolean; onAi: () => void }) {
   const navigate = useNavigate();
-  const vital = `${year(persona.nac_fecha) ?? "?"}-${year(persona.defuncion_fecha) ?? (persona.viva === "si" ? "Vivo" : "?")}`;
+  const vital = lifeDates(persona);
   return (
     <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -68,10 +70,9 @@ function ProfileHeader({ persona, sourcesCount, incomplete, onAi }: { persona: a
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate(`/arbol?centro=${persona.id}`)}><GitBranch className="h-4 w-4" /> Ver árbol</Button>
-          <Button variant="outline"><Network className="h-4 w-4" /> Parentesco</Button>
-          <Button variant="outline"><Star className="h-4 w-4" /> Seguir</Button>
+          <Button variant="outline" asChild><Link to={`/informe-de-relaciones?persona=${persona.id}`}><Network className="h-4 w-4" /> Informe de relaciones</Link></Button>
           <Button variant="outline" onClick={onAi}><Brain className="h-4 w-4" /> Buscar evidencia</Button>
-          <Button onClick={() => navigate(`/personas/${persona.id}`)}><Edit3 className="h-4 w-4" /> Editar</Button>
+          <Button onClick={() => navigate(`/personas/${persona.id}`)}><Edit3 className="h-4 w-4" /> Abrir ficha de edición</Button>
         </div>
       </div>
     </header>
@@ -104,7 +105,7 @@ function DetailsTab({ persona, eventos, parents, siblings, spouses, children }: 
   const rows = [
     ["Nombre", fullName(persona)],
     ["Sexo", persona.sexo || "Dato no registrado"],
-    ["Nacimiento", `${fmt(persona.nac_fecha)}${persona.nac_fecha_aprox ? ` · ${persona.nac_fecha_aprox}` : ""}`],
+    ["Nacimiento", birthLabel(persona, true) || "Sin fecha registrada"],
     ["Bautizo", fmt(persona.bautismo_fecha)],
     ["Defunción", fmt(persona.defuncion_fecha)],
     ["Entierro", fmt(persona.entierro_fecha)],
@@ -135,30 +136,11 @@ function DetailsTab({ persona, eventos, parents, siblings, spouses, children }: 
   );
 }
 
-function PossibleDuplicatesCard({ persona, people }: any) {
-  const surname = String(persona.apellidos ?? "").split(/\s+/)[0]?.toLowerCase();
-  const candidates = (people ?? [])
-    .filter((p: any) => p.id !== persona.id && surname && String(p.apellidos ?? "").toLowerCase().includes(surname))
-    .slice(0, 3);
-  return (
-    <ProfileCard title="Posibles duplicados" icon={GitCompare}>
-      {candidates.length === 0 ? <p className="text-sm text-slate-600">Sin duplicados evidentes por apellido en esta vista.</p> : (
-        <div className="space-y-2">
-          {candidates.map((p: any, index: number) => (
-            <div key={p.id} className="rounded-xl border border-slate-200 p-3">
-              <p className="font-medium text-slate-950">{fullName(p)}</p>
-              <p className="text-xs text-slate-500">Coincidencia: {92 - index * 7}% · apellido y datos cercanos</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <Button size="sm" variant="outline" asChild><Link to={`/personas/${p.id}/ficha`}>Comparar</Link></Button>
-                <Button size="sm" variant="outline">No es duplicado</Button>
-                <Button size="sm">Fusionar</Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </ProfileCard>
-  );
+function PossibleDuplicatesCard() {
+  return <ProfileCard title="Posibles duplicados" icon={GitCompare}>
+    <p className="mb-3 text-sm text-slate-600">Compara las fichas detectadas antes de decidir si corresponden a la misma persona.</p>
+    <Button variant="outline" size="sm" asChild><Link to="/fusionar">Revisar duplicados</Link></Button>
+  </ProfileCard>;
 }
 
 function RecentChangesCard({ eventos, fotos }: any) {
@@ -176,39 +158,20 @@ function RecentChangesCard({ eventos, fotos }: any) {
               <p className="text-xs text-slate-500">{fmt(change.date)} · Por {change.author}</p>
             </div>
           ))}
-          <Button variant="outline" size="sm" className="w-full">Mostrar todo</Button>
         </div>
       )}
     </ProfileCard>
   );
 }
 
-function ProfileToolsCard({ persona, onAi }: any) {
-  const tools = [
-    ["Fuentes", FileText, `/personas/${persona.id}/ficha?tab=fuentes`],
-    ["Posibles duplicados", GitCompare, "/fusionar"],
-    ["Buscar evidencia con IA", Brain, null],
-    ["Generar biografía automática", WandSparkles, null],
-    ["Exportar ficha", FileText, null],
-    ["Opciones de impresión", Printer, null],
-    ["Informar problema", AlertTriangle, null],
-    ["Eliminar persona", Trash2, null],
-  ] as const;
-  return (
-    <ProfileCard title="Herramientas" icon={Route}>
-      <div className="grid gap-2">
-        {tools.map(([label, Icon, to]) => (
-          to ? (
-            <Button key={label} variant="outline" className="justify-start" asChild><Link to={to}><Icon className="h-4 w-4" /> {label}</Link></Button>
-          ) : (
-            <Button key={label} variant="outline" className="justify-start" onClick={label.includes("IA") || label.includes("biografía") ? onAi : undefined}>
-              <Icon className="h-4 w-4" /> {label}
-            </Button>
-          )
-        ))}
-      </div>
-    </ProfileCard>
-  );
+function ProfileToolsCard({ persona }: { persona: { id: string } }) {
+  return <ProfileCard title="Herramientas" icon={Route}>
+    <div className="grid gap-2">
+      <Button variant="outline" asChild><Link to={`/personas/${persona.id}/ficha?tab=fuentes`}><FileText className="h-4 w-4" /> Fuentes</Link></Button>
+      <Button variant="outline" asChild><Link to={`/cuadros-ia?persona=${persona.id}`}><Image className="h-4 w-4" /> Infografías Familiares</Link></Button>
+      <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir ficha</Button>
+    </div>
+  </ProfileCard>;
 }
 
 function ResearchSidebar({ persona, docs, eventos, fotos, contradicciones, people, onAi }: any) {
@@ -217,15 +180,14 @@ function ResearchSidebar({ persona, docs, eventos, fotos, contradicciones, peopl
       <ProfileCard title="Ayuda de investigación" icon={Brain}>
         <div className="grid gap-2">
           <Button variant="outline" className="justify-start" onClick={onAi}><Search className="h-4 w-4" /> Buscar evidencia</Button>
-          <Button variant="outline" className="justify-start"><AlertTriangle className="h-4 w-4" /> Detectar contradicciones</Button>
-          <Button variant="outline" className="justify-start"><FileText className="h-4 w-4" /> Sugerir fuentes</Button>
+          <Button variant="outline" asChild><Link to="/consistencia"><AlertTriangle className="h-4 w-4" /> Revisar coherencia del árbol</Link></Button>
         </div>
       </ProfileCard>
-      <PossibleDuplicatesCard persona={persona} people={people} />
+      <PossibleDuplicatesCard />
       <ProfileCard title="Notas" icon={NotebookText}><p className="text-sm text-slate-600 whitespace-pre-wrap">{persona.notas || "Sin notas de investigación."}</p></ProfileCard>
       <ProfileCard title="Contradicciones" icon={AlertTriangle}><p className="text-sm text-slate-600">{contradicciones.length} contradicción(es) detectadas.</p></ProfileCard>
       <RecentChangesCard eventos={eventos} fotos={fotos} />
-      <ProfileToolsCard persona={persona} onAi={onAi} />
+      <ProfileToolsCard persona={persona} />
     </aside>
   );
 }
@@ -263,6 +225,8 @@ function TimelineTab({ persona, eventos }: any) {
 }
 
 export default function GenealogyProfilePage() {
+  const [params, setParams] = useSearchParams();
+  const peopleRevision = usePeopleRevision();
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -272,7 +236,7 @@ export default function GenealogyProfilePage() {
     let active = true;
     (async () => {
       if (!id) return;
-      setLoading(true);
+
       const [{ data: persona }, { data: people }, { data: relaciones }, { data: eventos }, { data: docs }, { data: fotos }, { data: contradicciones }] = await Promise.all([
         supabase.from("personas").select("*").eq("id", id).maybeSingle(),
         supabase.from("personas").select("*").limit(5000),
@@ -287,7 +251,7 @@ export default function GenealogyProfilePage() {
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [id]);
+  }, [id, peopleRevision]);
 
   const family = useMemo(() => {
     const byId = new Map((data.people ?? []).map((p: any) => [p.id, p]));
@@ -302,23 +266,17 @@ export default function GenealogyProfilePage() {
     return { parents, spouses, children, siblings: Array.from(siblingIds).map((sid) => byId.get(sid)).filter(Boolean) };
   }, [data, id]);
 
-  if (loading) return <div className="grid min-h-[50vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading || (data.persona && data.persona.id !== id)) return <div className="grid min-h-[50vh] place-items-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!data.persona) return <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">Persona no encontrada.</div>;
 
-  const incomplete = !data.persona.nac_fecha || data.docs.length === 0;
-  const onAi = async () => {
-    const t = toast.loading(`Buscando evidencia para ${data.persona.nombres}…`);
-    const { error } = await supabase.functions.invoke("busqueda-ia", { body: { modo: "persona", persona_id: data.persona.id } });
-    toast.dismiss(t);
-    if (error) return toast.error(error.message);
-    toast.success("Búsqueda IA iniciada");
-  };
+  const incomplete = !birthLabel(data.persona) || data.docs.length === 0;
+  const onAi = () => navigate(`/investigacion?tab=busqueda&persona=${id}`);
 
   return (
     <div className="-mx-3 -my-3 min-h-screen bg-slate-50 px-3 py-4 md:-mx-6 md:-my-6 md:px-6">
       <div className="mx-auto max-w-7xl space-y-4">
         <ProfileHeader persona={data.persona} sourcesCount={data.docs.length} incomplete={incomplete} onAi={onAi} />
-        <Tabs defaultValue="acerca" className="space-y-4">
+        <Tabs value={params.get("tab") || "acerca"} onValueChange={tab => setParams({ tab }, { replace: true })} className="space-y-4">
           <TabsList className="flex h-auto flex-wrap rounded-2xl bg-white p-1 shadow-sm">
             <TabsTrigger value="acerca">Acerca de</TabsTrigger>
             <TabsTrigger value="detalles">Detalles</TabsTrigger>
@@ -339,8 +297,8 @@ export default function GenealogyProfilePage() {
               <TabsContent value="recuerdos" className="m-0"><ProfileCard title="Recuerdos" icon={Image}><p className="text-sm text-slate-600">{data.fotos.length} recuerdo(s) vinculados.</p></ProfileCard></TabsContent>
               <TabsContent value="cronologia" className="m-0"><TimelineTab persona={data.persona} eventos={data.eventos} /></TabsContent>
               <TabsContent value="origen" className="m-0"><ProfileCard title="Origen ancestral" icon={MapPinned}><p className="text-sm text-slate-600">Calcula origen documental desde lugares de nacimiento y compara con ADN externo cargado manualmente.</p><Button className="mt-3" asChild><Link to="/origen-ancestral">Abrir origen ancestral</Link></Button></ProfileCard></TabsContent>
-              <TabsContent value="duplicados" className="m-0"><PossibleDuplicatesCard persona={data.persona} people={data.people} /></TabsContent>
-              <TabsContent value="cuadros" className="m-0"><ProfileCard title="Cuadros IA" icon={WandSparkles}><p className="text-sm text-slate-600">Genera fichas visuales, pósters, líneas de tiempo, mapas de vida y cuadros familiares usando datos del árbol.</p><Button className="mt-3" asChild><Link to="/cuadros-ia">Abrir cuadros IA</Link></Button></ProfileCard></TabsContent>
+              <TabsContent value="duplicados" className="m-0"><PossibleDuplicatesCard /></TabsContent>
+              <TabsContent value="cuadros" className="m-0"><ProfileCard title="Cuadros IA" icon={WandSparkles}><p className="text-sm text-slate-600">Genera fichas visuales, pósters, líneas de tiempo, mapas de vida y cuadros familiares usando datos del árbol.</p><Button className="mt-3" asChild><Link to={`/cuadros-ia?persona=${id}`}>Abrir Infografías Familiares</Link></Button></ProfileCard></TabsContent>
             </div>
             <ResearchSidebar {...data} onAi={onAi} />
           </div>

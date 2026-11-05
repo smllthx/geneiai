@@ -1,3 +1,6 @@
+import BirthDateField from "@/components/BirthDateField";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+import { lifeDates } from "@/lib/personDates";
 import { requestBiographyProposal } from "@/lib/biographyProposal";
 import PhotoImage from "@/components/PhotoImage";
 import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
@@ -59,7 +62,6 @@ const fmtDate = (d: string | null | undefined) => {
   try { return new Date(d).toLocaleDateString("es", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }); }
   catch { return d; }
 };
-const yearOf = (d: string | null | undefined) => (d ? new Date(d).getUTCFullYear() : null);
 
 const empty: any = {
   nombres: "", apellidos: "", variantes_nombre: [], sexo: "",
@@ -71,6 +73,10 @@ const empty: any = {
 
 export default function PersonaDetail() {
   const { id } = useParams();
+  return <PersonEditor key={id} id={id} />;
+}
+
+function PersonEditor({ id }: { id?: string }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isNew = id === "nueva";
@@ -91,7 +97,7 @@ export default function PersonaDetail() {
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(isNew);
-  const autoSaveSignature = useRef("");
+  const savedPerson = useRef<Record<string, unknown>>({});
   const [lugares, setLugares] = useLugares();
   const lugaresById = useMemo(() => new Map((lugares ?? []).map((l: any) => [l.id, l])), [lugares]);
 
@@ -136,8 +142,8 @@ export default function PersonaDetail() {
         if (!person.data) { setNotFound(true); return; }
         setAllPersonas(all);
         setP(person.data);
-        const { id: viewedId, ...initial } = person.data;
-        autoSaveSignature.current = JSON.stringify(initial);
+        const viewedId = person.data.id;
+        savedPerson.current = person.data;
         if (loadedPersonId.current !== viewedId) pushRecent(viewedId, "viewed");
         loadedPersonId.current = viewedId;
         setEventos(ev.data ?? []); setRelaciones(rel.data ?? []); setHipos(hip.data ?? []); setInferences(inf.data ?? []);
@@ -150,33 +156,43 @@ export default function PersonaDetail() {
   }, [id, isNew, idValid, rtReloadKey, editMode, retryKey, user?.id]);
 
   const save = async () => {
+    if (!user || loading) return;
     setLoading(true);
-    const user = (await supabase.auth.getUser()).data.user!;
-    const activeTreeId = await getActiveTreeId(user.id);
-    const payload = { ...p, user_id: user.id };
-    if (!payload.sexo) payload.sexo = inferSexFromName(payload.nombres);
-    delete payload.id;
-    if (isNew) {
-      const { data, error } = await supabase.from("personas").insert(withTreeScope(payload, activeTreeId)).select().single();
-      setLoading(false);
-      if (error) return toast.error(error.message);
-      toast.success("Persona creada");
-      navigate(`/personas/${data.id}`);
-    } else {
-      const { error } = await supabase.from("personas").update(payload).eq("id", id!);
-      setLoading(false);
-      if (error) return toast.error(error.message);
-      autoSaveSignature.current = JSON.stringify(payload);
+    try {
+      if (isNew) {
+        const activeTreeId = await getActiveTreeId(user.id);
+        const payload = { ...p, user_id: user.id, sexo: p.sexo || inferSexFromName(p.nombres) };
+        const { data, error } = await supabase.from("personas").insert(withTreeScope(payload, activeTreeId)).select("id").single();
+        if (error) throw error;
+        navigate(`/personas/${data.id}`);
+        return;
+      }
+      // Send only the fields that the editor changed, never a stale copy of the full row.
+      const patch = Object.fromEntries(Object.entries(p).filter(([key, value]) =>
+        JSON.stringify(value) !== JSON.stringify(savedPerson.current[key]) && !["id", "user_id", "arbol_id", "row_version", "updated_at", "created_at"].includes(key)));
+      if (!Object.keys(patch).length) { setEditMode(false); return; }
+      let query = supabase.from("personas").update(patch as TablesUpdate<"personas">).eq("id", id!).eq("user_id", user.id);
+      if (typeof savedPerson.current.row_version === "number") query = query.eq("row_version" as never, savedPerson.current.row_version);
+      const { data, error } = await query.select("*").maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        toast.error("La ficha cambió en otra sesión. Copia lo que quieras conservar y usa «Cancelar» para ver la versión actual.");
+        return;
+      }
+      savedPerson.current = data;
+      setP(data);
       setEditMode(false);
       pushRecent(id!, "edited");
-      window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table: "personas", personId: id } }));
       toast.success("Cambios guardados");
-    }
+    } catch (error) {
+      toast.error(error && typeof error === "object" && "message" in error ? String(error.message) : "No se pudo guardar la ficha.");
+    } finally { setLoading(false); }
   };
 
   const eliminar = async () => {
     if (!confirm("¿Eliminar esta persona y sus relaciones?")) return;
-    await supabase.from("personas").delete().eq("id", id!);
+    const { error } = await supabase.from("personas").delete().eq("id", id!).select("id").single();
+    if (error) { toast.error("No se pudo eliminar la persona."); return; }
     navigate("/personas");
   };
 
@@ -288,9 +304,7 @@ export default function PersonaDetail() {
   }
 
   const fullName = `${p.nombres ?? ""} ${p.apellidos ?? ""}`.trim() || "Persona";
-  const yNac = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
-  const yDef = yearOf(p.defuncion_fecha) ?? null;
-  const lifespan = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? (p.viva === "si" ? "vive" : "?")}` : "";
+  const lifespan = lifeDates(p);
   const metaTitle = isNew ? "Nueva persona · GENEAI" : `${fullName}${lifespan ? ` (${lifespan})` : ""} · GENEAI`;
   const metaDesc = isNew
     ? "Registra una nueva persona en tu árbol genealógico privado."
@@ -409,6 +423,7 @@ export default function PersonaDetail() {
             </Button>
             {user && !editMode && <Button variant="outline" className="justify-start" onClick={() => setEditMode(true)}><Pencil className="h-4 w-4" /> Editar ficha</Button>}
             {user && editMode && <Button className="justify-start" onClick={save} disabled={loading}><Save className="h-4 w-4" /> Guardar</Button>}
+            {user && editMode && <Button variant="outline" disabled={loading} onClick={() => { setP(savedPerson.current); setEditMode(false); }}>Cancelar</Button>}
             {user && editMode && <Button variant="outline" className="justify-start text-destructive hover:text-destructive" onClick={eliminar}><Trash2 className="h-4 w-4" /> Eliminar</Button>}
             <AgregarInfoSheet personaId={id!} onAdded={async () => {
               const { data } = await supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true });
@@ -509,13 +524,9 @@ export default function PersonaDetail() {
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent><SelectItem value="masculino">Masculino</SelectItem><SelectItem value="femenino">Femenino</SelectItem><SelectItem value="otro">Otro</SelectItem></SelectContent>
               </Select></div>
-            <div><Label>Fecha de nacimiento</Label><Input type="date" value={p.nac_fecha ?? ""} onChange={(e) => set("nac_fecha", e.target.value || null)} /></div>
+            <BirthDateField person={p} onChange={birth => setP((previous: typeof p) => ({ ...previous, ...birth }))} />
             <div><Label>Lugar de nacimiento</Label>
               <LugarSelect value={p.nac_lugar_id} onChange={(v) => set("nac_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
-            <div><Label>Fecha aprox. nacimiento</Label><Input value={p.nac_fecha_aprox ?? ""} onChange={(e) => set("nac_fecha_aprox", e.target.value)} placeholder="hacia 1880" /></div>
-            <div><Label>Rango de nacimiento (años)</Label>
-              <div className="flex gap-2"><Input type="number" placeholder="desde" value={p.nac_rango_ini ?? ""} onChange={(e) => set("nac_rango_ini", e.target.value ? parseInt(e.target.value) : null)} />
-                <Input type="number" placeholder="hasta" value={p.nac_rango_fin ?? ""} onChange={(e) => set("nac_rango_fin", e.target.value ? parseInt(e.target.value) : null)} /></div></div>
             <div><Label>Fecha de bautismo</Label><Input type="date" value={p.bautismo_fecha ?? ""} onChange={(e) => set("bautismo_fecha", e.target.value || null)} /></div>
             <div><Label>Lugar de bautismo</Label>
               <LugarSelect value={p.bautismo_lugar_id} onChange={(v) => set("bautismo_lugar_id", v)} lugares={lugares} onLugaresChange={setLugares} /></div>
@@ -1000,9 +1011,7 @@ function FamiliaSeccion({
       ) : (
         <ul className="divide-y divide-border/70">
           {personas.map((x: any) => {
-            const yNac = x.nac_fecha ? new Date(x.nac_fecha).getUTCFullYear() : x.nac_rango_ini ?? null;
-            const yDef = x.defuncion_fecha ? new Date(x.defuncion_fecha).getUTCFullYear() : null;
-            const sub = yNac || yDef ? `${yNac ?? "?"} – ${yDef ?? "?"}` : x.sexo ?? "";
+            const sub = lifeDates(x) || x.sexo || "";
             const matFecha = fmtDate(x.matrimonio_fecha);
             const matLugar = lugarNombre(x.matrimonio_lugar_id);
             const matLinea = matFecha || matLugar
@@ -1449,9 +1458,9 @@ function FamilyList({ label, people, onClick }: { label: string; people: any[]; 
             <li key={x.id}>
               <button onClick={() => onClick(x.id)} className="text-left text-link underline-offset-2 hover:underline">
                 {x.nombres} {x.apellidos}
-                {x.nac_fecha || x.defuncion_fecha ? (
+                {lifeDates(x) ? (
                   <span className="ml-1 text-xs text-muted-foreground">
-                    ({yearOf(x.nac_fecha) ?? "?"}–{yearOf(x.defuncion_fecha) ?? (x.viva === "si" ? "vive" : "?")})
+                    ({lifeDates(x)})
                   </span>
                 ) : null}
               </button>
@@ -1642,7 +1651,7 @@ function PersonaQuickMenu({
                   <Link to={`/personas/${node.id}`} className="flex flex-col items-center text-center">
                     <PersonPortrait person={node} className="h-12 w-12 rounded-full ring-2 ring-primary/20" />
                     <div className="mt-1 max-w-[180px] truncate text-xs font-bold">{node.nombres} {node.apellidos}</div>
-                    <div className="text-[10px] text-muted-foreground">{yearOf(node.nac_fecha) ?? "?"} - {yearOf(node.defuncion_fecha) ?? (node.viva === "si" ? "vive" : "?")} · {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
+                    <div className="text-[10px] text-muted-foreground">{lifeDates(node) && `${lifeDates(node)} · `} {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
                   </Link>
                 </div>
               ))}

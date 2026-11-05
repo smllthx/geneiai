@@ -1,10 +1,11 @@
+import { lifeDates, type BirthFields } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Check, ChevronRight, Clock3, Compass, FileText, GitBranch, Image, MapPin, Plus, Search, Sparkles, Upload, UserRound, Users } from "lucide-react";
 import { toDisplayText } from "@/lib/safeText";
 
-export type DashboardPerson = { id: string; nombres: string; apellidos: string | null; foto_url?: string | null };
+export type DashboardPerson = BirthFields & { viva?: string | null; defuncion_fecha?: string | null; id: string; nombres: string; apellidos: string | null; foto_url?: string | null };
 export type DashboardStats = { personas: number; lugares: number; fotos: number; docsPendientes: number; coincidencias: number; hipotesis: number; inferencias: number; totalApellidos: number; apellidos: string[] };
 export type DashboardActivity = { id: string; descripcion: unknown; created_at: string };
 export type DashboardProps = {
@@ -50,7 +51,7 @@ function PersonRow({ person }: { person: DashboardPerson }) {
   const fullName = [person.nombres, person.apellidos].filter(Boolean).join(" ");
   return <Link to={`/personas/${person.id}`} className="home-person-row">
     <PersonPortrait person={person} className="home-avatar" />
-    <span className="home-person-name">{fullName || "Persona sin nombre"}<small>Ver historia familiar</small></span>
+    <span className="home-person-name">{fullName || "Persona sin nombre"}<small>{lifeDates(person) || "Ver historia familiar"}</small></span>
     <ChevronRight size={16} aria-hidden="true" />
   </Link>;
 }
@@ -109,7 +110,7 @@ export default function DashboardView({ stats, recientes, vistasRecientes, sinPa
             { label: "Personas", value: stats.personas, to: "/personas" },
             { label: "Apellidos", value: stats.totalApellidos, to: "/apellidos" },
             { label: "Lugares", value: stats.lugares, to: "/lugares" },
-            { label: "Recuerdos", value: stats.fotos, to: "/fotos" },
+            { label: "Fotos", value: stats.fotos, to: "/fotos" },
           ].map(item => <Link to={item.to} key={item.label}><strong>{loading || (loadError && !stats.personas) ? "—" : number.format(item.value)}</strong><span>{item.label}</span></Link>)}
         </div>
       </section>
@@ -132,7 +133,7 @@ export default function DashboardView({ stats, recientes, vistasRecientes, sinPa
     </div>
 
     <nav className="home-shortcuts" aria-label="Accesos al archivo">
-      {[{ label: "Documentos", icon: FileText, to: "/documentos" }, { label: "Recuerdos", icon: Image, to: "/fotos" }, { label: "Orígenes", icon: Compass, to: "/adn" }, { label: "Importar", icon: Upload, to: "/importar" }].map(({ label, icon: Icon, to }) => <Link key={to} to={to}><span><Icon size={19} /></span>{label}<ChevronRight size={14} /></Link>)}
+      {[{ label: "Documentos", icon: FileText, to: "/documentos" }, { label: "Fotos", icon: Image, to: "/fotos" }, { label: "ADN", icon: Compass, to: "/adn" }, { label: "Importar", icon: Upload, to: "/importar" }].map(({ label, icon: Icon, to }) => <Link key={to} to={to}><span><Icon size={19} /></span>{label}<ChevronRight size={14} /></Link>)}
     </nav>
 
     <div className="home-secondary-grid">
