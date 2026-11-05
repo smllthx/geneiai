@@ -1,3 +1,4 @@
+import { lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useDeferredValue, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -68,7 +69,7 @@ export default function Buscar({ embedded = false }: { embedded?: boolean }) {
     staleTime: 60_000,
     queryFn: async ({ signal }) => {
       const [people, d, e, h, l] = await Promise.all([
-        fetchAllPeople<Pick<Tables<"personas">, "id" | "nombres" | "apellidos" | "variantes_nombre" | "notas" | "foto_url">>("id, nombres, apellidos, variantes_nombre, notas, foto_url", { treeId, signal }),
+        fetchAllPeople<Pick<Tables<"personas">, "id" | "nombres" | "apellidos" | "variantes_nombre" | "notas" | "foto_url" | "nac_fecha" | "nac_fecha_aprox" | "nac_rango_ini" | "nac_rango_fin" | "defuncion_fecha" | "viva">>("id, nombres, apellidos, variantes_nombre, notas, foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", { treeId, signal }),
         collectPages((from, to) => applyTreeScope(supabase.from("documentos").select("id, titulo, tipo, transcripcion, resumen, ocr_texto, cita, repositorio, url").order("id").range(from, to).abortSignal(signal), treeId)),
         collectPages((from, to) => applyTreeScope(supabase.from("eventos").select("id, tipo, descripcion, lugar_original, persona_id").order("id").range(from, to).abortSignal(signal), treeId)),
         collectPages((from, to) => supabase.from("hipotesis").select("id, titulo, descripcion, personas").order("id").range(from, to).abortSignal(signal)),
@@ -94,12 +95,12 @@ export default function Buscar({ embedded = false }: { embedded?: boolean }) {
 
     for (const r of people ?? []) {
       const variantes = (r.variantes_nombre ?? []).join(" ");
-      const text = `${r.nombres} ${r.apellidos} ${variantes} ${r.notas ?? ""}`;
+      const text = `${r.nombres} ${r.apellidos} ${variantes} ${lifeDates(r)} ${r.notas ?? ""}`;
       let score = fuzzyScore(q, text);
       if (looksLikeCode && matchesCode(q, r.id)) score = 1;
       if (score >= 0.7) all.push({
         id: r.id, cat: "personas", portrait: r.foto_url, label: `${r.nombres} ${r.apellidos}`.trim(),
-        sub: `${personaCode(r.id)}${variantes ? ` · también: ${variantes}` : ""}`,
+        sub: `${[lifeDates(r), personaCode(r.id)].filter(Boolean).join(" · ")}${variantes ? ` · también: ${variantes}` : ""}`,
         score, to: `/personas/${r.id}`,
       });
     }

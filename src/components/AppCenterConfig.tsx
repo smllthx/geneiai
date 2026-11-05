@@ -1,3 +1,4 @@
+import { birthLabel } from "@/lib/personDates";
 import PersonSelectItem from "@/components/PersonSelectItem";
 // Centro de configuración: vista por defecto del árbol, auto-configuración
 // inteligente según el tamaño del árbol, y "Aplicar y reiniciar" que limpia
@@ -48,7 +49,7 @@ export default function AppCenterConfig() {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
       const [{ data: p }, { data: prof }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha").order("apellidos"),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin").order("apellidos"),
         supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle(),
       ]);
       setPersonas((p as any) ?? []);
@@ -142,7 +143,7 @@ export default function AppCenterConfig() {
               </SelectTrigger>
               <SelectContent>
                 {personas.map((p) => (
-                  <PersonSelectItem key={p.id} person={p} suffix={p.nac_fecha?.slice(0, 4)} />
+                  <PersonSelectItem key={p.id} person={p} suffix={birthLabel(p)} />
                 ))}
               </SelectContent>
             </Select>

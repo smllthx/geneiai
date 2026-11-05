@@ -1,3 +1,4 @@
+import { familyLayers } from "@/lib/treeRendering";
 import type { GenealogyPerson, GenealogyRelationship, LineageSide, TreeEdge, TreeNode } from "./types";
 
 export const mockPeople: GenealogyPerson[] = [
@@ -135,129 +136,60 @@ export const mockRelationships: GenealogyRelationship[] = [
   { id: "r-rodrigo-hijo-2", from: "PUQT-GS2", to: "HIJO-002", type: "hijo" },
 ];
 
-const POSITIONS: Record<string, { x: number; y: number }> = {
-  "DC5N-DQC": { x: -520, y: -520 },
-  "LARA-001": { x: -230, y: -520 },
-  "GXQ4-SM9": { x: 230, y: -520 },
-  "BOU-001": { x: 520, y: -520 },
-  "G0VB-TSS": { x: -260, y: -260 },
-  "G0VB-SGT": { x: 260, y: -260 },
-  "PUQT-GS2": { x: 0, y: 40 },
-  "CONY-001": { x: 360, y: 40 },
-  "HIJO-001": { x: -160, y: 350 },
-  "HIJO-002": { x: 160, y: 350 },
-};
-
-const edgeLineage = (relationship: GenealogyRelationship, peopleById: Map<string, GenealogyPerson>): LineageSide => {
-  if (relationship.type === "conyuge" || relationship.type === "hijo") return "central";
-  if (relationship.to === "PUQT-GS2") return relationship.type === "padre" ? "paterna" : "materna";
-  return peopleById.get(relationship.from)?.lineage ?? "central";
-};
-
-const parentRelsOf = (id: string, relationships: GenealogyRelationship[]) =>
-  relationships.filter((relationship) => relationship.to === id && (relationship.type === "padre" || relationship.type === "madre"));
-
-const childrenOf = (id: string, relationships: GenealogyRelationship[]) =>
-  relationships
-    .filter((relationship) => relationship.from === id && (relationship.type === "hijo" || relationship.type === "padre" || relationship.type === "madre"))
-    .map((relationship) => relationship.to);
-
-const spousesOf = (id: string, relationships: GenealogyRelationship[]) =>
-  relationships.filter((relationship) => relationship.type === "conyuge" && (relationship.from === id || relationship.to === id));
-
-const inferLineages = (centerId: string, relationships: GenealogyRelationship[]) => {
-  const result = new Map<string, LineageSide>([[centerId, "central"]]);
-  const parentsByChild = new Map<string, string[]>();
-  for (const rel of relationships) if (["padre", "madre", "hijo"].includes(rel.type)) {
-    parentsByChild.set(rel.to, [...(parentsByChild.get(rel.to) ?? []), rel.from]);
+export function indexFamilyLinks(relationships: GenealogyRelationship[]) {
+  const parents = new Map<string, string[]>();
+  const children = new Map<string, string[]>();
+  for (const rel of relationships) {
+    if (rel.type === "conyuge") continue;
+    if (!parents.has(rel.to)) parents.set(rel.to, []);
+    if (!children.has(rel.from)) children.set(rel.from, []);
+    if (!parents.get(rel.to)!.includes(rel.from)) parents.get(rel.to)!.push(rel.from);
+    if (!children.get(rel.from)!.includes(rel.to)) children.get(rel.from)!.push(rel.to);
   }
-  const markAncestors = (id: string | undefined, lineage: LineageSide) => {
-    const pending = id ? [id] : [];
-    const visited = new Set<string>([centerId]);
-    while (pending.length) {
-      const next = pending.pop()!;
-      if (visited.has(next)) continue;
-      visited.add(next); result.set(next, lineage);
-      pending.push(...(parentsByChild.get(next) ?? []));
-    }
-  };
-  for (const parent of parentRelsOf(centerId, relationships)) {
-    markAncestors(parent.from, parent.type === "madre" ? "materna" : "paterna");
-  }
-  for (const spouse of spousesOf(centerId, relationships)) {
-    result.set(spouse.from === centerId ? spouse.to : spouse.from, "central");
-  }
-  for (const childId of childrenOf(centerId, relationships)) result.set(childId, "central");
-  return result;
-};
-
-const buildDynamicPositions = (centerId: string, relationships: GenealogyRelationship[]) => {
-  const positions = new Map<string, { x: number; y: number }>([[centerId, { x: 0, y: 40 }]]);
-  const parents = parentRelsOf(centerId, relationships);
-  const father = parents.find((r) => r.type === "padre")?.from;
-  const mother = parents.find((r) => r.type === "madre")?.from;
-  if (father) positions.set(father, { x: -260, y: -260 });
-  if (mother) positions.set(mother, { x: 260, y: -260 });
-  const alternatives = [...new Set(parents.map((r) => r.from))].filter((id) => id !== father && id !== mother);
-  alternatives.forEach((id, index) => positions.set(id, { x: 620 + index * 290, y: -260 }));
-
-  const placeGrandparents = (parentId: string | undefined, baseX: number) => {
-    if (!parentId) return;
-    const grandparents = parentRelsOf(parentId, relationships);
-    const grandFather = grandparents.find((r) => r.type === "padre")?.from;
-    const grandMother = grandparents.find((r) => r.type === "madre")?.from;
-    if (grandFather) positions.set(grandFather, { x: baseX - 145, y: -520 });
-    if (grandMother) positions.set(grandMother, { x: baseX + 145, y: -520 });
-  };
-  placeGrandparents(father, -260);
-  placeGrandparents(mother, 260);
-
-  const siblings = Array.from(new Set([...(father ? childrenOf(father, relationships) : []), ...(mother ? childrenOf(mother, relationships) : [])]))
-    .filter((id) => id !== centerId);
-  siblings.forEach((siblingId, index) => {
-    positions.set(siblingId, { x: -360 - index * 280, y: 40 });
-  });
-
-  const spouses = spousesOf(centerId, relationships);
-  spouses.forEach((spouse, index) => {
-    const spouseId = spouse.from === centerId ? spouse.to : spouse.from;
-    positions.set(spouseId, { x: 360 + index * 300, y: 40 + (index % 2) * 52 });
-  });
-
-  const children = childrenOf(centerId, relationships);
-  children.forEach((childId, index) => {
-    positions.set(childId, { x: (index - (children.length - 1) / 2) * 320, y: 350 });
-  });
-
-  return positions;
-};
+  return { parents, children };
+}
 
 export function buildGenealogyLayout(
   people: GenealogyPerson[] = mockPeople,
   relationships: GenealogyRelationship[] = mockRelationships,
   centerId = "PUQT-GS2",
+  generations = 4,
 ) {
   const peopleById = new Map(people.map((person) => [person.id, person]));
-  const dynamicPositions = buildDynamicPositions(centerId, relationships);
-  const lineages = inferLineages(centerId, relationships);
-  // Only the centered family has positions. Previously thousands of unrelated
-  // cards were stacked at (0,0), making every pan repaint the entire database.
-  const visible = people.filter((person) => dynamicPositions.has(person.id));
-  const centered = visible.find((person) => person.id === centerId);
-  const bounded = [...(centered ? [centered] : []), ...visible.filter((p) => p.id !== centerId)].slice(0, 160);
-  const visibleIds = new Set(bounded.map((person) => person.id));
-  const nodes: TreeNode[] = bounded.map((person) => ({
-    id: person.id,
-    type: "person",
-    position: dynamicPositions.get(person.id) ?? POSITIONS[person.id] ?? { x: 0, y: 0 },
-    data: { person: { ...person, lineage: lineages.get(person.id) ?? person.lineage } },
-  }));
-  const edges: TreeEdge[] = relationships.filter((r) => visibleIds.has(r.from) && visibleIds.has(r.to)).map((relationship) => ({
-    id: relationship.id,
-    source: relationship.from,
-    target: relationship.to,
-    type: relationship.type,
-    lineage: edgeLineage(relationship, peopleById),
+  const { parents, children } = indexFamilyLinks(relationships);
+  const position = new Map([[centerId, { x: 0, y: 40 }]]);
+  const lineages = new Map<string, LineageSide>([[centerId, "central"]]);
+  const rootParents = parents.get(centerId) ?? [];
+  const maternal = new Set(relationships.filter(r => r.to === centerId && r.type === "madre").map(r => r.from));
+  const placeLayers = (links: Map<string, string[]>, direction: number) => {
+    const layers = familyLayers(centerId, generations, id => links.get(id) ?? []);
+    layers.slice(1).forEach((layer, index) => {
+      const fresh = layer.filter(node => !node.repeated && !position.has(node.id) && peopleById.has(node.id));
+      fresh.forEach((node, column) => {
+        position.set(node.id, { x: (column - (fresh.length - 1) / 2) * 300, y: 40 + direction * 275 * (index + 1) });
+        lineages.set(node.id, direction > 0 ? "central" : maternal.has(rootParents[node.rootSide]) ? "materna" : "paterna");
+      });
+    });
+  };
+  placeLayers(parents, -1);
+  placeLayers(children, 1);
+  const siblings = new Set(rootParents.flatMap(id => children.get(id) ?? []));
+  let siblingColumn = 0, spouseColumn = 0;
+  for (const id of siblings) {
+    if (!position.has(id)) position.set(id, { x: -300 * ++siblingColumn, y: 40 });
+  }
+  for (const rel of relationships) {
+    if (rel.type !== "conyuge" || (rel.from !== centerId && rel.to !== centerId)) continue;
+    const id = rel.from === centerId ? rel.to : rel.from;
+    if (!position.has(id)) position.set(id, { x: 300 * ++spouseColumn, y: 40 });
+  }
+  const nodes: TreeNode[] = [...position.entries()].flatMap(([id, xy]) => {
+    const person = peopleById.get(id);
+    return person ? [{ id, type: "person", position: xy, data: { person: { ...person, lineage: lineages.get(id) ?? person.lineage } } }] : [];
+  });
+  const visibleIds = new Set(nodes.map(node => node.id));
+  const edges: TreeEdge[] = relationships.filter(r => visibleIds.has(r.from) && visibleIds.has(r.to)).map(rel => ({
+    id: rel.id, source: rel.from, target: rel.to, type: rel.type, lineage: lineages.get(rel.from) ?? "central",
   }));
   return { nodes, edges };
 }

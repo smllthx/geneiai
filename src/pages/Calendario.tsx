@@ -1,3 +1,4 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -14,12 +15,13 @@ const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto"
 function diffYears(fechaISO: string) {
   const d = new Date(fechaISO);
   const now = new Date();
-  let y = now.getFullYear() - d.getFullYear();
-  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) y--;
+  let y = now.getFullYear() - d.getUTCFullYear();
+  if (now.getMonth() < d.getUTCMonth() || (now.getMonth() === d.getUTCMonth() && now.getDate() < d.getUTCDate())) y--;
   return y;
 }
 
 export default function Calendario() {
+  const peopleRevision = usePeopleRevision();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function Calendario() {
       setEventos((e ?? []) as any);
       setLoading(false);
     })();
-  }, []);
+  }, [peopleRevision]);
 
   const items = useMemo(() => {
     const out: { fecha: Date; mes: number; dia: number; tipo: string; titulo: string; persona?: Persona; years?: number; icon: any; color: string }[] = [];
@@ -43,22 +45,22 @@ export default function Calendario() {
     personas.forEach(p => {
       if (p.nac_fecha) {
         const d = new Date(p.nac_fecha);
-        out.push({ fecha: d, mes: d.getMonth(), dia: d.getDate(), tipo: "cumpleanos", titulo: `Cumpleaños · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.nac_fecha), icon: Cake, color: "text-pink-500" });
+        out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: "cumpleanos", titulo: `Cumpleaños · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.nac_fecha), icon: Cake, color: "text-pink-500" });
       }
       if (p.matrimonio_fecha) {
         const d = new Date(p.matrimonio_fecha);
-        out.push({ fecha: d, mes: d.getMonth(), dia: d.getDate(), tipo: "matrimonio", titulo: `Aniversario boda · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.matrimonio_fecha), icon: Heart, color: "text-rose-500" });
+        out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: "matrimonio", titulo: `Aniversario boda · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.matrimonio_fecha), icon: Heart, color: "text-rose-500" });
       }
       if (p.defuncion_fecha) {
         const d = new Date(p.defuncion_fecha);
-        out.push({ fecha: d, mes: d.getMonth(), dia: d.getDate(), tipo: "defuncion", titulo: `Aniversario fallecimiento · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.defuncion_fecha), icon: Cross, color: "text-slate-500" });
+        out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: "defuncion", titulo: `Aniversario fallecimiento · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.defuncion_fecha), icon: Cross, color: "text-slate-500" });
       }
     });
     eventos.forEach(ev => {
       if (!ev.fecha) return;
       const d = new Date(ev.fecha);
       const per = map.get(ev.persona_id);
-      out.push({ fecha: d, mes: d.getMonth(), dia: d.getDate(), tipo: ev.tipo, titulo: `${ev.tipo}${per ? " · " + per.nombres + " " + per.apellidos : ""}`, persona: per, icon: Sparkles, color: "text-primary" });
+      out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: ev.tipo, titulo: `${ev.tipo}${per ? " · " + per.nombres + " " + per.apellidos : ""}`, persona: per, icon: Sparkles, color: "text-primary" });
     });
     return out.sort((a, b) => a.dia - b.dia);
   }, [personas, eventos]);

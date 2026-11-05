@@ -1,3 +1,4 @@
+import { personWriteEvent, personWriteKey } from "@/lib/personChanges";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +50,14 @@ export default function GlobalDataSync() {
       // Keep the first deadline: a busy stream must not postpone refresh forever.
       if (syncTimer === null) syncTimer = window.setTimeout(flush, 1000);
     };
+    const onLocalWrite = (event: Event) => {
+      if ((event as CustomEvent).detail === user.id) notifyChange("remote", "personas");
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === personWriteKey(user.id)) notifyChange("remote", "personas");
+    };
+    window.addEventListener(personWriteEvent, onLocalWrite);
+    window.addEventListener("storage", onStorage);
     const channel = supabase.channel(`global-sync-${user.id}`);
     TABLES.forEach((table) => {
       channel.on(
@@ -88,6 +97,8 @@ export default function GlobalDataSync() {
     return () => {
       disposed = true;
       if (syncTimer !== null) window.clearTimeout(syncTimer);
+      window.removeEventListener(personWriteEvent, onLocalWrite);
+      window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", resume);
       window.removeEventListener("pageshow", onPageShow);

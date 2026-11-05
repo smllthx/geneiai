@@ -2,24 +2,30 @@ import PersonPortrait from "@/components/PersonPortrait";
 import type { GenealogyRelationship, TreeNode } from "./types";
 
 type FounderLineageViewProps = {
+  generations: number;
   nodes: TreeNode[];
   relationships: GenealogyRelationship[];
   centerId: string;
   onSelect: (id: string) => void;
 };
 
-export default function FounderLineageView({ nodes, relationships, centerId, onSelect }: FounderLineageViewProps) {
+export default function FounderLineageView({ nodes, relationships, centerId, onSelect, generations }: FounderLineageViewProps) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const line: TreeNode[] = [];
   let current = byId.get(centerId) ?? nodes[0];
-  while (current && line.length < 8) {
-    line.unshift(current);
-    const father = relationships.find((rel) => rel.to === current.id && rel.type === "padre");
-    const mother = relationships.find((rel) => rel.to === current.id && rel.type === "madre");
-    const next = byId.get(father?.from ?? "") ?? byId.get(mother?.from ?? "");
-    if (!next || line.some((node) => node.id === next.id)) break;
-    current = next;
+  const preferredParent = new Map<string, string>();
+  for (const rel of relationships) {
+    if (rel.type !== "padre" && rel.type !== "madre") continue;
+    if (!byId.has(rel.from)) continue;
+    if (!preferredParent.has(rel.to) || rel.type === "padre") preferredParent.set(rel.to, rel.from);
   }
+  const visited = new Set<string>();
+  while (current && line.length <= generations && !visited.has(current.id)) {
+    visited.add(current.id);
+    line.push(current);
+    current = byId.get(preferredParent.get(current.id) ?? "");
+  }
+  line.reverse();
 
   return (
     <div className="absolute inset-0 overflow-auto p-8">

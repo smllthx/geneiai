@@ -1,8 +1,9 @@
+import { birthLabel, birthSortYear } from "@/lib/personDates";
 import { useMemo } from "react";
 import { Baby, Church, Heart, Cross, MapPin, Briefcase, Ship, FileText, Sparkles, Home, Landmark } from "lucide-react";
 import { toDisplayText } from "@/lib/safeText";
 
-type Item = { fecha: string; label: string; tipo?: string; lugar?: string };
+type Item = { fecha: string; label: string; tipo?: string; dateLabel?: string; lugar?: string };
 
 const ICONS: Record<string, any> = {
   nacimiento: Baby,
@@ -45,7 +46,8 @@ function clasifica(label: string, tipo?: string): string {
 export default function TimelineVisual({ eventos, persona }: { eventos: any[]; persona: any }) {
   const items: Item[] = useMemo(() => {
     const out: Item[] = [];
-    if (persona.nac_fecha) out.push({ fecha: persona.nac_fecha, label: "Nacimiento", tipo: "nacimiento" });
+    const birthYear = birthSortYear(persona);
+    if (birthYear != null) out.push({ fecha: persona.nac_fecha || String(birthYear), dateLabel: birthLabel(persona), label: "Nacimiento", tipo: "nacimiento" });
     if (persona.bautismo_fecha) out.push({ fecha: persona.bautismo_fecha, label: "Bautismo", tipo: "bautismo" });
     if (persona.matrimonio_fecha) out.push({ fecha: persona.matrimonio_fecha, label: "Matrimonio", tipo: "matrimonio" });
     (eventos ?? []).forEach((e: any) => {
@@ -79,7 +81,7 @@ export default function TimelineVisual({ eventos, persona }: { eventos: any[]; p
               <div className="relative flex-1 rounded-xl border border-border/50 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-display text-2xl font-bold tracking-tight">{y}</span>
+                    <span className="font-display text-2xl font-bold tracking-tight">{it.dateLabel || y}</span>
                     {edad != null && edad >= 0 && (
                       <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {edad === 0 ? "recién nacido" : `${edad} años`}

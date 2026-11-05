@@ -1,9 +1,12 @@
+import { familyLayers } from "@/lib/treeRendering";
+import { indexFamilyLinks } from "./genealogyLayout";
 import PersonPortrait from "@/components/PersonPortrait";
 import { ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyRelationship, TreeNode } from "./types";
 
 type DescendancyViewProps = {
+  generations: number;
   nodes: TreeNode[];
   relationships: GenealogyRelationship[];
   centerId: string;
@@ -11,13 +14,11 @@ type DescendancyViewProps = {
   onAddChild: (id: string) => void;
 };
 
-export default function DescendancyView({ nodes, relationships, centerId, onSelect, onAddChild }: DescendancyViewProps) {
+export default function DescendancyView({ nodes, relationships, centerId, generations, onSelect, onAddChild }: DescendancyViewProps) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const center = byId.get(centerId) ?? nodes[0];
-  const children = relationships
-    .filter((rel) => (rel.from === center?.id && rel.type === "hijo") || (rel.to !== center?.id && rel.from === center?.id && (rel.type === "padre" || rel.type === "madre")))
-    .map((rel) => byId.get(rel.to))
-    .filter((node, index, rows) => node && rows.findIndex((other) => other?.id === node.id) === index) as TreeNode[];
+  const links = indexFamilyLinks(relationships).children;
+  const layers = familyLayers(centerId, generations, id => (links.get(id) ?? []).filter(child => byId.has(child))).slice(1);
 
   return (
     <div className="absolute inset-0 overflow-auto p-8">
@@ -41,8 +42,10 @@ export default function DescendancyView({ nodes, relationships, centerId, onSele
             )}
           </div>
           <div className="space-y-2">
-            {children.length === 0 && <p className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">Aún no hay hijos registrados para esta persona.</p>}
-            {children.map((child) => (
+            {layers.length === 0 && <p className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">Aún no hay hijos registrados para esta persona.</p>}
+            {layers.map((layer, depth) => <section className="space-y-2" key={depth}>
+              <h3 className="text-xs font-semibold text-muted-foreground">Generación {depth + 1}</h3>
+              {layer.filter(node => !node.repeated).map(node => byId.get(node.id)!).map((child) => (
               <button
                 key={child.id}
                 type="button"
@@ -56,7 +59,7 @@ export default function DescendancyView({ nodes, relationships, centerId, onSele
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
-            ))}
+            ))}</section>)}
           </div>
         </div>
       </div>

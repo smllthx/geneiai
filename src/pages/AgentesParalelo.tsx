@@ -1,3 +1,4 @@
+import { birthLabel } from "@/lib/personDates";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,12 +59,12 @@ function AgentWorkspace({ personId }: { personId: string | null }) {
     const controller = new AbortController();
     void (async () => {
       const { data, error } = await supabase.from("personas")
-        .select("nombres,apellidos,nac_fecha,defuncion_fecha,nacimiento:lugares!personas_nac_lugar_id_fkey(ciudad,pais),defuncion:lugares!personas_defuncion_lugar_id_fkey(ciudad,pais)")
+        .select("nombres,apellidos,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nacimiento:lugares!personas_nac_lugar_id_fkey(ciudad,pais),defuncion:lugares!personas_defuncion_lugar_id_fkey(ciudad,pais)")
         .eq("id", personId).abortSignal(controller.signal).maybeSingle();
       if (controller.signal.aborted) return;
       if (error || !data) { toast.error("No se pudo cargar la persona para preparar las tareas."); return; }
       const name = [data.nombres, data.apellidos].filter(Boolean).join(" ");
-      const birth = [data.nac_fecha, data.nacimiento?.ciudad, data.nacimiento?.pais].filter(Boolean).join(", ");
+      const birth = [birthLabel(data, true), data.nacimiento?.ciudad, data.nacimiento?.pais].filter(Boolean).join(", ");
       const death = [data.defuncion_fecha, data.defuncion?.ciudad, data.defuncion?.pais].filter(Boolean).join(", ");
       const details = `Persona: ${name}. Nacimiento: ${birth || "sin registrar"}. Defunción: ${death || "sin registrar"}.`;
       setTasks(current => current.some(task => task.prompt.trim()) ? current : [

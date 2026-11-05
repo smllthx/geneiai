@@ -1,3 +1,4 @@
+import { birthSortYear } from "@/lib/personDates";
 // Persists an ImportResult into Supabase (personas + relaciones).
 // Marks every imported persona's `ids_externos.import_xref` so we can dedupe later.
 import { supabase } from "@/integrations/supabase/client";
@@ -20,13 +21,6 @@ const norm = (s?: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-const yearOf = (d?: string | null) => {
-  if (!d) return null;
-  const m = String(d).match(/(\d{4})/);
-  return m ? parseInt(m[1], 10) : null;
-};
-
-
 export async function persistImport(
   data: { personas: ImportPersona[]; familias: ImportFamilia[] },
   source: string,
@@ -44,13 +38,13 @@ export async function persistImport(
   // Pre-cargar personas del usuario para auto-merge alta confianza (nombre+apellido+año±2)
   const { data: existentes } = await supabase
     .from("personas")
-    .select("id, nombres, apellidos, nac_fecha")
+    .select("id, nombres, apellidos, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin")
     .eq("user_id", user.id);
   const indice = new Map<string, { id: string; year: number | null }[]>();
   (existentes ?? []).forEach((e: any) => {
     const k = `${norm(e.nombres)}|${norm(e.apellidos)}`;
     const arr = indice.get(k) ?? [];
-    arr.push({ id: e.id, year: yearOf(e.nac_fecha) });
+    arr.push({ id: e.id, year: birthSortYear(e) });
     indice.set(k, arr);
   });
 
@@ -58,7 +52,7 @@ export async function persistImport(
     const k = `${norm(p.nombres)}|${norm(p.apellidos)}`;
     const cands = indice.get(k);
     if (!cands || !cands.length) return null;
-    const y = yearOf(p.nac_fecha);
+    const y = birthSortYear(p);
     // Si no hay año en el import o no en el candidato, igual fusionamos por nombre exacto.
     const match = cands.find((c) => {
       if (y == null || c.year == null) return true;
@@ -84,6 +78,9 @@ export async function persistImport(
         apellidos: p.apellidos,
         sexo: p.sexo === "M" ? "masculino" : p.sexo === "F" ? "femenino" : inferSexFromName(p.nombres),
         nac_fecha: p.nac_fecha,
+        nac_fecha_aprox: p.nac_fecha_aprox,
+        nac_rango_ini: p.nac_rango_ini,
+        nac_rango_fin: p.nac_rango_fin,
         defuncion_fecha: p.defuncion_fecha,
         bautismo_fecha: p.bautismo_fecha,
         ocupacion: p.ocupacion,

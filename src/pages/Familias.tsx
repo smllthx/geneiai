@@ -33,7 +33,7 @@ export default function Familias() {
     const familiasQuery = supabase.from("familias").select("*").order("created_at", { ascending: false });
     const [{ data: f }, p, r] = await Promise.all([
       activeTreeId ? (familiasQuery as any).or(`arbol_id.eq.${activeTreeId},arbol_id.is.null`) : familiasQuery,
-      fetchAllPeople<any>("id,nombres,apellidos,foto_url,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
+      fetchAllPeople<any>("id,nombres,apellidos,foto_url,variantes_nombre,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
       fetchAllRelations<any>("id,persona_id,pariente_id,tipo", { treeId: activeTreeId }),
     ]);
     setFamilias(f ?? []); setPersonas(p ?? []); setRelaciones(r ?? []);

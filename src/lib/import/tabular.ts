@@ -1,3 +1,4 @@
+import { importedBirth } from "./gedcom";
 // CSV / Excel / JSON tabular importers.
 // Expected columns (insensitive): id, nombres, apellidos, sexo, nac_fecha,
 // nac_lugar, defuncion_fecha, defuncion_lugar, padre_id, madre_id, conyuge_id, notas
@@ -24,7 +25,10 @@ export function parseTabular(rows: TabularRow[]): { personas: ImportPersona[]; f
       nombres,
       apellidos,
       sexo: sexoRaw === "M" || sexoRaw === "F" ? (sexoRaw as "M" | "F") : null,
-      nac_fecha: r.nac_fecha || null,
+      ...importedBirth(r.nac_fecha || ""),
+      ...(r.nac_fecha_aprox ? { nac_fecha_aprox: r.nac_fecha_aprox } : {}),
+      ...(/^\d{1,4}$/.test(r.nac_rango_ini) ? { nac_rango_ini: Number(r.nac_rango_ini) } : {}),
+      ...(/^\d{1,4}$/.test(r.nac_rango_fin) ? { nac_rango_fin: Number(r.nac_rango_fin) } : {}),
       nac_lugar: r.nac_lugar || null,
       defuncion_fecha: r.defuncion_fecha || null,
       defuncion_lugar: r.defuncion_lugar || null,

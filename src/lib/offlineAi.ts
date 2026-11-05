@@ -1,3 +1,4 @@
+import { birthLabel, lifeDates } from "@/lib/personDates";
 import { supabase } from "@/integrations/supabase/client";
 import { checkCoherence } from "@/lib/coherence";
 import { isAiProviderOrCreditError } from "@/lib/aiErrors";
@@ -10,7 +11,8 @@ export const isCreditOrAiError = (e: any) => {
 };
 
 export function localPersonaInsight(persona: any) {
-  const born = y(persona?.nac_fecha) ?? persona?.nac_rango_ini;
+  const born = y(persona?.nac_fecha);
+  if (persona && !born && birthLabel(persona)) return `Nacimiento registrado: ${birthLabel(persona)}. Una partida de nacimiento o bautismo puede ayudar a precisar la fecha.`;
   const died = y(persona?.defuncion_fecha);
   if (born && died) return `Vivió aproximadamente ${died - born} años; revisá si existen fotos, fuentes o eventos que completen esa etapa.`;
   if (born) return `Pertenece a la generación nacida alrededor de ${born}; conviene buscar censos, bautismos y registros civiles de esa década.`;
@@ -47,13 +49,13 @@ export async function localAssistantReply(text: string) {
   if ((q.includes("buscar") || q.includes("busca") || q.includes("persona") || q.includes("ficha")) && personaWords.length) {
     const { data } = await supabase
       .from("personas")
-      .select("id,nombres,apellidos,nac_fecha,nac_rango_ini,defuncion_fecha")
+      .select("id,nombres,apellidos,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha")
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true })
       .limit(1500);
     const matches = (data ?? [])
       .filter((p: any) => {
-        const haystack = norm(`${p.nombres ?? ""} ${p.apellidos ?? ""} ${p.nac_fecha ?? ""} ${p.nac_rango_ini ?? ""}`);
+        const haystack = norm(`${p.nombres ?? ""} ${p.apellidos ?? ""} ${birthLabel(p)}`);
         return personaWords.every((word) => haystack.includes(word));
       })
       .slice(0, 8);
@@ -61,9 +63,8 @@ export async function localAssistantReply(text: string) {
       tool_events.push({ name: "search_personas", result: { ok: true, results: matches } });
       if (matches.length === 1) tool_events.push({ name: "navigate_to", result: { ok: true, navigate_to: `/personas/${matches[0].id}` } });
       const lines = matches.map((p: any) => {
-        const born = y(p.nac_fecha) ?? p.nac_rango_ini ?? "?";
-        const died = y(p.defuncion_fecha) ?? "";
-        return `- ${p.nombres ?? ""} ${p.apellidos ?? ""} (${born}${died ? `–${died}` : ""})`;
+        const dates = lifeDates(p);
+        return `- ${p.nombres ?? ""} ${p.apellidos ?? ""}${dates ? ` (${dates})` : ""}`;
       });
       return { content: `Encontré ${matches.length} persona(s), ordenadas por apellido:\n\n${lines.join("\n")}${matches.length === 1 ? "\n\nAbro su ficha." : "\n\nPuedes escribir el nombre completo para abrir una ficha concreta."}`, tool_events };
     }
@@ -78,7 +79,7 @@ export async function localAssistantReply(text: string) {
   }
   if (q.includes("coherencia") || q.includes("verifica")) {
     const [{ data: personas }, { data: rels }] = await Promise.all([
-      supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha"),
+      supabase.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha"),
       supabase.from("relaciones").select("id,persona_id,pariente_id,tipo"),
     ]);
     const issues = checkCoherence((personas ?? []) as any, (rels ?? []) as any);

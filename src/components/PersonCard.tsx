@@ -1,18 +1,16 @@
+import { lifeDates, birthLabel, type BirthFields } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { UserPlus } from "lucide-react";
 
-const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
-
-export type PersonaLite = {
+export type PersonaLite = BirthFields & {
   id: string;
   nombres: string;
   apellidos: string;
   sexo?: string | null;
-  nac_fecha?: string | null;
-  nac_rango_ini?: number | null;
+
   nac_lugar?: string | null;
   defuncion_fecha?: string | null;
   defuncion_lugar?: string | null;
@@ -27,7 +25,7 @@ function completeness(p: PersonaLite): number {
     "defuncion_fecha", "ocupacion",
   ];
   const filled = keys.filter((k) => {
-    const v = p[k];
+    const v = k === "nac_fecha" ? birthLabel(p) : p[k];
     return v !== null && v !== undefined && String(v).trim() !== "";
   }).length;
   return filled / keys.length;
@@ -43,9 +41,7 @@ export const PersonCard = memo(function PersonCard({
   onClick?: () => void;
 }) {
   const navigate = useNavigate();
-  const yN = yearOf(p.nac_fecha) ?? p.nac_rango_ini ?? null;
-  const yD = yearOf(p.defuncion_fecha) ?? null;
-  const lifespan = yN || yD ? `${yN ?? "?"}–${yD ?? (p.viva === "si" ? "Vive" : "?")}` : "—";
+  const lifespan = lifeDates(p);
   const isF = p.sexo === "femenino";
   const isM = p.sexo === "masculino";
   // FamilySearch-style colored top bar

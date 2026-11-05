@@ -1,8 +1,9 @@
+import { birthSortYear } from "@/lib/personDates";
 import { Component, type ReactNode, createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import "./tree-page.css";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import GenerationControl, { useTreeGenerations } from "@/components/tree/GenerationControl";
 import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
@@ -20,7 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
-import { renderGenerations } from "@/lib/treeRendering";
+import { familyLayers, type FamilyBranch } from "@/lib/treeRendering";
 import { toDisplayText } from "@/lib/safeText";
 
 
@@ -60,7 +61,7 @@ class TreeErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 
 type TreeViewState = {
   editMode: boolean; persona?: PersonaLite; rels: any[]; categoria: Categoria;
-  docsByPersona: Map<string, number>; byId: Map<string, PersonaLite>; generaciones: number;
+  docsByPersona: Map<string, number>; byId: Map<string, PersonaLite>; generaciones: number; ancestors?: FamilyBranch; descendants?: FamilyBranch;
   navigate: ReturnType<typeof useNavigate>; reload: () => void;
   padresDe: (id: string) => ReturnType<typeof kPadresDe>;
   hijosDe: (id: string) => PersonaLite[]; conyugesDe: (id: string) => PersonaLite[];
@@ -120,7 +121,7 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
       return `rounded-2xl ring-2`;
     }
     if (categoria === "historia") {
-      const y = (p as any).nac_fecha ? new Date((p as any).nac_fecha).getUTCFullYear() : (p as any).nac_rango_ini;
+      const y = birthSortYear(p);
       if (!y) return "opacity-60";
       if (y < 1850) return "ring-2 ring-amber-500/70 rounded-2xl";
       if (y < 1920) return "ring-2 ring-orange-500/70 rounded-2xl";
@@ -204,54 +205,32 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
   );
 
   // Recursive ascendants renderer — compact, connected, and symmetric.
-  const Ascendants = ({ pid, gen, trail = [] }: { pid: string; gen: number; trail?: string[] }) => {
-    const { padresDe } = useContext(TreeViewContext)!;
-    if (gen <= 0 || trail.includes(pid)) return null;
-    const { padre, madre } = padresDe(pid);
-    const hasAny = !!(padre || madre);
-    const nextTrail = [...trail, pid];
-    return (
-      <div className="inline-flex flex-col items-center">
-        {hasAny && (
-          <div className="relative mb-2 inline-grid grid-cols-2 items-end justify-center gap-3 sm:gap-4">
-            <div className="flex min-w-[156px] flex-col items-center justify-end">
-              {padre ? <Ascendants pid={padre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            </div>
-            <div className="flex min-w-[156px] flex-col items-center justify-end">
-              {madre ? <Ascendants pid={madre.id} gen={gen - 1} trail={nextTrail} /> : null}
-            </div>
-            <div className="pointer-events-none absolute bottom-0 left-1/4 right-1/4 h-px bg-foreground/25" />
-            <div className="pointer-events-none absolute bottom-0 left-1/2 h-4 w-px translate-y-full bg-foreground/25" />
-          </div>
-        )}
-        <div className="relative mt-4">
-          <CouplePair childId={pid} padre={padre} madre={madre} />
-        </div>
-        {hasAny && <div className="h-4 w-px bg-foreground/30" />}
+  const Ascendants = ({ node }: { node?: FamilyBranch }) => {
+    const { byId } = useContext(TreeViewContext)!;
+    if (!node?.children.length) return null;
+    const [father, mother] = [0, 1].map(side => node.children.find(child => child.side === side));
+    return <div className="inline-flex flex-col items-center">
+      <div className="flex items-end justify-center gap-3">
+        {node.children.map(child => <Ascendants key={child.side} node={child} />)}
       </div>
-    );
+      <div className="relative mt-4"><CouplePair childId={node.id} padre={father && byId.get(father.id)} madre={mother && byId.get(mother.id)} /></div>
+      <div className="h-4 w-px bg-foreground/30" />
+    </div>;
   };
 
-  const DescendantTree = ({ pid, depth = 2 }: { pid: string; depth?: number }) => {
-    const { hijosDe } = useContext(TreeViewContext)!;
-    if (depth <= 0) return null;
-    const children = hijosDe(pid);
-    if (!children.length) return null;
-    return (
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-4 w-px bg-foreground/30" />
-        <div className="relative flex items-start justify-center gap-4">
-          {children.length > 1 && <div className="pointer-events-none absolute left-[12%] right-[12%] top-0 h-px bg-foreground/25" />}
-          {children.map((child) => (
-            <div key={child.id} className="relative flex flex-col items-center gap-2">
-              <div className="h-3 w-px bg-foreground/25" />
-              <PartnershipStrip p={child} compact />
-              <DescendantTree pid={child.id} depth={depth - 1} />
-            </div>
-          ))}
-        </div>
+  const DescendantTree = ({ node }: { node?: FamilyBranch }) => {
+    const { byId } = useContext(TreeViewContext)!;
+    if (!node?.children.length) return null;
+    return <div className="flex flex-col items-center gap-3">
+      <div className="h-4 w-px bg-foreground/30" />
+      <div className="relative flex items-start justify-center gap-4">
+        {node.children.map(child => <div key={child.id} className="flex flex-col items-center gap-2">
+          <div className="h-3 w-px bg-foreground/30" />
+          <PartnershipStrip p={byId.get(child.id)!} compact />
+          <DescendantTree node={child} />
+        </div>)}
       </div>
-    );
+    </div>;
   };
 
   const SiblingBranch = ({ p }: { p: PersonaLite }) => {
@@ -271,7 +250,7 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
   ); };
 
   const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => {
-    const { generaciones, persona, reload, navigate } = useContext(TreeViewContext)!;
+    const { ancestors, persona, reload, navigate } = useContext(TreeViewContext)!;
     return (
     <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
       <div className={`mb-4 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
@@ -279,7 +258,7 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
       </div>
       {root ? (
         <>
-          <Ascendants pid={root.id} gen={Math.max(0, renderGenerations(generaciones) - 1)} />
+          <Ascendants node={ancestors?.children.find(child => child.id === root.id)} />
           <div className="h-4 w-px bg-foreground/30" />
           <Draggable p={root}>
             <Hl p={root}>
@@ -303,7 +282,7 @@ function ArbolContent() {
   const [rels, setRels] = useState<any[]>([]);
   const [center, setCenter] = useState<string>("");
   const [probandLocked, setProbandLocked] = useState(false);
-  const [generaciones, setGeneraciones] = useState(4);
+  const [generaciones, setGeneraciones] = useTreeGenerations();
   const [viewport] = useState(createTreeViewport);
   const [reloadKey, setReloadKey] = useState(0);
   const [editMode, setEditMode] = useState(false);
@@ -342,7 +321,7 @@ function ArbolContent() {
       try {
         const activeTreeId = await getActiveTreeId(authUser.id);
         const [p, r, profile, docs] = await Promise.all([
-          fetchAllPeople<PersonaLite>("id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
+          fetchAllPeople<PersonaLite>("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
           fetchAllRelations("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
           supabase.from("profiles").select("proband_id").eq("id", authUser.id).maybeSingle(),
           supabase.from("documentos").select("personas_mencionadas").limit(5000),
@@ -438,6 +417,13 @@ function ArbolContent() {
 
   const byId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
   const persona = center ? byId.get(center) : undefined;
+
+  const ancestors = useMemo(() => center && (vista === "ascendientes" || vista === "lineas") ? familyLayers(center, generaciones, id => {
+    const { padre, madre } = kPadresDe(id, rels, byId);
+    return [padre?.id ?? null, madre?.id ?? null];
+  })[0][0] : undefined, [center, generaciones, rels, byId, vista]);
+  const descendants = useMemo(() => center && vista === "ascendientes" ? familyLayers(center, generaciones,
+    id => kHijosDe(id, rels, byId).map(child => child.id))[0][0] : undefined, [center, generaciones, rels, byId, vista]);
 
   // Use unified kinship helpers — same logic everywhere in the app
   const padresDe = (pid: string) => kPadresDe(pid, rels as any, byId);
@@ -567,7 +553,7 @@ function ArbolContent() {
 
 
   return (
-    <TreeViewContext.Provider value={{ editMode, persona, rels, categoria, docsByPersona, byId, generaciones, navigate, reload, padresDe, hijosDe, conyugesDe, setDropTarget, setEditRel }}>
+    <TreeViewContext.Provider value={{ editMode, persona, rels, categoria, docsByPersona, byId, generaciones, ancestors, descendants, navigate, reload, padresDe, hijosDe, conyugesDe, setDropTarget, setEditRel }}>
     <div
       className={`family-tree-page flex min-h-0 flex-1 flex-col ${fullscreen ? "fixed inset-0 z-40 bg-background" : ""}`}
       style={fullscreen ? {
@@ -657,14 +643,7 @@ function ArbolContent() {
                 <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} disabled={refreshingTree} aria-label="Actualizar árbol" title="Actualizar árbol">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
-                <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
-                  <SelectTrigger aria-label="Generaciones de antepasados" className="h-9 w-full rounded-full text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[2, 3, 4, 5, 6].map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n} generaciones</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <GenerationControl value={generaciones} onChange={setGeneraciones} />
               </section>
               <section>
                 <p className="mb-2 text-xs font-semibold">Resaltado</p>
@@ -863,7 +842,7 @@ function ArbolContent() {
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Ascendencia paterna y materna
             </div>
-            <Ascendants pid={persona.id} gen={renderGenerations(generaciones)} />
+            {ancestors?.children.length ? <Ascendants node={ancestors} /> : <CouplePair childId={persona.id} />}
 
             <div className="h-4 w-px bg-foreground/30" />
             <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -886,7 +865,7 @@ function ArbolContent() {
               Descendencia
             </div>
             {hijosDe(persona.id).length > 0 ? (
-              <DescendantTree pid={persona.id} depth={3} />
+              <DescendantTree node={descendants} />
             ) : (
               <div className="text-xs text-muted-foreground">Sin hijos registrados.</div>
             )}

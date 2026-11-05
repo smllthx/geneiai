@@ -1,3 +1,4 @@
+import BirthDateField from "@/components/BirthDateField";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -108,14 +109,6 @@ export default function NuevaPersona() {
   const setName = (value: string) => setP((s) => {
     const inferredSex = s.sexo ? null : inferSexFromName(value);
     return { ...s, nombres: value, ...(inferredSex ? { sexo: inferredSex } : {}) };
-  });
-  const setBirthDate = (value: string | null) => setP((s) => {
-    const inferredLiving = s.defuncion_fecha ? null : inferLivingStatus(value, s.nac_rango_ini);
-    return { ...s, nac_fecha: value, ...(inferredLiving ? { viva: inferredLiving } : {}) };
-  });
-  const setBirthRangeStart = (value: number | null) => setP((s) => {
-    const inferredLiving = s.defuncion_fecha ? null : inferLivingStatus(s.nac_fecha, value);
-    return { ...s, nac_rango_ini: value, ...(inferredLiving ? { viva: inferredLiving } : {}) };
   });
   const setBirthPlace = (id: string | null) => setP((s) => {
     const place = lugares.find((l) => l.id === id);
@@ -259,20 +252,10 @@ export default function NuevaPersona() {
         </div>
 
         {/* Nacimiento */}
-        <FieldLine label="Fecha de nacimiento" optional>
-          <LineInput
-            type="date"
-            value={p.nac_fecha ?? ""}
-            onChange={(e) => setBirthDate(e.target.value || null)}
-          />
-        </FieldLine>
-        <FieldLine label="Fecha aproximada" optional>
-          <LineInput
-            value={p.nac_fecha_aprox}
-            onChange={(e) => set("nac_fecha_aprox", e.target.value)}
-            placeholder="hacia 1880"
-          />
-        </FieldLine>
+        <div className="my-3"><BirthDateField person={p} onChange={birth => setP(previous => {
+          const living = previous.defuncion_fecha ? null : inferLivingStatus(birth.nac_fecha, birth.nac_rango_ini);
+          return { ...previous, ...birth, ...(living ? { viva: living } : {}) };
+        })} /></div>
         <FieldLine label="Lugar de nacimiento" optional>
           <div className="-mx-1">
             <LugarSelect
@@ -319,23 +302,6 @@ export default function NuevaPersona() {
 
         {moreOpen && (
           <div className="mt-2">
-            <FieldLine label="Rango de nacimiento (años)" optional>
-              <div className="flex gap-3">
-                <LineInput
-                  type="number"
-                  placeholder="desde"
-                  value={p.nac_rango_ini ?? ""}
-                  onChange={(e) => setBirthRangeStart(e.target.value ? parseInt(e.target.value) : null)}
-                />
-                <LineInput
-                  type="number"
-                  placeholder="hasta"
-                  value={p.nac_rango_fin ?? ""}
-                  onChange={(e) => set("nac_rango_fin", e.target.value ? parseInt(e.target.value) : null)}
-                />
-              </div>
-            </FieldLine>
-
             <FieldLine label="Fecha de bautismo" optional>
               <LineInput type="date" value={p.bautismo_fecha ?? ""} onChange={(e) => set("bautismo_fecha", e.target.value || null)} />
             </FieldLine>

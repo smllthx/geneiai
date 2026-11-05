@@ -22,6 +22,8 @@ const Apellidos = lazy(routeLoaders.Apellidos);
 const PersonaDetail = lazy(routeLoaders.PersonaDetail);
 const GenealogyProfilePage = lazy(routeLoaders.GenealogyProfilePage);
 const NuevaPersona = lazy(routeLoaders.NuevaPersona);
+const TreeReports = lazy(routeLoaders.TreeReports);
+const Inbox = lazy(routeLoaders.Inbox);
 const Arbol = lazy(routeLoaders.Arbol);
 const ArbolModerno = lazy(routeLoaders.ArbolModerno);
 const Familias = lazy(routeLoaders.Familias);
@@ -104,6 +106,9 @@ const App = () => (
                   <Route path="/inicio" element={<Inicio />} />
                   <Route path="/dashboard" element={<Navigate to="/inicio" replace />} />
                   <Route path="/arbol" element={<Arbol />} />
+                  <Route path="/consistencia" element={<TreeReports mode="coherence" />} />
+                  <Route path="/informe-de-relaciones" element={<TreeReports mode="relationships" />} />
+                  <Route path="/bandeja-de-entrada" element={<Inbox page />} />
                   <Route path="/arbol-moderno" element={<ArbolModerno />} />
                   <Route path="/arbol-clasico" element={<Navigate to="/arbol" replace />} />
                   <Route path="/personas" element={<PersonasList />} />
@@ -124,7 +129,7 @@ const App = () => (
                   <Route path="/adn" element={<ADN />} />
                   <Route path="/origen-ancestral" element={<Navigate to="/adn" replace />} />
                   <Route path="/cuadros-ia" element={<CuadrosIA />} />
-                  <Route path="/estimacion-etnica" element={<Navigate to="/adn" replace />} />
+                  <Route path="/estimacion-etnica" element={<ADN ethnicity />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/agente" element={<Agente />} />
                   <Route path="/asistente" element={<Asistente />} />

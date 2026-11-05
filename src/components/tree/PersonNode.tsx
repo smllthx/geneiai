@@ -37,7 +37,7 @@ const lineageBar: Record<GenealogyPerson["lineage"], string> = {
 };
 
 export default function PersonNode({ person, selected, dimmed, showPortrait = true, showAiHints = true, showProblems = true, expanded, onSelect, onAction, onAddRelative }: PersonNodeProps) {
-  const years = [person.birth, person.death].filter(Boolean).join("-");
+  const years = person.lifespan ?? [person.birth, person.death].filter(Boolean).join("–");
   const fullName = `${person.givenNames} ${person.surnames}`.trim();
 
   return (

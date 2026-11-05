@@ -1,3 +1,5 @@
+import { birthSortYear, birthLabel } from "@/lib/personDates";
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -5,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Baby, Heart, Cross, Plane, MapPin, Briefcase, Church, FileText, Sparkles } from "lucide-react";
 
 type Person = { id: string; nombres: string; apellidos: string; foto_url: string | null };
-type Item = { year: number; label: string; persona_id?: string; tipo: string; persona?: Person; lugar?: string };
+type Item = { year: number; yearLabel?: string; label: string; persona_id?: string; tipo: string; persona?: Person; lugar?: string };
 
 const ICONS: Record<string, any> = {
   nacimiento: Baby, bautismo: Church, matrimonio: Heart, defuncion: Cross,
@@ -23,19 +25,21 @@ function clasifica(t: string) {
 }
 
 export default function FamilyTimeline() {
+  const peopleRevision = usePeopleRevision();
   const [items, setItems] = useState<Item[]>([]);
 
   useEffect(() => {
     (async () => {
       const [{ data: personas }, { data: eventos }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,defuncion_fecha,matrimonio_fecha"),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,matrimonio_fecha"),
         supabase.from("eventos").select("persona_id,tipo,fecha,lugar_original").not("fecha", "is", null).order("fecha"),
       ]);
       const out: Item[] = [];
       const byId = new Map((personas ?? []).map(p => [p.id, p]));
       (personas ?? []).forEach((p: any) => {
         const nm = `${p.nombres} ${p.apellidos}`.trim();
-        if (p.nac_fecha) out.push({ year: new Date(p.nac_fecha).getUTCFullYear(), label: `Nace ${nm}`, persona_id: p.id, persona: p, tipo: "nacimiento" });
+        const born = birthSortYear(p);
+        if (born != null) out.push({ year: born, yearLabel: birthLabel(p), label: `Nace ${nm}`, persona_id: p.id, persona: p, tipo: "nacimiento" });
         if (p.defuncion_fecha) out.push({ year: new Date(p.defuncion_fecha).getUTCFullYear(), label: `Muere ${nm}`, persona_id: p.id, persona: p, tipo: "defuncion" });
         if (p.matrimonio_fecha) out.push({ year: new Date(p.matrimonio_fecha).getUTCFullYear(), label: `Matrimonio de ${nm}`, persona_id: p.id, persona: p, tipo: "matrimonio" });
       });
@@ -49,11 +53,15 @@ export default function FamilyTimeline() {
       out.sort((a, b) => b.year - a.year);
       setItems(out.slice(0, 50));
     })();
-  }, []);
+  }, [peopleRevision]);
 
   const grouped = useMemo(() => {
-    const m = new Map<number, Item[]>();
-    items.forEach((i) => { if (!m.has(i.year)) m.set(i.year, []); m.get(i.year)!.push(i); });
+    const m = new Map<string, Item[]>();
+    items.forEach(i => {
+      const label = i.yearLabel ?? String(i.year);
+      if (!m.has(label)) m.set(label, []);
+      m.get(label)!.push(i);
+    });
     return [...m.entries()];
   }, [items]);
 
@@ -65,7 +73,7 @@ export default function FamilyTimeline() {
       <ol className="space-y-4">
         {grouped.map(([year, list]) => (
           <li key={year} className="relative pl-12">
-            <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground shadow-lg ring-4 ring-background">
+            <div className="relative mb-1 inline-flex min-h-8 min-w-10 items-center justify-center px-2 rounded-full bg-gradient-to-br from-primary to-accent text-[11px] font-bold text-primary-foreground shadow-lg ring-4 ring-background">
               {year}
             </div>
             <ul className="space-y-1.5">

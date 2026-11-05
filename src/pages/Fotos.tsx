@@ -54,7 +54,7 @@ export default function Fotos() {
       const fotosQuery = supabase.from("fotos").select("*").order("created_at", { ascending: false });
       const [{ data: f, error: fotosError }, p, { data: l, error: lugaresError }] = await Promise.all([
         applyTreeScope(fotosQuery as any, treeId),
-        fetchAllPeople<Persona>("id,nombres,apellidos,foto_url", { treeId }),
+        fetchAllPeople<Persona>("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", { treeId }),
         supabase.from("lugares").select("id,ciudad,pais,lat,lng"),
       ]);
       if (fotosError) throw fotosError;
@@ -173,7 +173,7 @@ export default function Fotos() {
     <div>
       <SectionHeader
         eyebrow="Galería familiar"
-        title="Recuerdos"
+        title="Fotos"
         subtitle="Fotos, retratos y álbumes que cuentan tu historia familiar."
         actions={subirAccion}
       />

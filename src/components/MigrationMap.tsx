@@ -1,3 +1,4 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import { useEffect, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Polyline } from "react-leaflet";
@@ -88,6 +89,7 @@ function eventIcon(tipo: EventoTipo) {
 }
 
 export default function MigrationMap({ height = 320 }: { height?: number }) {
+  const peopleRevision = usePeopleRevision();
   const [puntos, setPuntos] = useState<Array<{ lat: number; lng: number; label: string; count: number }>>([]);
   const [eventos, setEventos] = useState<EventMarker[]>([]);
   const [rutas, setRutas] = useState<Array<{ points: LatLng[]; label: string; maritime?: boolean }>>([]);
@@ -165,7 +167,7 @@ export default function MigrationMap({ height = 320 }: { height?: number }) {
       setEventos(marks);
       setRutas(lineas);
     })();
-  }, []);
+  }, [peopleRevision]);
 
   return (
     <div className="overflow-hidden rounded-2xl" style={{ height }}>

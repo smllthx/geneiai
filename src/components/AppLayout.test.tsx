@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppLayout from "./AppLayout";
@@ -46,9 +46,34 @@ describe("navigation shell", () => {
     expect(screen.getAllByText("Notificaciones únicas")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Abrir menú" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Archivo familiar" }));
     fireEvent.click(screen.getByRole("link", { name: "Personas" }));
     await screen.findByText("Lista de personas");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it.each([true, false])("uses the same section names and distinct destinations on mobile=%s", mobile => {
+    device.mobile = mobile;
+    show();
+    if (mobile) fireEvent.click(screen.getByRole("button", { name: "Abrir menú" }));
+    const menu = within(screen.getByRole("navigation", { name: "Secciones de GENEAI" }));
+    for (const label of ["Árbol Genealógico", "Descubrimientos", "ADN", "Fotos", "Investigación"]) {
+      expect(menu.getByRole("button", { name: label })).toHaveAttribute("aria-expanded", "false");
+    }
+    fireEvent.click(menu.getByRole("button", { name: "Árbol Genealógico" }));
+    expect(menu.getByRole("link", {name: "Mi árbol familiar"})).toHaveAttribute("href", "/arbol");
+    expect(menu.getByRole("link", {name: "Consistency Checker"})).toHaveAttribute("href", "/consistencia");
+    expect(menu.getByRole("link", {name: "Informe de relaciones"})).toHaveAttribute("href", "/informe-de-relaciones");
+    expect(menu.getByRole("link", {name: "Infografías Familiares"})).toHaveAttribute("href", "/cuadros-ia");
+    fireEvent.click(menu.getByRole("button", { name: "ADN" }));
+    expect(menu.queryByRole("link", { name: "Mi árbol familiar" })).toBeNull();
+    expect(menu.getByRole("link", { name: "Estimación Étnica" })).toHaveAttribute("href", "/estimacion-etnica");
+    for (const name of ["Coincidencias de ADN", "Orígenes Antiguos", "Activar kit de ADN", "Administrar kits de ADN", "Ordenar kits de ADN", "LiveMemory™"]) {
+      const link = menu.getByRole("link", { name: `${name} (MyHeritage, nueva pestaña)` });
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link.getAttribute("href")).toMatch(/^https:\/\/www\.myheritage\.es\//);
+    }
+    expect(menu.getByRole("link", { name: "Bandeja de entrada" })).toHaveAttribute("href", "/bandeja-de-entrada");
   });
 
   it("keeps a single search and notification when the desktop sidebar is collapsed", () => {
@@ -65,6 +90,7 @@ describe("navigation shell", () => {
   it("preserves the navigation while a new section is loading", async () => {
     device.mobile = false;
     show(true);
+    fireEvent.click(screen.getByRole("button", { name: "Archivo familiar" }));
     fireEvent.click(screen.getByRole("link", { name: "Personas" }));
     await screen.findByRole("status");
     expect(screen.getByRole("button", { name: "Buscar persona único" })).toBeVisible();

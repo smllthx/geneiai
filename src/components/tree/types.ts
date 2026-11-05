@@ -7,6 +7,7 @@ export type GenealogyPerson = {
   givenNames: string;
   surnames: string;
   birth?: string;
+  lifespan?: string;
   death?: string;
   mainPlace?: string;
   avatarUrl?: string;

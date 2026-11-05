@@ -1,3 +1,4 @@
+import { birthLabel } from "@/lib/personDates";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,12 +21,12 @@ export default function Agente() {
     setLoading(true);
     const { data: personas } = await supabase
       .from("personas")
-      .select("id, nombres, apellidos, nac_fecha, defuncion_fecha, nac_lugar_id, ocupacion, viva")
+      .select("id, nombres, apellidos, nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin, defuncion_fecha, nac_lugar_id, ocupacion, viva")
       .limit(200);
 
     const list: Prioridad[] = (personas ?? []).map((p) => {
       const faltantes: string[] = [];
-      if (!p.nac_fecha) faltantes.push("nacimiento");
+      if (!birthLabel(p)) faltantes.push("nacimiento");
       if (!p.defuncion_fecha && p.viva !== "si") faltantes.push("defunción");
       if (!p.nac_lugar_id) faltantes.push("lugar de origen");
       if (!p.ocupacion) faltantes.push("ocupación");

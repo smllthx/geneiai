@@ -1,3 +1,4 @@
+import { lifeDates } from "@/lib/personDates";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -137,8 +138,7 @@ export default function PersonasList() {
           </span>
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {p.nac_fecha ? `n. ${new Date(p.nac_fecha).getUTCFullYear()}` : p.nac_rango_ini ? `n. ${p.nac_rango_ini}–${p.nac_rango_fin}` : "nacimiento s/d"}
-          {p.defuncion_fecha && ` — †${new Date(p.defuncion_fecha).getUTCFullYear()}`}
+          {lifeDates(p) || "Sin fechas registradas"}
         </div>
         </div>
       </button>

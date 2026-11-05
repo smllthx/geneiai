@@ -38,7 +38,7 @@ export default function Insights() {
 
   const cargar = async () => {
     const treeId = await getActiveTreeId();
-    const scopedPeople = await fetchAllPeople("id,nombres,apellidos,foto_url", { treeId });
+    const scopedPeople = await fetchAllPeople("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", { treeId });
     const personIds = new Set(scopedPeople.map((p) => p.id));
     const [{ data: c }, { data: h }, { data: s }] = await Promise.all([
       supabase.from("contradicciones").select("*").eq("estado", "abierta").order("severidad").order("created_at", { ascending: false }),

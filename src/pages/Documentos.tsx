@@ -49,7 +49,7 @@ export default function Documentos() {
       const docsQuery = supabase.from("documentos").select("*").order("created_at", { ascending: false });
       const [{ data, error }, ps] = await Promise.all([
         applyTreeScope(docsQuery as any, treeId),
-        fetchAllPeople<any>("id,nombres,apellidos,foto_url", { treeId }),
+        fetchAllPeople<any>("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", { treeId }),
       ]);
       if (error) throw error;
       setItems(data ?? []); setPersonas(ps ?? []);
@@ -67,7 +67,22 @@ export default function Documentos() {
       setThumbs({});
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load();
+    let active = true;
+    let revision = 0;
+    const refreshNames = async (event: Event) => {
+      const table = (event as CustomEvent).detail?.table;
+      if (table && table !== "personas") return;
+      const version = ++revision;
+      try {
+        const next = await fetchAllPeople("id,nombres,apellidos,foto_url");
+        if (active && version === revision) setPersonas(next);
+      } catch { /* Keep the current names until a successful update. */ }
+    };
+    window.addEventListener("genaia:data-changed", refreshNames);
+    return () => { active = false; window.removeEventListener("genaia:data-changed", refreshNames); };
+  }, []);
   useEffect(() => {
     setEditDoc(selectedDoc ? { ...selectedDoc } : null);
     setEditPersona("none");

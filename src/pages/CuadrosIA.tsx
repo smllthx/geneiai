@@ -1,8 +1,10 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Download, Printer, Sparkles, UserRound } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -12,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { personaCode } from "@/lib/personaCode";
 
 export default function CuadrosIA() {
+  const peopleRevision = usePeopleRevision();
   const [personas, setPersonas] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [poster, setPoster] = useState<{ id: string; url: string } | null>(null);
@@ -20,9 +23,13 @@ export default function CuadrosIA() {
   const [searchParams] = useSearchParams();
   const personaParam = searchParams.get("persona");
 
+  const lastParam = useRef(personaParam);
   useEffect(() => {
+    let active = true;
+    const changed = lastParam.current !== personaParam;
+    lastParam.current = personaParam;
     (async () => {
-      const selectCols = "id,nombres,apellidos,nac_fecha,nac_fecha_aprox,defuncion_fecha,foto_url";
+      const selectCols = "id,nombres,apellidos,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,viva,defuncion_fecha,foto_url";
       const { data } = await supabase.from("personas").select(selectCols).order("updated_at", { ascending: false }).limit(24);
       let rows = data ?? [];
       let initial = personaParam ? rows.find((p) => p.id === personaParam) : null;
@@ -33,10 +40,12 @@ export default function CuadrosIA() {
           rows = [exact, ...rows.filter((p) => p.id !== exact.id)];
         }
       }
+      if (!active) return;
       setPersonas(rows);
-      setSelected(initial ?? rows[0] ?? null);
+      setSelected((prev: { id: string } | null) => (!changed && rows.find(row => row.id === prev?.id)) || initial || rows[0] || null);
     })();
-  }, [personaParam]);
+    return () => { active = false; };
+  }, [personaParam, peopleRevision]);
 
   const generate = async () => {
     if (!selected || busy) return;
@@ -53,7 +62,7 @@ export default function CuadrosIA() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cuadros IA"
+        title="Infografías Familiares"
         subtitle="Crea un cuadro con el retrato y los datos registrados de una persona."
       />
 
@@ -94,7 +103,7 @@ export default function CuadrosIA() {
                   {selected ? <PersonPortrait person={selected} className="h-full w-full" /> : <UserRound className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 <h2 className="mt-4 text-3xl font-semibold">{selected ? `${selected.nombres} ${selected.apellidos}` : "Selecciona una persona"}</h2>
-                <p className="mt-1 text-muted-foreground">{selected?.nac_fecha?.slice(0, 4) ?? "Nacimiento no registrado"}-{selected?.defuncion_fecha?.slice(0, 4) ?? "Vive o sin dato"}</p>
+                <p className="mt-1 text-muted-foreground">{selected && (lifeDates(selected) || "Sin fechas registradas")}</p>
               </div>}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button onClick={generate} disabled={!selected || busy}><Sparkles className="h-4 w-4" /> {busy ? "Generando…" : "Generar cuadro"}</Button>

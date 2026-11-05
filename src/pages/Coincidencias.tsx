@@ -1,3 +1,5 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -9,6 +11,7 @@ import { toast } from "sonner";
 import { toDisplayTextList } from "@/lib/safeText";
 
 export default function Coincidencias() {
+  const peopleRevision = usePeopleRevision();
   const [items, setItems] = useState<any[]>([]);
   const [personasMap, setPersonasMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -17,12 +20,12 @@ export default function Coincidencias() {
   const load = async () => {
     const [{ data: c }, { data: ps }] = await Promise.all([
       supabase.from("coincidencias").select("*").order("score", { ascending: false }),
-      supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,defuncion_fecha"),
+      supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva"),
     ]);
     setItems(c ?? []);
     setPersonasMap(new Map((ps ?? []).map((p: any) => [p.id, p])));
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [peopleRevision]);
 
   const detectar = async () => {
     setLoading(true);
@@ -100,8 +103,7 @@ export default function Coincidencias() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{p.nombres} {p.apellidos}</p>
                         <p className="text-xs text-muted-foreground">
-                          {p.nac_fecha ? new Date(p.nac_fecha).getUTCFullYear() : "?"}
-                          {p.defuncion_fecha ? `–${new Date(p.defuncion_fecha).getUTCFullYear()}` : ""}
+                          {lifeDates(p) || "Sin fechas registradas"}
                         </p>
                       </div>
                     </Link>

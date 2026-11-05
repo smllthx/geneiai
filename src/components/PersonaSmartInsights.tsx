@@ -1,3 +1,4 @@
+import { birthLabel } from "@/lib/personDates";
 import { useEffect, useState } from "react";
 import { ChevronDown, Lightbulb, RefreshCw } from "lucide-react";
 import { localPersonaInsight } from "@/lib/offlineAi";
@@ -16,7 +17,8 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
   const [refreshTick, setRefreshTick] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const insights: Insight[] = [];
-  const yN = yearOf(persona?.nac_fecha) ?? persona?.nac_rango_ini ?? null;
+  const yN = yearOf(persona?.nac_fecha);
+  if (persona && !yN && birthLabel(persona)) insights.push({ icon: "🕰️", texto: `Nacimiento registrado: ${birthLabel(persona)}.` });
   const yD = yearOf(persona?.defuncion_fecha) ?? null;
 
   if (yN) {
@@ -50,8 +52,8 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
   if (fam.padres?.length === 2) {
     const padre = fam.padres.find((x: any) => x.sexo === "masculino");
     const madre = fam.padres.find((x: any) => x.sexo === "femenino");
-    const yp = yearOf(padre?.nac_fecha) ?? padre?.nac_rango_ini;
-    const ym = yearOf(madre?.nac_fecha) ?? madre?.nac_rango_ini;
+    const yp = yearOf(padre?.nac_fecha);
+    const ym = yearOf(madre?.nac_fecha);
     if (yN && yp) insights.push({ icon: "👨", texto: `Su padre tenía ~${yN - yp} años cuando nació.` });
     if (yN && ym) insights.push({ icon: "👩", texto: `Su madre tenía ~${yN - ym} años cuando nació.` });
   }

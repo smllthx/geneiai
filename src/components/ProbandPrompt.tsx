@@ -1,3 +1,4 @@
+import { birthLabel } from "@/lib/personDates";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +29,7 @@ export default function ProbandPrompt() {
       if (!prof || prof.proband_id || prof.proband_asked) return;
       const { data: p } = await supabase
         .from("personas")
-        .select("id,nombres,apellidos,foto_url,nac_fecha")
+        .select("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin")
         .order("apellidos");
       if (!p?.length) return;
       setPersonas((p as any) ?? []);
@@ -80,7 +81,7 @@ export default function ProbandPrompt() {
             <SelectTrigger><SelectValue placeholder="Elegí la persona principal" /></SelectTrigger>
             <SelectContent>
               {personas.map((p) => (
-                <PersonSelectItem key={p.id} person={p} suffix={p.nac_fecha?.slice(0, 4)} />
+                <PersonSelectItem key={p.id} person={p} suffix={birthLabel(p)} />
               ))}
             </SelectContent>
           </Select>

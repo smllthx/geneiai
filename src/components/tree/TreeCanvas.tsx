@@ -20,7 +20,7 @@ export function TreeZoomControls({ viewport, fan }: { viewport: TreeViewport; fa
   const scale = useSyncExternalStore(viewport.subscribe, viewport.getScale, viewport.getScale);
   return <div className="flex items-center gap-2">
     <Button variant="outline" size="icon" onClick={viewport.zoomOut} aria-label="Alejar árbol"><ZoomOut className="h-4 w-4" /></Button>
-    <span className="min-w-10 text-center text-xs tabular-nums">{Math.round(scale * 100)}%</span>
+    <span className="min-w-10 text-center text-xs tabular-nums">{scale < 0.01 ? "<1" : Math.round(scale * 100)}%</span>
     <Button variant="outline" size="icon" onClick={viewport.zoomIn} aria-label="Acercar árbol"><ZoomIn className="h-4 w-4" /></Button>
     <Button variant="outline" size={fan ? "sm" : "icon"} onClick={viewport.reset} aria-label={fan ? "Ver abanico completo" : "Centrar árbol"} title={fan ? "Ver abanico completo" : "Centrar árbol"}><Crosshair className="h-4 w-4" />{fan && <span className="ml-1 text-xs">Ajustar</span>}</Button>
   </div>;

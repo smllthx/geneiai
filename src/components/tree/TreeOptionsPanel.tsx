@@ -1,3 +1,4 @@
+import GenerationControl from "./GenerationControl";
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -5,6 +6,8 @@ import type { TreeOptions } from "./types";
 
 type TreeOptionsPanelProps = {
   open: boolean;
+  generations: number;
+  onGenerationsChange: (value: number) => void;
   options: TreeOptions;
   onChange: (options: TreeOptions) => void;
   onClose: () => void;
@@ -21,13 +24,13 @@ const OPTIONS: Array<{ key: keyof TreeOptions; label: string }> = [
   { key: "darkMode", label: "Modo oscuro del árbol" },
 ];
 
-export default function TreeOptionsPanel({ open, options, onChange, onClose }: TreeOptionsPanelProps) {
+export default function TreeOptionsPanel({ open, options, onChange, onClose, generations, onGenerationsChange }: TreeOptionsPanelProps) {
   if (!open) return null;
 
   const update = (key: keyof TreeOptions, checked: boolean) => onChange({ ...options, [key]: checked });
 
   return (
-    <aside className="absolute left-4 top-24 z-30 w-[320px] max-w-[calc(100%-2rem)] rounded-2xl border border-border bg-card p-4 shadow-xl">
+    <aside className="absolute left-4 top-24 z-30 max-h-[calc(100%-7rem)] w-[320px] overflow-y-auto max-w-[calc(100%-2rem)] rounded-2xl border border-border bg-card p-4 shadow-xl">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Opciones</p>
@@ -39,6 +42,7 @@ export default function TreeOptionsPanel({ open, options, onChange, onClose }: T
       </div>
 
       <div className="space-y-3">
+        <GenerationControl value={generations} onChange={onGenerationsChange} />
         {OPTIONS.map(({ key, label }) => (
           <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/40 p-3 text-sm">
             <span className="text-foreground/80">{label}</span>

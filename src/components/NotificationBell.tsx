@@ -1,3 +1,4 @@
+import PageHeader from "@/components/PageHeader";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Check, Sparkles, FileText, Lightbulb, ListChecks } from "lucide-react";
@@ -17,25 +18,31 @@ type ResearchTask = { id: string; person_id: string | null; tipo: string; estado
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
-export default function NotificationBell() {
+export default function NotificationBell({ page = false }: { page?: boolean }) {
   const [items, setItems] = useState<Notificacion[]>([]);
   const [sugs, setSugs] = useState<Sugerencia[]>([]);
   const [infs, setInfs] = useState<Inferencia[]>([]);
   const [tasks, setTasks] = useState<ResearchTask[]>([]);
   const [perm, setPerm] = useState<NotificationPermission>("default");
 
+  const [loadState, setLoadState] = useState<"pending" | "ready" | "error">("pending");
   const load = async () => {
-    const { treeId, personIds } = await getActiveTreeScopedIds();
-    const [{ data: n }, { data: s }, { data: i }, { data: t }] = await Promise.all([
-      supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
-      applyTreeScope(supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30) as any, treeId),
-      supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
-      applyTreeScope(supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30) as any, treeId),
-    ]);
-    setItems(n ?? []);
-    setSugs(s ?? []);
-    setInfs((i ?? []).filter((row: any) => !row.person_id || personIds.has(row.person_id)));
-    setTasks(t ?? []);
+    try {
+      const { treeId, personIds } = await getActiveTreeScopedIds();
+      const results = await Promise.all([
+        supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
+        applyTreeScope(supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30) as any, treeId),
+        supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
+        applyTreeScope(supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30) as any, treeId),
+      ]);
+      if (results.some(result => result.error)) throw new Error("No se pudo consultar la bandeja.");
+      const [{ data: n }, { data: s }, { data: i }, { data: t }] = results;
+      setItems(n ?? []);
+      setSugs(s ?? []);
+      setInfs((i ?? []).filter((row: any) => !row.person_id || personIds.has(row.person_id)));
+      setTasks(t ?? []);
+      setLoadState("ready");
+    } catch { setLoadState("error"); }
   };
 
   useEffect(() => {
@@ -59,8 +66,9 @@ export default function NotificationBell() {
   const noLeidas = items.filter((i) => !i.leida).length;
   const total = noLeidas + sugs.length + infs.length + tasks.length;
   const marcarTodas = async () => {
-    await supabase.from("notificaciones").update({ leida: true }).eq("leida", false);
-    load();
+    const { error } = await supabase.from("notificaciones").update({ leida: true }).eq("leida", false);
+    if (error) return toast.error("No se pudieron marcar los avisos como leídos.");
+    void load();
   };
   const pedirPermiso = async () => {
     const p = await requestNotificationPermission();
@@ -79,19 +87,10 @@ export default function NotificationBell() {
     }
   };
 
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Notificaciones" className="toolbar-control relative h-11 w-11 rounded-full">
-          <Bell className="h-4 w-4" />
-          {total > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{total}</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[22rem] max-w-[calc(100vw-1rem)] p-0" align="end">
+  const contents = loadState === "error" ? <div role="alert" className="p-4">No se pudo consultar tu bandeja. <Button size="sm" variant="outline" onClick={() => void load()}>Reintentar</Button></div>
+    : loadState === "pending" ? <p role="status" className="p-4 text-sm text-muted-foreground">Consultando la bandeja…</p> : <>
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-semibold">Centro de avisos</span>
+          <span className="text-sm font-semibold">Actividad del archivo</span>
           {noLeidas > 0 && (
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={marcarTodas}>
               <Check className="mr-1 h-3 w-3" /> Marcar leídas
@@ -105,21 +104,21 @@ export default function NotificationBell() {
           </div>
         )}
         <Tabs defaultValue="notif" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 rounded-none border-b bg-transparent">
+          <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 rounded-none border-b bg-transparent">
             <TabsTrigger value="notif" className="text-[11px]">
               <FileText className="mr-1 h-3 w-3" /> Avisos {noLeidas > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{noLeidas}</span>}
             </TabsTrigger>
             <TabsTrigger value="sug" className="text-[11px]">
-              <Sparkles className="mr-1 h-3 w-3" /> Sug. {sugs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{sugs.length}</span>}
+              <Sparkles className="mr-1 h-3 w-3" /> Sugerencias {sugs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{sugs.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="pred" className="text-[11px]">
-              <Lightbulb className="mr-1 h-3 w-3" /> Pred. {infs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{infs.length}</span>}
+              <Lightbulb className="mr-1 h-3 w-3" /> Inferencias {infs.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{infs.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="task" className="text-[11px]">
               <ListChecks className="mr-1 h-3 w-3" /> Tareas {tasks.length > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[10px]">{tasks.length}</span>}
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="notif" className="mt-0 max-h-80 overflow-y-auto">
+          <TabsContent value="notif" className="mt-0 overflow-y-auto">
             {items.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin notificaciones.</p>
             ) : items.map((n) => (
@@ -130,7 +129,7 @@ export default function NotificationBell() {
               </Link>
             ))}
           </TabsContent>
-          <TabsContent value="sug" className="mt-0 max-h-80 overflow-y-auto">
+          <TabsContent value="sug" className="mt-0 overflow-y-auto">
             {sugs.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin sugerencias pendientes. Pulsa "Investigar con IA" en una persona.</p>
             ) : sugs.map((s) => (
@@ -144,7 +143,7 @@ export default function NotificationBell() {
               </Link>
             ))}
           </TabsContent>
-          <TabsContent value="pred" className="mt-0 max-h-80 overflow-y-auto">
+          <TabsContent value="pred" className="mt-0 overflow-y-auto">
             {infs.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">Sin predicciones aún. Genera inferencias desde una persona.</p>
             ) : infs.map((i) => (
@@ -157,7 +156,7 @@ export default function NotificationBell() {
               </Link>
             ))}
           </TabsContent>
-          <TabsContent value="task" className="mt-0 max-h-80 overflow-y-auto">
+          <TabsContent value="task" className="mt-0 overflow-y-auto">
             {tasks.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-muted-foreground">No hay tareas pendientes.</p>
             ) : tasks.map((t) => (
@@ -172,6 +171,23 @@ export default function NotificationBell() {
             ))}
           </TabsContent>
         </Tabs>
+  </>;
+  if (page) return <>
+    <PageHeader title="Bandeja de entrada" subtitle="Consulta los avisos, las sugerencias y las tareas de tu archivo familiar." />
+    <section className="rounded-2xl border bg-card">{contents}</section>
+  </>;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Notificaciones" className="toolbar-control relative h-11 w-11 rounded-full">
+          <Bell className="h-4 w-4" />
+          {total > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{total}</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[25rem] max-w-[calc(100vw-1rem)] max-h-[70dvh] overflow-y-auto p-0" align="end">
+        {contents}
       </PopoverContent>
     </Popover>
   );

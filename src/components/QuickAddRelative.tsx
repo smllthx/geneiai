@@ -1,3 +1,5 @@
+import BirthDateField from "@/components/BirthDateField";
+import type { BirthFields } from "@/lib/personDates";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -58,7 +60,7 @@ export default function QuickAddRelative({
   const [sexo, setSexo] = useState<string>(
     defaultTipo === "padre" ? "masculino" : defaultTipo === "madre" ? "femenino" : "",
   );
-  const [nacAprox, setNacAprox] = useState("");
+  const [birth, setBirth] = useState<BirthFields>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function QuickAddRelative({
             nombres: nombres.trim(),
             apellidos: apellidos.trim(),
             sexo: sexo || inferSexFromName(nombres) || null,
-            nac_fecha_aprox: nacAprox || null,
+            ...birth,
             certeza: "probable",
           }, activeTreeId))
           .select()
@@ -245,7 +247,7 @@ export default function QuickAddRelative({
 
       toast.success(`${labels[tipo]} ${mode === "buscar" ? "vinculado/a" : "agregado/a"}`);
       setOpen(false);
-      setNombres(""); setApellidos(""); setNacAprox(""); setPicked(null);
+      setNombres(""); setApellidos(""); setBirth({}); setPicked(null);
       window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { personId: personaId, relatedPersonId: parienteId, table: "relaciones" } }));
       onAdded?.();
     } catch (e: any) {
@@ -328,7 +330,7 @@ export default function QuickAddRelative({
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Nacimiento aprox.</Label><Input placeholder="hacia 1880" value={nacAprox} onChange={(e) => setNacAprox(e.target.value)} /></div>
+                <BirthDateField person={birth} onChange={setBirth} />
               </div>
             </>
           )}

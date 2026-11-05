@@ -1,3 +1,5 @@
+import { usePeopleRevision } from "@/hooks/use-realtime-reload";
+import { birthLabel } from "@/lib/personDates";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +41,7 @@ function PersonaPicker({ label, value, onChange, personas, exclude }: {
                 <div className="font-bold">{value.nombres} {value.apellidos}</div>
                 <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-mono">{personaCode(value.id)}</span>
-                  {value.nac_fecha && <span>n. {new Date(value.nac_fecha).getUTCFullYear()}</span>}
+                  {birthLabel(value) && <span>n. {birthLabel(value)}</span>}
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={() => onChange(null)}>Cambiar</Button>
@@ -87,6 +89,7 @@ function PersonaPicker({ label, value, onChange, personas, exclude }: {
 }
 
 export default function Fusionar() {
+  const peopleRevision = usePeopleRevision();
   const navigate = useNavigate();
   const [personas, setPersonas] = useState<any[]>([]);
   const [target, setTarget] = useState<any>(null);
@@ -102,7 +105,7 @@ export default function Fusionar() {
       toast.error(e.message ?? "No se pudieron cargar todas las personas");
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [peopleRevision]);
 
   // Pre-cargar duplicados detectados
   useEffect(() => {
