@@ -1,4 +1,4 @@
-import { UserRound } from "lucide-react";
+import PersonPortrait from "@/components/PersonPortrait";
 import type { GenealogyRelationship, TreeNode } from "./types";
 
 type FounderLineageViewProps = {
@@ -36,7 +36,7 @@ export default function FounderLineageView({ nodes, relationships, centerId, onS
                 className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card/40 p-3 text-left transition hover:bg-foreground/5"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {node.data.person.avatarUrl ? <img src={node.data.person.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" /> : <UserRound className="h-4 w-4" />}
+                  <PersonPortrait personId={node.data.person.id} src={node.data.person.avatarUrl} name={[node.data.person.givenNames, node.data.person.surnames].join(" ")} className="h-full w-full rounded-full" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium text-foreground">{node.data.person.givenNames} {node.data.person.surnames}</span>

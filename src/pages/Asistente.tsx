@@ -7,7 +7,7 @@ import { Bot, Send, Sparkles, Loader2, User, Wand2, ListChecks, Check, X, ArrowU
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { isCreditOrAiError, localAssistantReply } from "@/lib/offlineAi";
-import { applyTreeScope, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
+import { applyTreeScope, getActiveTreeId } from "@/lib/peopleData";
 
 type ToolEvent = { name: string; args?: any; result?: any };
 type Msg = { role: "user" | "assistant"; content: string; tools?: ToolEvent[] };
@@ -19,11 +19,11 @@ type Sugerencia = {
 const TOOL_LABELS: Record<string, string> = {
   search_personas: "Buscando personas",
   get_persona: "Consultando ficha",
-  get_origin_analysis: "Consultando origen estimado",
+  get_origin_analysis: "Consultando resultados de ADN",
   list_recent: "Listando personas",
-  create_persona: "Creando persona",
-  update_persona: "Actualizando datos",
-  create_relation: "Conectando relación",
+  create_persona: "Propuesta de persona",
+  update_persona: "Propuesta de corrección",
+  create_relation: "Propuesta de relación",
   set_proband: "Definiendo persona principal",
   mega_search: "Lanzando 6 agentes",
   web_search: "Buscando en la web",
@@ -37,7 +37,7 @@ const QUICK = [
   "Mostrame el árbol de la persona principal",
   "Lanzá el mega-buscador para la persona principal",
   "Buscá información en la web sobre…",
-  "Explicá mi origen estimado por árbol",
+  "Consultá mis resultados de ADN registrados",
   "Creá una persona llamada …",
   "Verificá la coherencia del árbol",
   "Conectá a … como padre de …",
@@ -46,7 +46,7 @@ const QUICK = [
 export default function Asistente() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Soy el **Asistente ChatGPT de GENEAI**. Puedo crear personas, conectar relaciones, lanzar investigaciones, buscar en la web, verificar coherencia y navegar pantallas. Pedime lo que necesites." },
+    { role: "assistant", content: "Soy el **Asistente ChatGPT de GENEAI**. Puedo investigar, buscar fuentes y preparar propuestas de personas y relaciones para que las revises. Pedime lo que necesites." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,68 +83,24 @@ export default function Asistente() {
       if (error || data?.error) {
         if (!isCreditOrAiError(error ?? data?.error)) throw (error ?? new Error(data.error));
         data = await localAssistantReply(text);
-        toast.info("Activa ChatGPT en Configuración → IA. Guarda la API key y reinicia para aplicar el cambio.");
+        data = { ...data, content: `Respuesta local. ${data.content}` };
       }
       const events: ToolEvent[] = data?.tool_events ?? [];
       setMessages((m) => [...m, { role: "assistant", content: data?.content || "(sin respuesta)", tools: events }]);
       // Auto-actions on UI side
       const nav = events.find((e) => e.name === "navigate_to" && e.result?.navigate_to);
-      if (nav?.result?.navigate_to) {
-        toast.success(`Navegando…`, { description: nav.result.navigate_to });
-        setTimeout(() => navigate(nav.result.navigate_to), 400);
-      }
-      const created = events.find((e) => e.name === "create_persona" && e.result?.ok);
-      if (created) toast.success("Persona creada");
-      const rel = events.find((e) => e.name === "create_relation" && e.result?.ok);
-      if (rel) toast.success("Relación creada");
-      const mega = events.find((e) => e.name === "mega_search" && e.result?.ok);
-      if (mega) toast.success(`Mega-buscador: ${mega.result.sugerencias ?? 0} hallazgos`);
-      if (events.some((e) => e.name === "propose_change")) await loadSugerencias();
+      if (nav?.result?.navigate_to) navigate(nav.result.navigate_to);
+      if (events.some(event => event.result?.review_required && event.result?.sugerencia_id)) await loadSugerencias();
     } catch (e: any) {
-      const data = await localAssistantReply(text);
-      setMessages((m) => [...m, { role: "assistant", content: data.content, tools: data.tool_events }]);
-      toast.info("Respuesta local activada. Para ChatGPT: Configuración → IA → Guardar y reiniciar.");
+      setMessages((m) => [...m, { role: "assistant", content: e?.message || "No se pudo consultar el asistente. Vuelve a intentarlo." }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const applyChange = async (s: Sugerencia) => {
-    try {
-      if (s.tipo === "nueva_persona") {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("no auth");
-        const activeTreeId = await getActiveTreeId(user.id);
-        const p = s.payload ?? {};
-        await supabase.from("personas").insert(withTreeScope({
-          user_id: user.id, nombres: p.nombres ?? "Sin nombre", apellidos: p.apellidos ?? "",
-          sexo: p.sexo ?? null, nac_fecha: p.nac_fecha ?? null, ocupacion: p.ocupacion ?? null, notas: p.notas ?? null,
-        }, activeTreeId));
-      } else if (s.tipo === "actualizar_persona" && s.persona_id) {
-        const allowed = [
-          "nombres", "apellidos", "variantes_nombre", "sexo", "viva", "nac_fecha", "nac_fecha_aprox",
-          "nac_rango_ini", "nac_rango_fin", "bautismo_fecha", "matrimonio_fecha", "defuncion_fecha",
-          "entierro_fecha", "ocupacion", "nacionalidad", "religion", "notas", "certeza",
-        ];
-        const patch = Object.fromEntries(
-          Object.entries(s.payload ?? {}).filter(([key]) => allowed.includes(key)),
-        );
-        if (!Object.keys(patch).length) throw new Error("La propuesta no contiene campos editables.");
-        const activeTreeId = await getActiveTreeId();
-        if (!activeTreeId) throw new Error("Selecciona un árbol activo antes de aceptar el cambio.");
-        const { error } = await (supabase.from("personas") as any)
-          .update(patch)
-          .eq("id", s.persona_id)
-          .eq("arbol_id", activeTreeId);
-        if (error) throw error;
-      }
-      await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
-      toast.success("Aceptada");
-      loadSugerencias();
-    } catch (e: any) { toast.error(e?.message ?? "Error"); }
-  };
   const rejectChange = async (s: Sugerencia) => {
-    await supabase.from("sugerencias").update({ estado: "rechazada" }).eq("id", s.id);
+    const { error } = await supabase.from("sugerencias").update({ estado: "rechazada" }).eq("id", s.id);
+    if (error) return toast.error(error.message);
     loadSugerencias();
   };
 
@@ -186,8 +142,8 @@ export default function Asistente() {
                   <p className="mt-0.5 text-sm font-semibold">{s.titulo}</p>
                   {s.descripcion && <p className="mt-1 text-xs text-muted-foreground">{s.descripcion}</p>}
                   <div className="mt-2 flex gap-1.5">
-                    <Button size="sm" className="h-7 flex-1 text-xs" onClick={() => applyChange(s)}>
-                      <Check className="mr-1 h-3 w-3" /> Aceptar
+                    <Button size="sm" className="h-7 flex-1 text-xs" onClick={() => navigate(`/investigacion?tab=sugerencias&propuesta=${encodeURIComponent(s.id)}`)}>
+                      <Check className="mr-1 h-3 w-3" /> Revisar
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => rejectChange(s)}>
                       <X className="h-3 w-3" />

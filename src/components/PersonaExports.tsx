@@ -1,10 +1,11 @@
+import { requestBiographyProposal } from "@/lib/biographyProposal";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Baby, FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { runExport, type ExportKind } from "@/lib/personaExports";
-import { supabase } from "@/integrations/supabase/client";
+import type { ExportKind } from "@/lib/personaExports";
+
 
 const ITEMS: { kind: ExportKind; label: string; icon: any; desc: string }[] = [
   { kind: "certificado-nacimiento", label: "Certificado de nacimiento", icon: Baby, desc: "PDF genealógico desde la ficha" },
@@ -23,6 +24,7 @@ export default function PersonaExports({ personaId, personaNombre }: { personaId
     setBusy(kind);
     const t = toast.loading("Generando PDF…");
     try {
+      const { runExport } = await import("@/lib/personaExports");
       await runExport(kind, personaId);
       toast.dismiss(t);
       toast.success("PDF descargado");
@@ -38,9 +40,9 @@ export default function PersonaExports({ personaId, personaNombre }: { personaId
     setAiBusy(true);
     const t = toast.loading("Generando contenido con IA para los PDFs…");
     try {
-      await supabase.functions.invoke("biografia-auto", { body: { person_id: personaId } });
+      await requestBiographyProposal(personaId);
       toast.dismiss(t);
-      toast.success("Contenido enriquecido. Ya puedes generar el PDF.");
+      toast.success("Borrador preparado. Apruébalo en Sugerencias para incluirlo en el PDF.");
     } catch (e: any) {
       toast.dismiss(t);
       toast.error(e.message ?? "Error con IA");

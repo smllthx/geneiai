@@ -4,6 +4,7 @@ import { norm, rankResults } from "@/lib/search/fuzzy";
 export type SearchablePerson = {
   id: string;
   nombres?: string | null;
+  foto_url?: string | null;
   apellidos?: string | null;
   codigo?: string | null;
   variantes_nombre?: string[] | null;

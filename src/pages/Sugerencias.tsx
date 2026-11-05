@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { applyAssistantProposal } from "@/lib/reviewAssistantProposal";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ type Sugerencia = {
 };
 
 export default function Sugerencias() {
+  const [params, setParams] = useSearchParams();
+  const requestedId = params.get("propuesta");
   const [items, setItems] = useState<Sugerencia[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -41,7 +44,6 @@ export default function Sugerencias() {
     const query = supabase
       .from("sugerencias")
       .select("*")
-      .in("tipo", ["persona", "actualizacion_persona", "fuente"])
       .eq("estado", "pendiente")
       .order("created_at", { ascending: false })
       .limit(2000);
@@ -70,9 +72,18 @@ export default function Sugerencias() {
 
   const aceptar = async (s: Sugerencia) => {
     const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return toast.error("Sesión no encontrada");
+    if (!user) throw new Error("Sesión no encontrada");
     const activeTreeId = await getActiveTreeId(user.id);
     const p = s.payload ?? {};
+    if (["nueva_persona", "actualizar_persona", "nueva_relacion"].includes(s.tipo)) {
+      if (!activeTreeId) throw new Error("Selecciona un árbol activo.");
+      await applyAssistantProposal(s, user.id, activeTreeId);
+      const { error } = await supabase.from("sugerencias").update({ estado: "aceptada" })
+        .eq("id", s.id).eq("user_id", user.id).eq("arbol_id" as never, activeTreeId).select("id").single();
+      if (error) throw error;
+      setItems(xs => xs.filter(x => x.id !== s.id));
+      return;
+    }
 
     // Sugerencia de actualización: aplica campos nuevos sobre la persona existente
     if (s.tipo === "actualizacion_persona" && (s as any).persona_id) {
@@ -83,7 +94,7 @@ export default function Sugerencias() {
         if (nuevos[k] && !actual[k]) patch[k] = nuevos[k];
       }
       const { error } = await supabase.from("personas").update(patch).eq("id", (s as any).persona_id);
-      if (error) return toast.error(error.message);
+      if (error) throw error;
       await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
       setItems((xs) => xs.filter((x) => x.id !== s.id));
       return toast.success("Persona actualizada");
@@ -100,6 +111,7 @@ export default function Sugerencias() {
       return toast.success("Fuente enlazada");
     }
 
+    if (s.tipo !== "persona") throw new Error("Esta propuesta requiere revisión manual.");
     const insert: any = {
       user_id: user.id,
       nombres: p.nombres ?? s.titulo.split(" ")[0] ?? "Sin nombre",
@@ -113,7 +125,7 @@ export default function Sugerencias() {
       certeza: "probable",
     };
     const { error } = await supabase.from("personas").insert(withTreeScope(insert, activeTreeId));
-    if (error) return toast.error(error.message);
+    if (error) throw error;
     await supabase.from("sugerencias").update({ estado: "aceptada" }).eq("id", s.id);
     setItems((xs) => xs.filter((x) => x.id !== s.id));
     toast.success(`Añadida ${insert.nombres} ${insert.apellidos}`);
@@ -128,7 +140,7 @@ export default function Sugerencias() {
     const ids = Array.from(selected);
     const toAccept = items.filter((x) => ids.includes(x.id));
     if (!toAccept.length) return;
-    toast.loading(`Añadiendo ${toAccept.length} personas…`, { id: "bulk" });
+    toast.loading(`Revisando ${toAccept.length} propuestas…`, { id: "bulk" });
     let ok = 0;
     for (const s of toAccept) {
       try { await aceptar(s); ok++; } catch (_) {}
@@ -148,10 +160,11 @@ export default function Sugerencias() {
   };
 
   const filtered = useMemo(() => {
+    if (requestedId) return items.filter(s => s.id === requestedId);
     if (!q.trim()) return items;
     const lower = q.toLowerCase();
     return items.filter((s) => toDisplayText(s.titulo).toLowerCase().includes(lower) || toDisplayText(s.descripcion).toLowerCase().includes(lower));
-  }, [items, q]);
+  }, [items, q, requestedId]);
 
   // Agrupar por documento origen
   const groups = useMemo(() => {
@@ -178,7 +191,7 @@ export default function Sugerencias() {
     <div>
       <PageHeader
         title="Sugerencias"
-        subtitle="Personas detectadas en tus documentos por la IA. Decide cuáles añadir a tu árbol."
+        subtitle="Revisa las propuestas y sus fuentes antes de incorporar cambios a tu árbol."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button onClick={extraer} disabled={running}>
@@ -203,6 +216,7 @@ export default function Sugerencias() {
         )}
       </div>
 
+      {requestedId && <Button className="mb-3" variant="outline" onClick={() => { const next = new URLSearchParams(params); next.delete("propuesta"); setParams(next); }}>Ver todas las propuestas</Button>}
       {loading ? (
         <div className="grid min-h-[40vh] place-items-center text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -260,18 +274,25 @@ export default function Sugerencias() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-baseline gap-x-2">
                               <span className="font-medium">{toDisplayText(s.titulo)}</span>
-                              <Badge variant="outline" className="text-[10px]">{s.confianza}%</Badge>
+                              <Badge variant="outline" className="text-[10px]">{s.confianza > 0 ? `${s.confianza}%` : "Pendiente de revisión"}</Badge>
                               {s.tipo === "actualizacion_persona" && <Badge variant="secondary" className="text-[10px]">Mejora</Badge>}
                               {s.tipo === "fuente" && <Badge variant="secondary" className="text-[10px]">Fuente web</Badge>}
                             </div>
                             {toDisplayText(s.descripcion) && (
                               <div className="text-xs text-muted-foreground">{toDisplayText(s.descripcion)}</div>
                             )}
+                            {s.payload && <details open={s.id === requestedId || undefined} className="mt-1 text-xs">
+                              <summary className="cursor-pointer">Datos propuestos</summary>
+                              <dl className="mt-2 space-y-1">
+                                {Object.entries(s.payload).filter(([key]) => key !== "verificacion" && key !== "expected_current_notes").map(([key, value]) =>
+                                  <div key={key}><dt className="font-semibold">{key.replace(/_/g, " ")}</dt><dd className="whitespace-pre-wrap">{toDisplayText(value)}</dd></div>)}
+                              </dl>
+                            </details>}
                             {s.url_externa && (
                               <a href={s.url_externa} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline truncate block">{s.url_externa}</a>
                             )}
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => aceptar(s)} title="Añadir al árbol">
+                          <Button size="sm" variant="outline" disabled={!["persona", "actualizacion_persona", "fuente", "nueva_persona", "actualizar_persona", "nueva_relacion"].includes(s.tipo)} onClick={() => aceptar(s).catch(error => toast.error(error.message))} title="Añadir al árbol">
                             <Check className="h-3.5 w-3.5" />
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => rechazar(s.id)} title="Descartar">

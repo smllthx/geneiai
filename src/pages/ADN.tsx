@@ -16,10 +16,13 @@ import { guardarEtnicidadArbol } from "@/lib/etnicidadArbol";
 
 const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#14b8a6", "#a855f7", "#3b82f6"];
 
+type DraftRegion = { region: string; porcentaje: number };
+type ImportDraft = { fuente: string; rows: DraftRegion[]; warnings: string[] };
 type Tipo = "todos" | "arbol" | "adn";
 
 function tipoDe(fuente: string | null): "arbol" | "adn" {
   const f = (fuente ?? "").toLowerCase();
+  if (f.startsWith("adn · ") || f === "manual (adn)") return "adn";
   if (f.includes("árbol") || f.includes("arbol") || f.includes("genealóg") || f.includes("genealog") || f.includes("manual")) return "arbol";
   return "adn";
 }
@@ -34,6 +37,8 @@ export default function ADN() {
   const [origenTipo, setOrigenTipo] = useState<"arbol" | "adn">("arbol");
   const [vista, setVista] = useState<"lista" | "mapa">("lista");
   const [filtro, setFiltro] = useState<Tipo>("todos");
+  const [draft, setDraft] = useState<ImportDraft | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [importando, setImportando] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -87,24 +92,40 @@ export default function ADN() {
     setImportando(true);
     const t = toast.loading(`Leyendo ${file.name}…`);
     try {
-      let texto = "";
-      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
-        // Read as base64 and let backend extract — simpler: read as text fallback
-        texto = await file.text().catch(() => "");
-      } else {
-        texto = await file.text();
+      if (!/\.(txt|csv|json|html?)$/i.test(file.name) || file.type === "application/pdf" || (await file.slice(0, 5).text()) === "%PDF-") {
+        throw new Error("Usa un informe TXT, CSV, JSON o HTML con las regiones y sus porcentajes.");
       }
-      if (!texto.trim()) throw new Error("No se pudo leer el archivo (intenta pegar el texto en el campo manual)");
+      const texto = await file.text();
+      if (!texto.trim()) throw new Error("El archivo está vacío.");
       const { data, error } = await supabase.functions.invoke("parsear-dna", {
-        body: { texto, fuente: `${file.name} (importado)` },
+        body: { texto },
       });
       toast.dismiss(t);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`+${data.insertados} regiones importadas`);
-      load();
+      if (data?.persistido !== false || !Array.isArray(data.items)) throw new Error("El servicio no devolvió un borrador revisable.");
+      const rows = data.items.filter((row: DraftRegion) => typeof row?.region === "string" && Number.isFinite(row.porcentaje) && row.porcentaje > 0 && row.porcentaje <= 100);
+      if (!rows.length) throw new Error("No se encontraron regiones con porcentajes en el informe.");
+      setDraft({ fuente: `ADN · ${file.name}`, rows, warnings: Array.isArray(data.advertencias) ? data.advertencias.filter((v: unknown) => typeof v === "string") : [] });
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
     finally { setImportando(false); if (fileRef.current) fileRef.current.value = ""; }
+  };
+
+  const saveDraft = async () => {
+    if (!draft?.rows.length || savingDraft) return;
+    setSavingDraft(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión requerida.");
+      const { error } = await supabase.from("dna_estimates").insert(draft.rows.map(({ region, porcentaje }) => ({
+        user_id: user.id, region, porcentaje, fuente: draft.fuente,
+      })));
+      if (error) throw error;
+      toast.success(`${draft.rows.length} regiones guardadas`);
+      setDraft(null);
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo guardar el informe."); }
+    finally { setSavingDraft(false); }
   };
 
   const itemsFiltrados = useMemo(() => {
@@ -140,10 +161,10 @@ export default function ADN() {
               ref={fileRef}
               type="file"
               className="hidden"
-              accept=".txt,.csv,.json,.html,.htm,.pdf,text/*"
+              accept=".txt,.csv,.json,.html,.htm"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) importarArchivo(f); }}
             />
-            <Button variant="outline" disabled={importando} onClick={() => fileRef.current?.click()}>
+            <Button variant="outline" aria-describedby="dna-import-formats" disabled={importando} onClick={() => fileRef.current?.click()}>
               <Upload className="h-4 w-4" /> Importar test ADN
             </Button>
             <Button variant="outline" disabled={syncing} onClick={calcularPorArbol}>
@@ -177,6 +198,24 @@ export default function ADN() {
         }
       />
 
+      <Dialog open={!!draft} onOpenChange={open => { if (!open && !savingDraft) setDraft(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Revisar regiones del informe</DialogTitle></DialogHeader>
+          <p className="text-sm">{draft?.fuente}</p>
+          {draft?.warnings.map((message, i) => <p key={i} className="text-sm text-muted-foreground">{message}</p>)}
+          <ul className="max-h-[40dvh] space-y-2 overflow-y-auto">
+            {draft?.rows.map((row, index) => <li key={index} className="flex items-center gap-2">
+              <span className="flex-1">{row.region}</span><span>{row.porcentaje}%</span>
+              <Button variant="ghost" size="sm" aria-label={`Excluir ${row.region}`} disabled={savingDraft} onClick={() => setDraft({ ...draft, rows: draft.rows.filter((_, i) => i !== index) })}>Excluir</Button>
+            </li>)}
+          </ul>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" disabled={savingDraft} onClick={() => setDraft(null)}>Cancelar</Button>
+            <Button disabled={savingDraft || !draft?.rows.length} onClick={saveDraft}>{savingDraft ? "Guardando…" : "Guardar regiones"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <p id="dna-import-formats" className="mb-3 text-xs text-muted-foreground">Importa regiones y porcentajes desde TXT, CSV, JSON o HTML. Si tu informe es PDF, copia esos datos a un archivo TXT.</p>
       <Alert className="mb-4 border-accent/30 bg-accent/5">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Estimación referencial</AlertTitle>

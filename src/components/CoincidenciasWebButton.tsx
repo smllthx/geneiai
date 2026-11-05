@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Globe, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function CoincidenciasWebButton({ personaId }: { personaId: string }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const run = async () => {
     setLoading(true);
@@ -16,7 +17,7 @@ export default function CoincidenciasWebButton({ personaId }: { personaId: strin
       toast.dismiss(t);
       toast.success(`${data?.creadas ?? 0} fuentes sugeridas`, {
         description: "Revísalas en Sugerencias",
-        action: { label: "Ver", onClick: () => (window.location.href = "/sugerencias") },
+        action: { label: "Ver", onClick: () => navigate("/sugerencias") },
       });
     } catch (e: any) {
       toast.dismiss(t);

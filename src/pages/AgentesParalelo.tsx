@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "lucide-react";
 import { toast } from "sonner";
-import { notify } from "@/lib/notifications";
+import { getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 
-type Provider = "gemini";
+type Provider = "openai";
 type Status = "queued" | "running" | "done" | "error" | "cancelled";
 
 interface Task {
@@ -21,7 +21,7 @@ interface Run {
   id: string;
   titulo: string;
   prompt: string;
-  provider: Provider;
+  provider: "openai" | "gemini" | "anthropic";
   modelo: string;
   status: Status;
   resultado: string | null;
@@ -31,21 +31,50 @@ interface Run {
 }
 
 const MODELS: Record<Provider, string[]> = {
-  gemini: ["openai/gpt-4o-mini", "openai/gpt-4o"],
+  openai: ["openai/gpt-4o-mini", "openai/gpt-4o"],
 };
 
 const newTask = (): Task => ({
   titulo: "Nueva tarea",
   prompt: "",
-  provider: "gemini",
-  modelo: MODELS.gemini[0],
+  provider: "openai",
+  modelo: MODELS.openai[0],
 });
 
 export default function AgentesParalelo() {
+  const [params] = useSearchParams();
+  const personId = params.get("persona");
+  return <AgentWorkspace key={personId} personId={personId} />;
+}
+
+function AgentWorkspace({ personId }: { personId: string | null }) {
   const [tasks, setTasks] = useState<Task[]>([newTask()]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [launching, setLaunching] = useState(false);
   const [progress, setProgress] = useState({ total: 0, done: 0, ok: 0 });
+
+  useEffect(() => {
+    if (!personId) return;
+    const controller = new AbortController();
+    void (async () => {
+      const { data, error } = await supabase.from("personas")
+        .select("nombres,apellidos,nac_fecha,defuncion_fecha,nacimiento:lugares!personas_nac_lugar_id_fkey(ciudad,pais),defuncion:lugares!personas_defuncion_lugar_id_fkey(ciudad,pais)")
+        .eq("id", personId).abortSignal(controller.signal).maybeSingle();
+      if (controller.signal.aborted) return;
+      if (error || !data) { toast.error("No se pudo cargar la persona para preparar las tareas."); return; }
+      const name = [data.nombres, data.apellidos].filter(Boolean).join(" ");
+      const birth = [data.nac_fecha, data.nacimiento?.ciudad, data.nacimiento?.pais].filter(Boolean).join(", ");
+      const death = [data.defuncion_fecha, data.defuncion?.ciudad, data.defuncion?.pais].filter(Boolean).join(", ");
+      const details = `Persona: ${name}. Nacimiento: ${birth || "sin registrar"}. Defunción: ${death || "sin registrar"}.`;
+      setTasks(current => current.some(task => task.prompt.trim()) ? current : [
+        ["Historia familiar", "Resume los hechos documentados e identifica los datos que faltan."],
+        ["Ascendientes", "Propón fuentes concretas para identificar y verificar a sus padres."],
+        ["Descendencia", "Diseña una búsqueda de registros de matrimonios y nacimientos de sus hijos."],
+        ["Cronología", "Revisa la coherencia de las fechas y propone la siguiente verificación."],
+      ].map(([titulo, prompt]) => ({ ...newTask(), titulo, prompt: `${details} ${prompt}` })));
+    })();
+    return () => controller.abort();
+  }, [personId]);
 
   const loadRuns = async () => {
     const { data } = await supabase
@@ -58,11 +87,14 @@ export default function AgentesParalelo() {
 
   useEffect(() => {
     loadRuns();
+    let timer: ReturnType<typeof setTimeout>;
     const ch = supabase
       .channel("agent_runs_live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs" }, () => loadRuns())
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_runs" }, () => {
+        clearTimeout(timer); timer = setTimeout(loadRuns, 300);
+      })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearTimeout(timer); supabase.removeChannel(ch); };
   }, []);
 
   const updateTask = (i: number, patch: Partial<Task>) => {
@@ -78,6 +110,7 @@ export default function AgentesParalelo() {
       const user_id = userRes.user?.id;
       if (!user_id) throw new Error("No autenticado");
 
+      const treeId = await getActiveTreeId(user_id);
       const inserts = valid.map((t) => ({
         user_id,
         titulo: t.titulo || "Tarea",
@@ -88,27 +121,33 @@ export default function AgentesParalelo() {
       }));
       const { data: created, error } = await supabase.from("agent_runs").insert(inserts).select("id");
       if (error) throw error;
-      await supabase.from("research_tasks").insert(valid.map((t) => ({
-        user_id,
+      if (created?.length !== valid.length) throw new Error("No se pudieron preparar todas las ejecuciones.");
+      const { error: taskError } = await supabase.from("research_tasks").insert(valid.map((t) => withTreeScope({
+        user_id, person_id: personId,
         tipo: "otro" as const,
         descripcion: `Agente paralelo: ${t.titulo || "Tarea"} — ${t.prompt.slice(0, 180)}`,
-      })));
+      }, treeId)));
+      if (taskError) toast.warning("No se pudieron guardar las tareas enlazadas.");
 
-      setProgress({ total: created?.length ?? valid.length, done: 0, ok: 0 });
-      const results = await Promise.allSettled((created ?? []).map(async (r) => {
+      setProgress({ total: created.length, done: 0, ok: 0 });
+      const results = await Promise.allSettled(created.map(async (r) => {
         try {
           const res = await supabase.functions.invoke("run-agent", { body: { runId: r.id } });
           if (res.error) throw res.error;
+          if (!res.data?.ok || !res.data.text?.trim()) throw new Error("El agente no devolvió una respuesta.");
           setProgress((p) => ({ ...p, ok: p.ok + 1 }));
           return res;
         } finally {
           setProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
         }
       }));
-      const ok = results.filter((r) => r.status === "fulfilled").length;
-      toast.success(`${ok}/${valid.length} agentes completados en paralelo`);
-      notify("Agentes en paralelo", { body: `${ok}/${valid.length} tareas completadas; revisa resultados y tareas enlazadas.`, url: "/investigacion?tab=paralelo" });
-      setTasks([newTask()]);
+      const failed = valid.filter((_, i) => results[i].status === "rejected");
+      if (failed.length) {
+        const first = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+        toast.error(first?.reason?.message || "No se pudieron completar todas las tareas.");
+      }
+      setTasks(failed.length ? failed : [newTask()]);
+      await loadRuns();
     } catch (e: any) {
       toast.error(e.message ?? "Error al lanzar agentes");
     } finally {
@@ -201,7 +240,7 @@ export default function AgentesParalelo() {
               <span className="text-xs text-muted-foreground">{progress.done}/{progress.total} · {progress.ok} correctos</span>
             </div>
             <Progress value={(progress.done / progress.total) * 100} className="h-2" />
-            <Link to="/investigacion?tab=pistas" className="mt-2 inline-block text-xs text-link underline">Ver tareas y pistas enlazadas</Link>
+            <Link to="/investigacion?tab=tareas" className="mt-2 inline-block text-xs text-link underline">Ver tareas enlazadas</Link>
           </div>
         )}
       </div>

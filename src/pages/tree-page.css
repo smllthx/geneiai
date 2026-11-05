@@ -1,0 +1,22 @@
+/* Allocate the remaining height after the app toolbar and device safe areas. */
+.app-main:has(> .family-tree-page) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: .45rem max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left));
+}
+.app-main:has(> .family-tree-page) > .desktop-toolbar {
+  width: 100%;
+  flex-shrink: 0;
+  margin-bottom: .25rem;
+}
+.app-shell[data-navigation=compact] .app-main:not(.app-window-main):has(> .family-tree-page) {
+  padding-top: calc(env(safe-area-inset-top) + var(--app-header-height) + .6rem);
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--bottom-nav-height) + .5rem);
+}
+
+body.tree-fullscreen .desktop-toolbar,
+body.tree-fullscreen .mobile-app-header,
+body.tree-fullscreen [aria-label="Mostrar menú GENEAI"] {
+  display: none;
+}

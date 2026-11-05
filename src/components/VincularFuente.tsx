@@ -54,7 +54,7 @@ export default function VincularFuente({ personaId, personaNombre, onLinked }: {
           .from("documentos")
           .select("id,titulo,tipo,fecha,cita,repositorio,transcripcion,ocr_texto,personas_mencionadas")
           .order("created_at", { ascending: false }),
-        fetchAllPeople("id,nombres,apellidos,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nacionalidad"),
+        fetchAllPeople("id,nombres,apellidos,foto_url,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nacionalidad"),
         supabase.from("personas").select("id,nombres,apellidos,sexo").eq("id", personaId).maybeSingle(),
       ]);
       setDocs((data as any) ?? []);

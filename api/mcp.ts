@@ -93,12 +93,13 @@ function oauthClientId(req: ApiRequest) {
   }
 }
 
-function addCors(res: ApiResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function addCors(res: ApiResponse, origin?: string) {
+  res.setHeader("Vary", "Origin");
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "authorization, content-type, mcp-session-id, last-event-id",
+    "authorization, content-type, mcp-protocol-version, mcp-session-id, last-event-id",
   );
   res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, WWW-Authenticate");
   res.setHeader("Cache-Control", "no-store, max-age=0");
@@ -405,7 +406,22 @@ function createServer(sb: SupabaseClient, userId: string) {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  addCors(res);
+  try {
+    resolveServerBackendConfig(process.env);
+    const appOrigin = getPublicAppOrigin(req);
+    const origin = req.headers.origin;
+    if (origin !== undefined && ![appOrigin, "https://chatgpt.com", "https://claude.ai", "https://claude.com"].includes(origin)) {
+      return res.status(403).json({ jsonrpc: "2.0", error: { code: -32003, message: "Invalid request origin" }, id: null });
+    }
+    addCors(res, origin);
+  } catch (error) {
+    return res.status(503).json({
+      jsonrpc: "2.0",
+      error: { code: -32004, message: "GENEAI backend configuration is unavailable", data: { code: connectionError(error)?.code ?? "BACKEND_UNAVAILABLE" } },
+      id: null,
+    });
+  }
+
   if (req.method === "OPTIONS") return res.status(204).end();
 
   if (!["POST", "GET", "DELETE"].includes(req.method ?? "")) {
@@ -413,17 +429,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(405).json({
       jsonrpc: "2.0",
       error: { code: -32000, message: "Method not allowed" },
-      id: null,
-    });
-  }
-
-  try {
-    resolveServerBackendConfig(process.env);
-    getPublicAppOrigin(req);
-  } catch (error) {
-    return res.status(503).json({
-      jsonrpc: "2.0",
-      error: { code: -32004, message: "GENEAI backend configuration is unavailable", data: { code: connectionError(error)?.code ?? "BACKEND_UNAVAILABLE" } },
       id: null,
     });
   }
@@ -512,11 +517,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     await server.connect(transport);
+    // handleRequest can finish the HTTP response before its promise resolves.
+    res.once("close", () => { void server.close().catch(() => undefined); });
     await transport.handleRequest(req, res, req.body);
-    res.on("close", () => {
-      transport.close().catch(() => undefined);
-      server.close().catch(() => undefined);
-    });
   } catch {
     if (!res.headersSent) {
       return res.status(500).json({

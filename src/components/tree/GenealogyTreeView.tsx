@@ -190,6 +190,8 @@ export default function GenealogyTreeView() {
     if (surface) return viewport.attach(surface);
   }, [viewport]);
 
+  useEffect(() => { viewport.frame(); }, [viewport, viewMode, centerId]);
+
   const displayNodes = useMemo(() => nodes.map((node) => nodeWithView(node, viewMode)), [nodes, viewMode]);
   const nodesById = useMemo(() => new Map(displayNodes.map((node) => [node.id, node])), [displayNodes]);
   const visibleIds = useMemo(() => new Set(displayNodes.filter((node) => matchesFilters(node.data.person, filters)).map((node) => node.id)), [displayNodes, filters]);
@@ -413,10 +415,6 @@ export default function GenealogyTreeView() {
             willChange: "transform",
           }}
         >
-          <div className="pointer-events-none absolute left-[700px] top-[18px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Abuelos</div>
-          <div className="pointer-events-none absolute left-[760px] top-[270px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Padres</div>
-          <div className="pointer-events-none absolute left-[820px] top-[575px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Persona central</div>
-          <div className="pointer-events-none absolute left-[830px] top-[885px] rounded-full glass-pill px-3 py-1 text-xs font-semibold uppercase tracking-wide">Hijos</div>
           <svg className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
             {siblingEdges.map((edge) => {
               const source = nodesById.get(edge.source);

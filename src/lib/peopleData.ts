@@ -1,3 +1,5 @@
+import { applyTreeScope } from "../../shared/treeScope";
+export { applyTreeScope };
 import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 1000;
@@ -18,17 +20,6 @@ export async function getActiveTreeId(userId?: string | null) {
   if (error) throw error;
   if (!data) throw new Error('No se encontró el perfil de esta cuenta.');
   return ((data as any)?.active_arbol_id ?? null) as string | null;
-}
-
-export function applyTreeScope<T extends { or: (filters: string) => T }>(
-  query: T,
-  treeId?: string | null,
-  includeUnscoped = true,
-) {
-  if (!treeId) return query;
-  return includeUnscoped
-    ? query.or(`arbol_id.eq.${treeId},arbol_id.is.null`)
-    : query.or(`arbol_id.eq.${treeId}`);
 }
 
 export async function fetchAllPeople<T = any>(

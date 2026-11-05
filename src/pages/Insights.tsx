@@ -1,10 +1,13 @@
+import { requestBiographyProposal } from "@/lib/biographyProposal";
+import PersonPortrait from "@/components/PersonPortrait";
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Sparkles, AlertTriangle, BookOpen, Lightbulb, RefreshCw, Loader2, Globe2, ExternalLink, Brain } from "lucide-react";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
@@ -35,7 +38,7 @@ export default function Insights() {
 
   const cargar = async () => {
     const treeId = await getActiveTreeId();
-    const scopedPeople = await fetchAllPeople("id,nombres,apellidos", { treeId });
+    const scopedPeople = await fetchAllPeople("id,nombres,apellidos,foto_url", { treeId });
     const personIds = new Set(scopedPeople.map((p) => p.id));
     const [{ data: c }, { data: h }, { data: s }] = await Promise.all([
       supabase.from("contradicciones").select("*").eq("estado", "abierta").order("severidad").order("created_at", { ascending: false }),
@@ -96,9 +99,8 @@ export default function Insights() {
   const generarBio = async (personaId: string) => {
     setGenBio(personaId);
     try {
-      const { error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: personaId } });
-      if (error) throw error;
-      toast.success("Biografía solicitada — se actualizará en segundos.");
+      await requestBiographyProposal(personaId);
+      toast.success("Biografía preparada. Puedes revisarla en Sugerencias.");
     } catch (e: any) { toast.error(e.message ?? "No se pudo generar"); }
     finally { setGenBio(null); }
   };
@@ -221,7 +223,8 @@ export default function Insights() {
           <ul className="max-h-[60vh] divide-y divide-border/40 overflow-y-auto">
             {personas.slice(0, 100).map((p) => (
               <li key={p.id} className="flex items-center justify-between py-2">
-                <Link to={`/personas/${p.id}`} className="text-sm hover:text-primary">
+                <Link to={`/personas/${p.id}`} className="flex items-center gap-2 text-sm hover:text-primary">
+                  <PersonPortrait person={p} className="h-8 w-8 shrink-0 rounded-full" />
                   <span className="font-bold">{p.nombres} {p.apellidos}</span>
                 </Link>
                 <Button size="sm" variant="outline" disabled={genBio === p.id} onClick={() => generarBio(p.id)}>
@@ -241,7 +244,7 @@ export default function Insights() {
               <label className="mb-1 block text-xs text-muted-foreground">Persona</label>
               <Select value={pidExt} onValueChange={setPidExt}>
                 <SelectTrigger><SelectValue placeholder="Selecciona…" /></SelectTrigger>
-                <SelectContent className="max-h-64">{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-64">{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
               </Select>
             </div>
             <Button onClick={buscarExternas} disabled={genExt || !pidExt}>

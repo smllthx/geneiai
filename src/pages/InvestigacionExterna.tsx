@@ -1,9 +1,10 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -17,7 +18,7 @@ export default function InvestigacionExterna() {
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    supabase.from("personas").select("id, nombres, apellidos").order("apellidos").then(({ data }) => {
+    supabase.from("personas").select("id, nombres, apellidos, foto_url").order("apellidos").then(({ data }) => {
       setPersonas(data ?? []); if (data?.[0]) setPid(data[0].id);
     });
   }, []);
@@ -59,7 +60,7 @@ export default function InvestigacionExterna() {
               <Select value={pid} onValueChange={setPid}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}
+                  {personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}
                 </SelectContent>
               </Select>
             </div>

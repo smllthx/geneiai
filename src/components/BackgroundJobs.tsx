@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { toDisplayText } from "@/lib/safeText";
 
@@ -15,34 +16,37 @@ type Job = {
 // Muestra una tira flotante en la base de pantalla con los jobs IA en curso
 // (lectura de documentos, mega-buscador, etc). Persiste entre rutas.
 export default function BackgroundJobs() {
+  const userId = useAuth().user?.id;
   const [jobs, setJobs] = useState<Job[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const load = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const load = useCallback(async () => {
+    if (!userId || document.visibilityState === "hidden" || !navigator.onLine) return;
     const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from("actividad")
       .select("id, tipo, descripcion, metadata, created_at")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("created_at", since)
       .or("tipo.like.%inicio%,tipo.like.%lectura_documento%,tipo.like.%mega%,tipo.like.%smart%,tipo.like.%error%")
       .order("created_at", { ascending: false })
       .limit(10);
-    setJobs((data ?? []) as Job[]);
-  };
+    if (data) setJobs(data as Job[]);
+  }, [userId]);
 
   useEffect(() => {
-    load();
-    const iv = setInterval(load, 5000);
-    // Realtime para nuevos jobs
+    if (!userId) return;
+    void load();
     const ch = supabase
-      .channel("actividad-jobs")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "actividad" }, () => load())
+      .channel(`actividad-jobs-${userId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "actividad", filter: `user_id=eq.${userId}` }, () => void load())
       .subscribe();
-    return () => { clearInterval(iv); supabase.removeChannel(ch); };
-  }, []);
+    document.addEventListener("visibilitychange", load);
+    return () => {
+      document.removeEventListener("visibilitychange", load);
+      void supabase.removeChannel(ch);
+    };
+  }, [load, userId]);
 
   // Filtrar: si hay un "completado" o "error" para un filename, ocultar el "inicio" correspondiente
   const visible = jobs.filter((j) => {
@@ -66,7 +70,15 @@ export default function BackgroundJobs() {
     return Date.now() - new Date(j.created_at).getTime() < 60 * 1000;
   }).slice(0, 2);
 
-  if (!visible.length && !recientes.length) return null;
+  const hasActive = visible.length > 0;
+  const hasRecent = recientes.length > 0;
+  useEffect(() => {
+    if (!hasActive && !hasRecent) return;
+    const timer = window.setInterval(load, hasActive ? 15_000 : 60_000);
+    return () => window.clearInterval(timer);
+  }, [load, hasActive, hasRecent]);
+
+  if (!hasActive && !hasRecent) return null;
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 z-50 w-[min(92vw,420px)] flex flex-col gap-2 pointer-events-none"

@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GitBranch, UserRound } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
@@ -49,10 +50,10 @@ export default function Apellidos() {
       try {
         const treeId = await getActiveTreeId();
         const data = await fetchAllPeople(
-          "id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha,nac_lugar,nacionalidad,certeza,viva,foto_url,updated_at",
+          "id,nombres,apellidos,sexo,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais),nacionalidad,certeza,viva,foto_url,updated_at",
           { treeId },
         );
-        setPersonas([...data].sort((a, b) =>
+        setPersonas(data.map(p => ({ ...p, nac_lugar: [p.lugar?.ciudad, p.lugar?.pais].filter(Boolean).join(", ") })).sort((a, b) =>
           `${a.apellidos ?? ""} ${a.nombres ?? ""}`.localeCompare(`${b.apellidos ?? ""} ${b.nombres ?? ""}`, "es"),
         ));
       } catch (e: any) {
@@ -178,11 +179,7 @@ export default function Apellidos() {
                               className="flex min-w-0 items-center gap-3 text-left"
                             >
                               <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-foreground/10">
-                                {p.foto_url ? (
-                                  <img src={p.foto_url} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                  <UserRound className="h-5 w-5 text-muted-foreground" />
-                                )}
+                                <PersonPortrait person={p} className="h-full w-full" />
                               </span>
                               <span className="min-w-0">
                                 <span className="block font-semibold leading-tight">{p.nombres || "Sin nombre"}</span>

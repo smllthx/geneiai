@@ -85,7 +85,7 @@ function WorkConnectionCard() {
   }, []);
 
   const revoke = async (clientId: string) => {
-    if (!window.confirm("¿Desconectar ChatGPT Work de tu cuenta GENEAI?")) return;
+    if (!window.confirm("¿Desconectar este asistente de tu cuenta de GENEAI?")) return;
     setRevoking(clientId);
     const { error: trustError } = await (supabase as any).from("work_oauth_clients")
       .update({ active: false })
@@ -98,7 +98,7 @@ function WorkConnectionCard() {
     const { error } = await supabase.auth.oauth.revokeGrant({ clientId });
     setRevoking("");
     if (error) return toast.error("GENEAI bloqueó el acceso, pero falta retirar el permiso OAuth. Vuelve a intentarlo.");
-    toast.success("ChatGPT Work fue desconectado de GENEAI.");
+    toast.success("Conector desconectado.");
     loadGrants();
   };
 
@@ -106,13 +106,14 @@ function WorkConnectionCard() {
     <Card className="archivo-card mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif text-xl">
-          <MessagesSquare className="h-5 w-5" /> ChatGPT Work
+          <MessagesSquare className="h-5 w-5" /> Conectar ChatGPT o Claude
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Usa GENEAI y Work al mismo tiempo. Work consulta y modifica el mismo árbol activo con tu autorización; no crea una copia de tus datos.
+          Añade un conector MCP personalizado en ChatGPT o Claude. Pega esta dirección, selecciona OAuth e inicia sesión con tu cuenta de GENEAI.
         </p>
+        <Input aria-label="Dirección MCP de GENEAI" readOnly value="https://geneiai.vercel.app/mcp" onFocus={event => event.target.select()} />
         <div className="rounded-xl border border-border/70 bg-card/45 p-4">
           {loading ? (
             <p className="text-sm text-muted-foreground">Comprobando conexiones…</p>
@@ -123,7 +124,7 @@ function WorkConnectionCard() {
                   <div>
                     <div className="flex items-center gap-2 font-medium">
                       <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                      {grant.client.name || "ChatGPT Work"} conectado
+                      {grant.client.name || "Asistente"} conectado
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Acceso concedido {grant.granted_at ? new Date(grant.granted_at).toLocaleDateString("es-CL") : ""}
@@ -141,14 +142,14 @@ function WorkConnectionCard() {
               <div>
                 <p className="font-medium">Listo para conectar</p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Al activar GENEAI en Work aparecerá una pantalla de permiso. Ninguna persona se puede borrar desde esta conexión.
+                  GENEAI te mostrará los permisos antes de conectar tu árbol.
                 </p>
               </div>
             </div>
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          La conexión con Work no usa ni muestra la API key privada configurada para las funciones IA internas de GENEAI.
+          Puedes revocar el acceso de cada asistente desde esta sección.
         </p>
       </CardContent>
     </Card>
@@ -324,9 +325,7 @@ export default function Configuracion() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
     if (!rawKey || rawKey.includes("•")) {
-      toast.info("La API key guardada se mantiene igual. Reiniciando para aplicar la configuración IA…");
-      await supabase.auth.refreshSession();
-      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 700);
+      toast.info("La clave guardada sigue activa.");
       return;
     }
     const clean = rawKey.trim();
@@ -335,13 +334,8 @@ export default function Configuracion() {
     value.openai_api_key = clean;
     const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
-    toast.success("ChatGPT quedó guardado. Reiniciando la app para aplicar IA en todas las secciones…");
-    try {
-      localStorage.setItem("genaia:ai-config-updated", String(Date.now()));
-      await supabase.auth.refreshSession();
-    } finally {
-      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 900);
-    }
+    setAiCfg({ openai_api_key: `••••••••${clean.slice(-4)}`, hasKey: true });
+    toast.success("Clave de OpenAI guardada.");
   };
 
   const clearOpenAIKey = async () => {
@@ -378,7 +372,7 @@ export default function Configuracion() {
     if (!user) return toast.error("Sesión requerida");
     const { data, error } = await supabase
       .from("personas")
-      .select("id,nombres,apellidos,nac_fecha,nac_lugar")
+      .select("id,nombres,apellidos,nac_fecha,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais)")
       .eq("user_id", user.id);
     if (error) return toast.error(error.message);
     const full = accountProfile.nombre_completo.toLowerCase();
@@ -388,7 +382,7 @@ export default function Configuracion() {
         let score = 0;
         for (const word of full.split(/\s+/).filter(Boolean)) if (personText.includes(word)) score += 2;
         if (accountProfile.fecha_nacimiento && p.nac_fecha === accountProfile.fecha_nacimiento) score += 5;
-        if (accountProfile.lugar_nacimiento && `${p.nac_lugar ?? ""}`.toLowerCase().includes(accountProfile.lugar_nacimiento.toLowerCase())) score += 2;
+        if (accountProfile.lugar_nacimiento && [p.lugar?.ciudad, p.lugar?.pais].filter(Boolean).join(", ").toLowerCase().includes(accountProfile.lugar_nacimiento.toLowerCase())) score += 2;
         return { p, score };
       })
       .sort((a, b) => b.score - a.score)[0];
@@ -559,11 +553,11 @@ export default function Configuracion() {
               value={aiCfg.openai_api_key}
               onChange={(e) => setAiCfg({ ...aiCfg, openai_api_key: e.target.value })}
             />
-            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar y reiniciar</Button>
+            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar</Button>
             {aiCfg.hasKey && <Button variant="outline" onClick={clearOpenAIKey}>Borrar key</Button>}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {aiCfg.hasKey ? "Tu API key está guardada. Si acabas de cambiarla, usa Guardar y reiniciar para refrescar la sesión." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+            {aiCfg.hasKey ? "Tu clave está guardada y se usará en la próxima consulta." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
           </p>
           <p className="text-[11px] text-muted-foreground">
             Si no quedan créditos, recarga billing en OpenAI o crea una API key nueva en tu proyecto manual de OpenAI.

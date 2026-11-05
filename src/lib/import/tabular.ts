@@ -1,7 +1,6 @@
 // CSV / Excel / JSON tabular importers.
 // Expected columns (insensitive): id, nombres, apellidos, sexo, nac_fecha,
 // nac_lugar, defuncion_fecha, defuncion_lugar, padre_id, madre_id, conyuge_id, notas
-import * as XLSX from "xlsx";
 import type { ImportPersona, ImportFamilia } from "./gedcom";
 
 export type TabularRow = Record<string, string>;
@@ -60,6 +59,7 @@ export function parseTabular(rows: TabularRow[]): { personas: ImportPersona[]; f
 }
 
 export async function readCSV(file: File): Promise<TabularRow[]> {
+  const XLSX = await import("xlsx");
   const text = await file.text();
   const wb = XLSX.read(text, { type: "string" });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -67,6 +67,7 @@ export async function readCSV(file: File): Promise<TabularRow[]> {
 }
 
 export async function readXLSX(file: File): Promise<TabularRow[]> {
+  const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const sheet = wb.Sheets[wb.SheetNames[0]];

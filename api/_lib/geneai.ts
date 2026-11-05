@@ -108,16 +108,26 @@ export async function openAIJson(sb: SupabaseClient, messages: Array<{ role: "sy
     }),
   });
   if (!response.ok) {
-    const raw = await response.text();
-    throw new Error(`OpenAI ${response.status}: ${raw.slice(0, 240)}`);
+    if (response.status === 401 || response.status === 403) {
+      throw new GeneaiConnectionError("AI_KEY_REJECTED", "OpenAI rechazó la credencial. Revisa Configuración → IA.", 502);
+    }
+    if (response.status === 429) {
+      throw new GeneaiConnectionError("AI_LIMIT", "OpenAI alcanzó el límite de uso. Revisa tu cuota o reintenta más tarde.", 429);
+    }
+    throw new GeneaiConnectionError("AI_PROVIDER_ERROR", "OpenAI no pudo completar la solicitud. Inténtalo nuevamente.", 502);
   }
-  const payload = await response.json();
-  const content = payload.choices?.[0]?.message?.content ?? "{}";
   try {
-    return JSON.parse(content) as Json;
+    const payload = await response.json();
+    const choice = payload?.choices?.[0];
+    const content = choice?.message?.content;
+    if (typeof content === "string" && !choice.message.refusal && (!choice.finish_reason || choice.finish_reason === "stop")) {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Object.keys(parsed).length) return parsed as Json;
+    }
   } catch {
-    throw new Error("La IA respondió con JSON inválido");
+    // Provider bodies may contain private input. Return only the stable error below.
   }
+  throw new GeneaiConnectionError("AI_INVALID_RESPONSE", "OpenAI devolvió una respuesta incompleta. Vuelve a intentarlo.", 502);
 }
 
 export function limitPublicDocumentText(text: string) {

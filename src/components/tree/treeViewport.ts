@@ -11,15 +11,16 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const midpoint = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /** Keep the same world point under the fingers, even at a zoom limit. */
-export function anchoredCamera(start: Camera, from: Point, to: Point, ratio: number): Camera {
+export function anchoredCamera(start: Camera, from: Point, to: Point, ratio: number, minScale = TREE_MIN_SCALE): Camera {
   if (!Number.isFinite(ratio) || ratio <= 0) return start;
-  const scale = clamp(start.scale * ratio, TREE_MIN_SCALE, TREE_MAX_SCALE);
+  const scale = clamp(start.scale * ratio, minScale, TREE_MAX_SCALE);
   const applied = scale / start.scale;
   return { x: to.x - (from.x - start.x) * applied, y: to.y - (from.y - start.y) * applied, scale };
 }
 
 export function createTreeViewport() {
   let camera: Camera = INITIAL;
+  let minScale = TREE_MIN_SCALE;
   let element: HTMLDivElement | null = null;
   let frame = 0;
   let animation = 0;
@@ -79,6 +80,20 @@ export function createTreeViewport() {
     element?.removeAttribute("data-panning");
     stop();
   };
+  const homeCamera = (readable = false): Camera => {
+    const fan = element?.querySelector<HTMLElement>("[data-tree-fit]");
+    if (!element || !fan?.offsetWidth || !fan.offsetHeight) {
+      minScale = TREE_MIN_SCALE;
+      return INITIAL;
+    }
+    const height = Math.max(1, element.clientHeight - 48);
+    const fit = Math.min((element.clientWidth - 16) / fan.offsetWidth, height / fan.offsetHeight);
+    minScale = Math.max(0.01, Math.min(fit, TREE_MIN_SCALE));
+    const overviewIsReadable = element.clientWidth >= 600 && fit >= 0.45;
+    const scale = clamp(fit, readable && !overviewIsReadable ? INITIAL.scale : minScale, 1.25);
+    // In a dense tree keep the central person on screen at a readable zoom.
+    return { x: 0, y: Math.min(0, (height - fan.offsetHeight * scale) / 2), scale };
+  };
   const animateTo = (target: Camera) => {
     stop();
     if (!element || reducedMotion()) { update(target); return; }
@@ -95,7 +110,7 @@ export function createTreeViewport() {
   };
   const zoom = (ratio: number, anchor: Point = { x: 0, y: 0 }) => {
     cancelGesture();
-    animateTo(anchoredCamera(camera, anchor, anchor, ratio));
+    animateTo(anchoredCamera(camera, anchor, anchor, ratio, minScale));
   };
   const momentum = () => {
     if (reducedMotion() || samples.length < 2) return;
@@ -135,7 +150,7 @@ export function createTreeViewport() {
     if (points.length === 2 && baseline.points.length === 2) {
       const originalDistance = distance(baseline.points[0], baseline.points[1]);
       if (originalDistance < 4) { rebase(); return; }
-      update(anchoredCamera(baseline.camera, local(midpoint(baseline.points[0], baseline.points[1])), local(midpoint(points[0], points[1])), distance(points[0], points[1]) / originalDistance));
+      update(anchoredCamera(baseline.camera, local(midpoint(baseline.points[0], baseline.points[1])), local(midpoint(points[0], points[1])), distance(points[0], points[1]) / originalDistance, minScale));
     } else if (points.length === 1) {
       const dx = points[0].x - baseline.points[0].x, dy = points[0].y - baseline.points[0].y;
       if (!moved && Math.hypot(dx, dy) < 6) return;
@@ -184,7 +199,7 @@ export function createTreeViewport() {
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element!.clientHeight : 1;
     if (event.ctrlKey || event.metaKey) {
       const anchor = local({ x: event.clientX, y: event.clientY });
-      update(anchoredCamera(camera, anchor, anchor, Math.exp(clamp(-event.deltaY * unit * 0.01, -1, 1))));
+      update(anchoredCamera(camera, anchor, anchor, Math.exp(clamp(-event.deltaY * unit * 0.01, -1, 1)), minScale));
     } else {
       // Trackpads keep their native two-axis scrolling and inertia.
       const dx = event.shiftKey && !event.deltaX ? event.deltaY : event.deltaX;
@@ -203,7 +218,7 @@ export function createTreeViewport() {
     if (["+", "=", "-", "0", "Home", ...Object.keys(offsets)].includes(event.key)) event.preventDefault();
     if (event.key === "+" || event.key === "=") zoom(1.25);
     else if (event.key === "-") zoom(1 / 1.25);
-    else if (event.key === "0" || event.key === "Home") { cancelGesture(); animateTo(INITIAL); }
+    else if (event.key === "0" || event.key === "Home") { cancelGesture(); animateTo(homeCamera()); }
     else if (offsets[event.key]) { cancelGesture(); update({ ...camera, x: camera.x + offsets[event.key].x, y: camera.y + offsets[event.key].y }); }
   };
   const visibility = () => { if (document.hidden) cancelGesture(); };
@@ -215,7 +230,8 @@ export function createTreeViewport() {
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     zoomIn: () => zoom(1.25),
     zoomOut: () => zoom(1 / 1.25),
-    reset: () => { cancelGesture(); animateTo(INITIAL); },
+    frame: () => { cancelGesture(); update(homeCamera(true)); },
+    reset: () => { cancelGesture(); animateTo(homeCamera()); },
     attach: (surface: HTMLDivElement) => {
       detach?.();
       element = surface;
@@ -233,7 +249,13 @@ export function createTreeViewport() {
       surface.addEventListener("dragstart", preventDrag);
       window.addEventListener("blur", cancelGesture);
       document.addEventListener("visibilitychange", visibility);
-      const resize = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => { cancelGesture(); }) : null;
+      let previousHome = homeCamera(true);
+      const resize = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
+        const wasCentered = camera.x === 0 && Math.abs(camera.y - previousHome.y) < 0.5 && Math.abs(camera.scale - previousHome.scale) < 0.001;
+        cancelGesture();
+        previousHome = homeCamera(true);
+        if (wasCentered) update(previousHome);
+      }) : null;
       resize?.observe(surface);
       detach = () => {
         cancelGesture();

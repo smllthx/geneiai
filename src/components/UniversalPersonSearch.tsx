@@ -1,6 +1,7 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Loader2, Search, UserRound } from "lucide-react";
+import { Brain, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,8 +56,11 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
   }, [open]);
 
   useEffect(() => {
-    const refresh = () => {
-      if (open) loadPeople();
+    const refresh = (event: Event) => {
+      const table = (event as CustomEvent).detail?.table;
+      if (table && table !== "personas") return;
+      if (open) void loadPeople();
+      else setPeople([]);
     };
     window.addEventListener("genaia:data-changed", refresh);
     return () => window.removeEventListener("genaia:data-changed", refresh);
@@ -180,11 +184,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
                           className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         >
                           <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary">
-                            {person.foto_url ? (
-                              <img src={person.foto_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <UserRound className="h-5 w-5" />
-                            )}
+                            <PersonPortrait person={person} className="h-full w-full" />
                           </span>
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-semibold">{personFullName(person)}</span>

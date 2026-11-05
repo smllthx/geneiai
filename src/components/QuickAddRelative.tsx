@@ -63,7 +63,7 @@ export default function QuickAddRelative({
 
   useEffect(() => {
     if (!open) return;
-    fetchAllPeople("id, nombres, apellidos, variantes_nombre, sexo, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin, defuncion_fecha")
+    fetchAllPeople("id, nombres, apellidos, foto_url, variantes_nombre, sexo, nac_fecha, nac_fecha_aprox, nac_rango_ini, nac_rango_fin, defuncion_fecha")
       .then(setAll)
       .catch((e) => toast.error(e.message ?? "No se pudieron cargar todas las personas"));
   }, [open]);

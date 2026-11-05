@@ -1,4 +1,4 @@
-import { Component, ReactNode, useEffect, useState, useCallback } from "react";
+import { Component, ReactNode, useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Bug, Loader2, RefreshCw, Sparkles, X, Power } from "lucide-react";
@@ -56,7 +56,8 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { err: 
 
 // ---------- Listener + Panel ----------
 export default function SelfHealer() {
-  const [errors, setErrors] = useState<CapturedError[]>([]);
+
+  const lastError = useRef<CapturedError | null>(null);
   const [current, setCurrent] = useState<CapturedError | null>(null);
   const [diag, setDiag] = useState<Diagnosis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,7 @@ export default function SelfHealer() {
 
   useEffect(() => {
     pushError = (e) => {
-      setErrors((arr) => [...arr.slice(-9), e]);
+      if (e.source === "auto") { lastError.current = e; return; }
       setCurrent(e);
       setDiag(null);
       setOpen(true);
@@ -137,20 +138,14 @@ export default function SelfHealer() {
       setDiag({
         diagnosis: "No se pudo contactar a la IA: " + (e?.message ?? "error"),
         severity: "medium",
-        suggested_action: "reload",
-        user_message: "Vamos a reiniciar la app para intentar resolverlo.",
-        requires_restart: true,
+        suggested_action: "none",
+        user_message: "Puedes volver a intentar el diagnóstico.",
+        requires_restart: false,
       });
     } finally {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (!open || !current || diag || loading) return;
-    const timer = window.setTimeout(() => diagnose(current), 250);
-    return () => window.clearTimeout(timer);
-  }, [open, current, diag, loading, diagnose]);
 
   const apply = async () => {
     if (!diag) return;
@@ -161,7 +156,10 @@ export default function SelfHealer() {
   };
 
   useEffect(() => {
-    const report = () => setManualOpen(true);
+    const report = () => {
+      setManualText(lastError.current?.message ?? "");
+      setManualOpen(true);
+    };
     window.addEventListener("geneai:report-problem", report);
     return () => window.removeEventListener("geneai:report-problem", report);
   }, []);
@@ -266,9 +264,9 @@ export default function SelfHealer() {
                     Acción: {diag.suggested_action}
                   </span>
                 </div>
-                <Button onClick={apply} className="w-full">
+                <Button onClick={diag.suggested_action === "none" ? () => setOpen(false) : apply} className="w-full">
                   <Power className="mr-1 h-4 w-4" />
-                  {diag.requires_restart ? "Aplicar recuperación y reiniciar" : "Aplicar recuperación"}
+                  {diag.suggested_action === "none" ? "Cerrar" : diag.requires_restart ? "Aplicar recuperación y reiniciar" : "Aplicar recuperación"}
                 </Button>
               </div>
             )}

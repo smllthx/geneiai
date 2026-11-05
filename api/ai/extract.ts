@@ -1,3 +1,4 @@
+import { applyTreeScope } from "../../shared/treeScope.js";
 import { getActiveTreeId, getBearer, getSupabase, getUserOrThrow, json, jsonApiError, limitPublicDocumentText, openAIJson, suggestionTitle } from "../_lib/geneai.js";
 
 export default async function handler(req: any, res: any) {
@@ -13,10 +14,10 @@ export default async function handler(req: any, res: any) {
     let documentTitle = "Documento sin título";
 
     if (documentId) {
-      const { data, error } = await sb
+      const { data, error } = await applyTreeScope(sb
         .from("documentos")
         .select("id,titulo,transcripcion,ocr_texto,resumen,cita,repositorio,arbol_id")
-        .eq("id", documentId)
+        .eq("id", documentId), treeId)
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Documento no encontrado");

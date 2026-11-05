@@ -1,15 +1,14 @@
 import { Component, type ReactNode, createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-// SectionHeader removed — replaced by minimal sticky header
+import "./tree-page.css";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Crosshair, Pencil, ZoomIn, ZoomOut, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, Loader2, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Pencil, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeCanvas, { TreeZoomControls } from "@/components/tree/TreeCanvas";
 import { createTreeViewport } from "@/components/tree/treeViewport";
 import { toast } from "sonner";
@@ -17,7 +16,6 @@ import FanChart from "@/components/FanChart";
 import DynastyView from "@/components/DynastyView";
 import { padresDe as kPadresDe, conyugesDe as kConyugesDe, hijosDe as kHijosDe, hermanosDe as kHermanosDe, relacionesEntre, type RelTipo } from "@/lib/kinship";
 import { checkCoherence } from "@/lib/coherence";
-import { notify } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
@@ -29,21 +27,6 @@ import { toDisplayText } from "@/lib/safeText";
 type Vista = "ascendientes" | "lineas" | "abanico" | "dinastica";
 type Categoria = "predeterminada" | "pais" | "fuentes" | "historia";
 type Panel = "arbol" | "tareas" | "recientes" | "mas";
-
-const generationName = (level: number) => {
-  if (level <= 1) return "padres";
-  if (level === 2) return "abuelos";
-  if (level === 3) return "bisabuelos";
-  if (level === 4) return "tatarabuelos";
-  if (level === 5) return "trastatarabuelos";
-  return `${level}.ª generación`;
-};
-
-const generationOptionLabel = (generations: number) => {
-  if (generations === 999) return "Todas las generaciones";
-  const lastLevel = Math.max(1, generations - 1);
-  return `${generations} gen · hasta ${generationName(lastLevel)}`;
-};
 
 class TreeErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -339,7 +322,6 @@ function ArbolContent() {
   const [panel, setPanel] = useState<Panel>("arbol");
   const [tasks, setTasks] = useState<any[]>([]);
   const [recentPeople, setRecentPeople] = useState<PersonaLite[]>([]);
-  const [agentProgress, setAgentProgress] = useState<{ total: number; done: number; ok: number; running: boolean; errors: string[] }>({ total: 0, done: 0, ok: 0, running: false, errors: [] });
   const initialTreeLoaded = useRef(false);
 
 
@@ -538,8 +520,7 @@ function ArbolContent() {
     const { data, error } = await supabase.functions.invoke("familysearch-export", { body: { format: "gedcom" } });
     if (error || !data) {
       // Fallback: ir a la página Importar/Exportar
-      toast.info("Abriendo el centro de Importar / Exportar para crear el archivo");
-      window.location.href = "/importar";
+      navigate("/importar");
       return;
     }
     const blob = new Blob([typeof data === "string" ? data : (data as any).gedcom ?? JSON.stringify(data)], { type: "text/plain" });
@@ -556,7 +537,6 @@ function ArbolContent() {
       if (issues.length === 0) { toast.success("Árbol coherente: 0 problemas detectados"); return; }
       const errors = issues.filter((i) => i.severity === "error").length;
       const warns = issues.filter((i) => i.severity === "warn").length;
-      toast.success(`${issues.length} problema(s) — ${errors} crítico(s), ${warns} aviso(s)`);
       const user = (await supabase.auth.getUser()).data.user;
       if (user) {
         const activeTreeId = await getActiveTreeId(user.id);
@@ -567,49 +547,15 @@ function ArbolContent() {
           tipo: "otro" as const,
           descripcion: `[${i.severity.toUpperCase()}] ${i.message} (${i.rule})`,
         })).map((row) => withTreeScope(row, activeTreeId));
-        await supabase.from("research_tasks").insert(rows);
-        notify("Verificación de coherencia", { body: `${issues.length} problemas registrados como tareas`, url: "/arbol" });
+        const { error } = await supabase.from("research_tasks").insert(rows);
+        if (error) throw error;
+        toast.success(`${rows.length} tareas registradas. ${errors} problemas críticos y ${warns} avisos en el árbol.`);
       }
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
   };
 
-  const agentesEnParalelo = async () => {
-    if (!persona) return;
-    const pid = persona.id;
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return toast.error("Sesión no encontrada");
-    const activeTreeId = await getActiveTreeId(user.id);
-    const issues = checkCoherence(personas as any, rels as any).filter((i) => i.persona_id === pid || i.related_id === pid);
-    const agentJobs = [
-      { titulo: "Resumen local", descripcion: `Revisar datos vitales de ${persona.nombres} ${persona.apellidos}` },
-      { titulo: "Ascendientes faltantes", descripcion: `Padres/abuelos faltantes detectados: ${padresDe(pid).all.length < 2 ? "sí" : "sin faltantes inmediatos"}` },
-      { titulo: "Descendientes y cónyuges", descripcion: `${hijosDe(pid).length} hijo(s) y ${conyugesDe(pid).length} cónyuge(s) o coprogenitor(es) registrados` },
-      { titulo: "Coherencia", descripcion: `${issues.length} aviso(s) locales para revisar` },
-    ];
-    setAgentProgress({ total: agentJobs.length, done: 0, ok: 0, running: true, errors: [] });
-    const t = toast.loading("Desplegando agentes en paralelo…");
-    try {
-      await supabase.from("research_tasks").insert(agentJobs.map((job) => withTreeScope({
-        user_id: user.id,
-        person_id: pid,
-        tipo: "otro" as const,
-        descripcion: `Agente local: ${job.titulo} — ${job.descripcion}`,
-      }, activeTreeId)));
-      const results = await Promise.allSettled(agentJobs.map(async () => {
-        setAgentProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1), ok: p.ok + 1 }));
-        return true;
-      }));
-      toast.dismiss(t);
-      const ok = results.filter((r) => r.status === "fulfilled").length;
-      const errors = results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => r.reason?.message ?? "Error desconocido");
-      setAgentProgress({ total: agentJobs.length, done: agentJobs.length, ok, running: false, errors });
-      toast.success(`${ok}/4 agentes completados para ${persona.nombres}`);
-      notify("Agentes en paralelo", { body: `${ok}/4 completados para ${persona.nombres} ${persona.apellidos}`, url: `/personas/${pid}` });
-      reload();
-    } catch (e: any) {
-      toast.dismiss(t); toast.error(e.message ?? "Error");
-      setAgentProgress((p) => ({ ...p, running: false, errors: [...p.errors, e.message ?? "Error"] }));
-    }
+  const agentesEnParalelo = () => {
+    if (persona) navigate(`/investigacion?tab=paralelo&persona=${encodeURIComponent(persona.id)}`);
   };
 
   const completarTarea = async (id: string) => {
@@ -623,7 +569,7 @@ function ArbolContent() {
   return (
     <TreeViewContext.Provider value={{ editMode, persona, rels, categoria, docsByPersona, byId, generaciones, navigate, reload, padresDe, hijosDe, conyugesDe, setDropTarget, setEditRel }}>
     <div
-      className={fullscreen ? "fixed inset-0 z-[100] bg-background overflow-y-auto" : "-mx-3 md:-mx-6"}
+      className={`family-tree-page flex min-h-0 flex-1 flex-col ${fullscreen ? "fixed inset-0 z-40 bg-background" : ""}`}
       style={fullscreen ? {
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -633,10 +579,9 @@ function ArbolContent() {
     >
       {/* Minimal top bar */}
       <div
-        className="sticky top-0 z-20 mb-2 flex items-center justify-between gap-2 bg-background/80 px-3 py-2 backdrop-blur-md md:px-6"
-        style={fullscreen ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" } : undefined}
+        className="flex shrink-0 items-center justify-between gap-1 px-1 py-1 sm:gap-2"
       >
-        <h1 className="min-w-0 flex-1 font-display text-2xl font-bold leading-tight tracking-tight md:text-3xl">Árbol</h1>
+        <h1 className="min-w-0 flex-1 font-display text-2xl font-bold leading-tight tracking-tight md:text-3xl">{({ arbol: "Árbol", tareas: "Tareas", recientes: "Recientes", mas: "Más" })[panel]}</h1>
         <div className="glass inline-flex rounded-full p-1">
           {([
             ["ascendientes", GitBranch, "Retrato"],
@@ -646,7 +591,8 @@ function ArbolContent() {
           ] as [Vista, any, string][]).map(([k, Icon, label]) => (
             <button
               key={k}
-              onClick={() => setVista(k)}
+              onClick={() => { setVista(k); setPanel("arbol"); }}
+              aria-pressed={vista === k && panel === "arbol"}
               aria-label={label}
               title={label}
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-all ${
@@ -662,186 +608,159 @@ function ArbolContent() {
           onClick={() => setFullscreen((v) => !v)}
           aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          className="glass grid h-9 w-9 place-items-center rounded-full text-foreground/70 transition hover:bg-foreground/5 hover:text-foreground"
+          className="glass grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground/70 transition hover:bg-foreground/5 hover:text-foreground"
         >
           {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <button
+              aria-label="Herramientas del árbol"
+              title="Herramientas del árbol"
+              className="glass grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground/80 hover:bg-foreground/5"
+            >
+              <SlidersHorizontal className="h-5 w-5" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[88vw] max-w-sm overflow-y-auto p-0">
+            <SheetHeader className="border-b border-border/60 p-4">
+              <SheetTitle className="font-display text-lg">Herramientas</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-5 p-4">
+              <nav aria-label="Secciones del árbol">
+                <div className="grid grid-cols-2 gap-1">
+                  {([
+                    ["arbol", GitBranch, "Árbol"],
+                    ["tareas", ListChecks, "Tareas"],
+                    ["recientes", Clock3, "Recientes"],
+                    ["mas", MoreHorizontal, "Más"],
+                  ] as [Panel, any, string][]).map(([key, Icon, label]) => (
+                    <SheetClose asChild key={key}><button
+                      aria-pressed={panel === key}
+                      onClick={() => setPanel(key)}
+                      className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition ${
+                        panel === key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </button></SheetClose>
+                  ))}
+                </div>
+              </nav>
+              <section className="flex flex-wrap items-center gap-2" aria-label="Configuración del árbol">
+                <div className="min-w-0 flex-1 rounded-full border border-border bg-card/60 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Centro: </span>
+                  <span className="font-medium">{persona ? `${persona.nombres} ${persona.apellidos}` : "configúralo en Configuración"}</span>
+                  <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
+                </div>
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} disabled={refreshingTree} aria-label="Actualizar árbol" title="Actualizar árbol">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
+                  <SelectTrigger aria-label="Generaciones de antepasados" className="h-9 w-full rounded-full text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[2, 3, 4, 5, 6].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n} generaciones</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </section>
+              <section>
+                <p className="mb-2 text-xs font-semibold">Resaltado</p>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    ["predeterminada", "Predeterminada"],
+                    ["pais", "País"],
+                    ["fuentes", "Fuentes"],
+                    ["historia", "Historia"],
+                  ] as [Categoria, string][]).map(([k, label]) => (
+                    <button
+                      key={k}
+                      onClick={() => setCategoria(k)}
+                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                        categoria === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-foreground/5"
+                      }`}
+                    >{label}</button>
+                  ))}
+                  {categoria !== "predeterminada" && (
+                    <span className="ml-1 text-[10px] text-muted-foreground">
+                      {categoria === "fuentes" && "Resalta personas con documentos vinculados."}
+                      {categoria === "pais" && "Color por nacionalidad."}
+                      {categoria === "historia" && "Color por época de nacimiento."}
+                    </span>
+                  )}
+                </div>
+              </section>
+              <section>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Vista</p>
+                <TreeZoomControls viewport={viewport} fan={vista === "abanico"} />
+                <Button variant={fullscreen ? "default" : "outline"} size="sm" className="mt-2 w-full justify-start" onClick={() => setFullscreen((v) => !v)}>
+                  {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
+                </Button>
+              </section>
+
+              {vista === "abanico" && persona && <section>
+                <p className="mb-2 text-xs font-semibold">Persona central y uniones</p>
+                <PartnershipStrip p={persona} compact />
+              </section>}
+              <section>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Edición</p>
+                <Button variant={editMode ? "default" : "outline"} size="sm" className="w-full justify-start" onClick={() => setEditMode((v) => !v)}>
+                  <Pencil className="h-4 w-4" /> {editMode ? "Editando relaciones" : "Editar relaciones"}
+                </Button>
+                {lastUndo && (
+                  <Button variant="ghost" size="sm" className="mt-2 w-full justify-start" onClick={async () => {
+                    await supabase.from("relaciones").delete().in("id", lastUndo.ids);
+                    setLastUndo(null); reload();
+                  }}><Undo2 className="h-4 w-4" /> Deshacer última</Button>
+                )}
+              </section>
+
+              <section>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Inteligencia</p>
+                <div className="space-y-2">
+                  <Button variant="secondary" size="sm" className="w-full justify-start" onClick={agentesEnParalelo} disabled={!persona}>
+                    <Rocket className="h-4 w-4" /> Agentes en paralelo
+                  </Button>
+                  <Button variant="secondary" size="sm" className="w-full justify-start" onClick={verificarCoherencia}>
+                    <ShieldCheck className="h-4 w-4" /> Verificar coherencia
+                  </Button>
+                </div>
+              </section>
+
+              <section>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Datos</p>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={exportarGedcom}>
+                  <FileDown className="h-4 w-4" /> Exportar GEDCOM
+                </Button>
+              </section>
+
+              <section>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-destructive/80">Peligro</p>
+                <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={eliminarTodoElArbol}>
+                  <Trash2 className="h-4 w-4" /> Eliminar todo el árbol
+                </Button>
+              </section>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
-      {/* Compact tree control row */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 px-3 md:px-6">
-        <div className="min-w-0 flex-1 rounded-full border border-border bg-card/60 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Centro: </span>
-          <span className="font-medium">{persona ? `${persona.nombres} ${persona.apellidos}` : "configúralo en Configuración"}</span>
-          <Link to="/configuracion" className="ml-2 text-link underline">Cambiar</Link>
-        </div>
-        <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={refreshTree} disabled={refreshingTree} aria-label="Actualizar árbol" title="Actualizar árbol">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-        <Select value={String(generaciones)} onValueChange={(v) => setGeneraciones(parseInt(v))}>
-          <SelectTrigger className="h-9 w-[186px] rounded-full text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {[2, 3, 4, 5, 6].map((n) => (
-              <SelectItem key={n} value={String(n)}>{generationOptionLabel(n)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <p className="mx-3 mb-3 text-xs text-muted-foreground md:mx-6">Hasta seis generaciones por vista. Abre la ficha de un antepasado y céntralo en el árbol para seguir explorando.</p>
       {treeError && <div role="alert" className="mx-3 mb-3 rounded-xl border border-destructive/40 p-4 md:mx-6">
         <p>{treeError}</p><Button className="mt-2" onClick={reload} disabled={refreshingTree}>Reintentar carga</Button>
       </div>}
-      {vista === "ascendientes" && (
-        <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
-          {["Padres", "Abuelos", "Bisabuelos", "Tatarabuelos", "Trastatarabuelos"].map((label) => (
-            <span
-              key={label}
-              className="shrink-0 rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-medium text-muted-foreground"
-            >
-              {label}
-            </span>
-          ))}
-          <span className="shrink-0 text-[11px] text-muted-foreground">
-            La vista retrato mantiene madres, padres, cónyuges y uniones visibles cuando existen.
-          </span>
-        </div>
-      )}
-
-      {/* Configuración del árbol: resaltado por categoría */}
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:px-6 [&::-webkit-scrollbar]:hidden">
-        {([
-          ["predeterminada", "Predeterminada"],
-          ["pais", "País"],
-          ["fuentes", "Fuentes"],
-          ["historia", "Historia"],
-        ] as [Categoria, string][]).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setCategoria(k)}
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
-              categoria === k ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-foreground/5"
-            }`}
-          >{label}</button>
-        ))}
-        {categoria !== "predeterminada" && (
-          <span className="ml-1 text-[10px] text-muted-foreground">
-            {categoria === "fuentes" && "Resalta personas con documentos vinculados."}
-            {categoria === "pais" && "Color por nacionalidad."}
-            {categoria === "historia" && "Color por época de nacimiento."}
-          </span>
-        )}
-      </div>
-
-
-      {agentProgress.total > 0 && (
-        <div className="mx-3 mb-3 rounded-2xl border border-border bg-card/70 p-3 shadow-sm md:mx-6">
-          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-            <span className="inline-flex items-center gap-2 font-medium">
-              {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : agentProgress.errors.length ? <AlertCircle className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-primary" />}
-              Agentes
-            </span>
-            <span className="text-xs text-muted-foreground">{agentProgress.done}/{agentProgress.total} · {agentProgress.ok} ok</span>
-          </div>
-          <Progress value={(agentProgress.done / agentProgress.total) * 100} className="h-1.5" />
-        </div>
-      )}
-
       {editMode && (
         <p className="mx-3 mb-2 rounded-xl bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-foreground md:mx-6">
           Arrastra una persona <strong>sobre otra</strong> para crear una relación.
         </p>
       )}
 
-      {/* Floating tools panel — agrupa todo lo demás */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <button
-            aria-label="Herramientas del árbol"
-            style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.25rem)" }}
-            className="fixed right-4 z-30 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_40px_-8px_hsl(var(--primary)/0.55)] ring-1 ring-border/40 transition-transform hover:scale-105 active:scale-95 md:!bottom-6"
-          >
-            <SlidersHorizontal className="h-5 w-5" />
-          </button>
-        </SheetTrigger>
-        <SheetContent side="right" className="w-[88vw] max-w-sm overflow-y-auto p-0">
-          <SheetHeader className="border-b border-border/60 p-4">
-            <SheetTitle className="font-display text-lg">Herramientas</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-5 p-4">
-            <section>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Vista</p>
-              <TreeZoomControls viewport={viewport} />
-              <Button variant={fullscreen ? "default" : "outline"} size="sm" className="mt-2 w-full justify-start" onClick={() => setFullscreen((v) => !v)}>
-                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                {fullscreen ? "Salir pantalla completa" : "Pantalla completa"}
-              </Button>
-            </section>
 
-            <section>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Edición</p>
-              <Button variant={editMode ? "default" : "outline"} size="sm" className="w-full justify-start" onClick={() => setEditMode((v) => !v)}>
-                <Pencil className="h-4 w-4" /> {editMode ? "Editando relaciones" : "Editar relaciones"}
-              </Button>
-              {lastUndo && (
-                <Button variant="ghost" size="sm" className="mt-2 w-full justify-start" onClick={async () => {
-                  await supabase.from("relaciones").delete().in("id", lastUndo.ids);
-                  setLastUndo(null); reload();
-                }}><Undo2 className="h-4 w-4" /> Deshacer última</Button>
-              )}
-            </section>
-
-            <section>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Inteligencia</p>
-              <div className="space-y-2">
-                <Button variant="secondary" size="sm" className="w-full justify-start" onClick={agentesEnParalelo} disabled={!persona}>
-                  {agentProgress.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />} Agentes en paralelo
-                </Button>
-                <Button variant="secondary" size="sm" className="w-full justify-start" onClick={verificarCoherencia}>
-                  <ShieldCheck className="h-4 w-4" /> Verificar coherencia
-                </Button>
-              </div>
-            </section>
-
-            <section>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Datos</p>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={exportarGedcom}>
-                <FileDown className="h-4 w-4" /> Exportar GEDCOM
-              </Button>
-            </section>
-
-            <section>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-destructive/80">Peligro</p>
-              <Button variant="ghost" size="sm" className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={eliminarTodoElArbol}>
-                <Trash2 className="h-4 w-4" /> Eliminar todo el árbol
-              </Button>
-            </section>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <div className="sticky bottom-3 z-20 mx-auto mb-4 grid max-w-lg grid-cols-4 gap-1 rounded-3xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur md:bottom-4">
-        {([
-          ["arbol", GitBranch, "Árbol"],
-          ["tareas", ListChecks, "Tareas"],
-          ["recientes", Clock3, "Recientes"],
-          ["mas", MoreHorizontal, "Más"],
-        ] as [Panel, any, string][]).map(([key, Icon, label]) => (
-          <button
-            key={key}
-            onClick={() => setPanel(key)}
-            className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition ${
-              panel === key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
 
       {panel === "tareas" ? (
-        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-2">
+        <div className="mx-3 grid gap-3 overflow-auto pb-4 md:mx-6 md:grid-cols-2">
           {tasks.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground md:col-span-2">
               No hay tareas pendientes. Puedes generar tareas con Verificar coherencia o Agentes en paralelo.
@@ -856,7 +775,7 @@ function ArbolContent() {
                 </div>
                 <p className="text-sm">{toDisplayText(task.descripcion)}</p>
                 {p && <Link to={`/personas/${p.id}`} className="mt-2 block text-xs text-link underline">{p.nombres} {p.apellidos}</Link>}
-                {task.estado !== "completada" && (
+                {task.estado !== "encontrado" && task.estado !== "descartado" && (
                   <Button size="sm" variant="outline" className="mt-3" onClick={() => completarTarea(task.id)}>
                     <CheckCircle2 className="h-4 w-4" /> Completar
                   </Button>
@@ -866,7 +785,7 @@ function ArbolContent() {
           })}
         </div>
       ) : panel === "recientes" ? (
-        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-3">
+        <div className="mx-3 grid gap-3 overflow-auto pb-4 md:mx-6 md:grid-cols-3">
           {recentPeople.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground md:col-span-3">
               Todavía no hay personas vistas recientemente.
@@ -878,7 +797,7 @@ function ArbolContent() {
           ))}
         </div>
       ) : panel === "mas" ? (
-        <div className="mx-3 grid gap-3 pb-24 md:mx-6 md:grid-cols-2">
+        <div className="mx-3 grid gap-3 overflow-auto pb-4 md:mx-6 md:grid-cols-2">
           <Button variant="outline" className="justify-start rounded-2xl p-6" onClick={verificarCoherencia}>
             <ShieldCheck className="h-4 w-4" /> Verificar coherencia del árbol
           </Button>
@@ -892,24 +811,15 @@ function ArbolContent() {
             Configurar persona central, vista por defecto y Face ID / Touch ID
           </Link>
         </div>
-      ) : loadingTree ? (
-        <div className="grid min-h-[45vh] place-items-center rounded-2xl border border-border bg-card/60">
-          <div className="text-center text-sm text-muted-foreground"><Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />Cargando árbol…</div>
-        </div>
+      ) : !persona && loadingTree ? (
+        <div className="min-h-0 flex-1 rounded-2xl border bg-card/30" aria-label="Árbol" aria-busy="true" />
       ) : !persona ? (
-        <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
+        !treeError && <p className="text-muted-foreground">Selecciona una persona o crea la primera en Personas.</p>
       ) : vista === "abanico" ? (
-        <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
-          <div className="px-4 md:px-6">
-            <div className="mb-3 flex justify-center">
-              <PartnershipStrip p={persona} compact />
-            </div>
-            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={generaciones} size={760} />
+        <TreeCanvas fan viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`}>
+          <div data-tree-fit>
+            <FanChart personas={personas} rels={rels} centerId={persona.id} generations={generaciones} />
           </div>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            <span className="inline-block h-2 w-2 rounded-full bg-sky-500" /> línea paterna ·{" "}
-            <span className="inline-block h-2 w-2 rounded-full bg-pink-500" /> línea materna
-          </p>
         </TreeCanvas>
       ) : vista === "dinastica" ? (
         <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>

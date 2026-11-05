@@ -23,6 +23,7 @@ import OriginBackgroundSync from "@/components/OriginBackgroundSync";
 import NetworkStatusModal from "@/components/NetworkStatusModal";
 import OfflineContextKeeper from "@/components/OfflineContextKeeper";
 import AppWindowLayer from "@/components/AppWindowLayer";
+import GalleryPortraitProvider from "@/components/GalleryPortraitProvider";
 import UniversalPersonSearch from "@/components/UniversalPersonSearch";
 import { loadOrder, saveOrder } from "@/lib/navOrder";
 import { filterByHidden, toggleHidden } from "@/lib/navConfig";
@@ -184,10 +185,6 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
   const signOut = auth.signOut;
   const navigate = useNavigate();
   const location = useLocation();
-  useEffect(() => {
-    if (preview) return;
-    ["/inicio", "/personas", "/arbol", "/investigacion", "/buscar"].forEach(path => prefetchRoute(path));
-  }, [preview]);
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, location.search, isMobile]);
   useLayoutEffect(() => {
     const header = headerRef.current;
@@ -207,7 +204,6 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
   const refreshVisibleData = () => {
     window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { source: "manual" } }));
     window.dispatchEvent(new Event("genaia:recent-changed"));
-    toast.success("Datos actualizados");
   };
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -248,21 +244,9 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
     supabase.functions.invoke("notificar-aniversarios").catch(() => {});
   }, [user]);
 
-  useEffect(() => {
-    const onAiError = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (!detail?.message) return;
-      toast.error(detail.message, {
-        description: detail.functionName ? `Opción IA: ${detail.functionName}` : undefined,
-        duration: 7000,
-      });
-    };
-    window.addEventListener("genaia:ia-error", onAiError);
-    return () => window.removeEventListener("genaia:ia-error", onAiError);
-  }, []);
-
 
   return (
+    <GalleryPortraitProvider key={user?.id ?? "preview"} userId={user?.id}>
     <div className="app-shell relative flex min-h-screen" data-navigation={isMobile ? "compact" : "wide"}>
       {!isMobile && !isWindowFrame && !sidebarCollapsed && <aside
         className={cn(
@@ -384,5 +368,6 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
       <KeyboardAwareScroller />
       {!isWindowFrame && !preview && <AppWindowLayer />}
     </div>
+    </GalleryPortraitProvider>
   );
 }

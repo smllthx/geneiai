@@ -1,5 +1,6 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useMemo, useState } from "react";
-import { Search, UserRound } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +64,8 @@ export default function PersonSearchSelect<T extends SearchablePerson>({
 
       {value && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2">
-          <div className="min-w-0">
+          <PersonPortrait person={value} className="h-9 w-9 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{personFullName(value)}</p>
             <p className="truncate text-xs text-muted-foreground">{personSearchSubtitle(value)}</p>
           </div>
@@ -91,9 +93,7 @@ export default function PersonSearchSelect<T extends SearchablePerson>({
                     onClick={() => onChange(person)}
                     className="flex w-full items-center gap-3 border-t border-border/60 px-3 py-2 text-left first:border-t-0 hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:outline-none"
                   >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                      <UserRound className="h-4 w-4" />
-                    </span>
+                    <PersonPortrait person={person} className="h-9 w-9 shrink-0 rounded-full" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-foreground">{personFullName(person)}</span>
                       <span className="block truncate text-xs text-muted-foreground">{personSearchSubtitle(person)}</span>

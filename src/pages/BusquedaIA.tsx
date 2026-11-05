@@ -1,3 +1,4 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,7 +6,7 @@ import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Sparkles, User, Globe2, Search, Link2, Loader2, ExternalLink, Check, X, Lightbulb } from "lucide-react";
@@ -33,7 +34,7 @@ export default function BusquedaIA() {
   useEffect(() => {
     (async () => {
       const treeId = await getActiveTreeId();
-      const data = await fetchAllPeople("id,nombres,apellidos", { treeId });
+      const data = await fetchAllPeople("id,nombres,apellidos,foto_url", { treeId });
       setPersonas(data ?? []);
       const personaParam = params.get("persona");
       const queryParam = params.get("q") || sessionStorage.getItem("geneai:ai-search-query") || "";
@@ -141,7 +142,7 @@ export default function BusquedaIA() {
             <Label>Persona del árbol</Label>
             <Select value={pid} onValueChange={setPid}>
               <SelectTrigger className="h-12"><SelectValue placeholder="Selecciona…" /></SelectTrigger>
-              <SelectContent className="max-h-72">{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+              <SelectContent className="max-h-72">{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">La IA usará nombres, variantes, fechas, lugares, familiares y fuentes ya guardadas.</p>
             <Button size="lg" className="w-full" onClick={ejecutar} disabled={busy || !pid}>
