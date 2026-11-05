@@ -1,3 +1,4 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 // Centro de configuración: vista por defecto del árbol, auto-configuración
 // inteligente según el tamaño del árbol, y "Aplicar y reiniciar" que limpia
 // cachés y recarga la app para que los cambios se vean en todos los menús.
@@ -5,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, RotateCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,7 +48,7 @@ export default function AppCenterConfig() {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) return;
       const [{ data: p }, { data: prof }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,nac_fecha").order("apellidos"),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha").order("apellidos"),
         supabase.from("profiles").select("proband_id").eq("id", user.id).maybeSingle(),
       ]);
       setPersonas((p as any) ?? []);
@@ -141,9 +142,7 @@ export default function AppCenterConfig() {
               </SelectTrigger>
               <SelectContent>
                 {personas.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.nombres} {p.apellidos}{p.nac_fecha ? ` · ${new Date(p.nac_fecha).getUTCFullYear()}` : ""}
-                  </SelectItem>
+                  <PersonSelectItem key={p.id} person={p} suffix={p.nac_fecha?.slice(0, 4)} />
                 ))}
               </SelectContent>
             </Select>

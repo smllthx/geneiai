@@ -123,7 +123,7 @@ export default function PersonasList() {
     <div key={p.id}
       className="archivo-card flex min-h-[78px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:border-primary/40">
       <button onClick={() => navigate(`/personas/${p.id}`)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-        <PersonPortrait src={p.foto_url} name={`${p.nombres} ${p.apellidos}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
+        <PersonPortrait person={p} className="h-12 w-12 shrink-0 rounded-full object-cover" />
         <div className="min-w-0">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span className="font-bold text-foreground">{p.nombres}</span>

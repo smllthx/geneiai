@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,11 +96,7 @@ export default function Coincidencias() {
                   {[a, b].map((p, i) => p ? (
                     <Link key={p.id} to={`/personas/${p.id}`}
                       className="flex items-center gap-3 rounded-2xl p-2 hover:bg-foreground/5 transition-colors">
-                      {p.foto_url ? (
-                        <img src={p.foto_url} className="h-10 w-10 rounded-full object-cover" alt="" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-foreground/10" />
-                      )}
+                      <PersonPortrait person={p} className="h-10 w-10 shrink-0 rounded-full" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{p.nombres} {p.apellidos}</p>
                         <p className="text-xs text-muted-foreground">

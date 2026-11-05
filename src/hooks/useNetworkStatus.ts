@@ -5,7 +5,7 @@ type NetworkQuality = "online" | "offline" | "checking";
 export function useNetworkStatus() {
   const [status, setStatus] = useState<NetworkQuality>(() => {
     if (typeof navigator === "undefined") return "checking";
-    return navigator.onLine ? "checking" : "offline";
+    return navigator.onLine ? "online" : "offline";
   });
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const mounted = useRef(true);
@@ -49,13 +49,10 @@ export function useNetworkStatus() {
     };
     window.addEventListener("online", online);
     window.addEventListener("offline", offline);
-    void check();
-    const timer = window.setInterval(check, 30_000);
     return () => {
       mounted.current = false;
       window.removeEventListener("online", online);
       window.removeEventListener("offline", offline);
-      window.clearInterval(timer);
     };
   }, [check]);
 

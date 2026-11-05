@@ -1,30 +1,29 @@
-import { useEffect, useState } from "react";
+import PersonPortrait from "@/components/PersonPortrait";
+import { createPortal } from "react-dom";
+import { toast } from "sonner";
+import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Download, FileText, Image, MapPinned, Printer, Sparkles, UserRound, Users } from "lucide-react";
+import { Download, Printer, Sparkles, UserRound } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { personaCode } from "@/lib/personaCode";
 
-const TEMPLATES = [
-  { title: "Ficha visual de persona", icon: UserRound, desc: "Retrato, fechas, lugares, padres, cónyuge, hijos y fuentes." },
-  { title: "Cuadro familiar", icon: Users, desc: "Pareja, matrimonio, hijos, lugares principales y línea familiar." },
-  { title: "Póster de antepasado", icon: Image, desc: "Foto, cronología breve, mapa de vida y origen familiar." },
-  { title: "Línea de tiempo visual", icon: FileText, desc: "Nacimiento, matrimonio, migraciones, defunción y entierro." },
-  { title: "Mapa migratorio", icon: MapPinned, desc: "Lugares importantes y ruta de vida con eventos asociados." },
-  { title: "Origen ancestral", icon: Sparkles, desc: "Países, regiones y porcentajes documentales." },
-];
-
 export default function CuadrosIA() {
   const [personas, setPersonas] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const [poster, setPoster] = useState<{ id: string; url: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const portraitRef = useRef<HTMLDivElement>(null);
+  const result = poster?.id === selected?.id ? poster?.url : undefined;
   const [searchParams] = useSearchParams();
   const personaParam = searchParams.get("persona");
 
   useEffect(() => {
     (async () => {
-      const selectCols = "id,nombres,apellidos,nac_fecha,defuncion_fecha,foto_url,notas";
+      const selectCols = "id,nombres,apellidos,nac_fecha,nac_fecha_aprox,defuncion_fecha,foto_url,ocupacion,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais),nacionalidad";
       const { data } = await supabase.from("personas").select(selectCols).order("updated_at", { ascending: false }).limit(24);
       let rows = data ?? [];
       let initial = personaParam ? rows.find((p) => p.id === personaParam) : null;
@@ -40,11 +39,24 @@ export default function CuadrosIA() {
     })();
   }, [personaParam]);
 
+  const generate = async () => {
+    if (!selected || busy) return;
+    setBusy(true);
+    try {
+      const portrait = portraitRef.current?.querySelector("img")?.currentSrc;
+      const url = await generatePersonPoster({ ...selected, nac_lugar: [selected.lugar?.ciudad, selected.lugar?.pais].filter(Boolean).join(", ") }, portrait ?? selected.foto_url);
+      setPoster({ id: selected.id, url });
+    } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo generar el cuadro."); }
+    finally { setBusy(false); }
+  };
+  const download = (format: "png" | "pdf") => {
+    if (result) void downloadPersonPoster(result, selected.id, format).catch(() => toast.error("No se pudo exportar el cuadro."));
+  };
   return (
     <div className="space-y-6">
       <PageHeader
         title="Cuadros IA"
-        subtitle="Generador visual de antepasados. Separa hechos, datos faltantes e hipótesis; no debe inventar información."
+        subtitle="Crea un cuadro con el retrato y los datos registrados de una persona."
       />
 
       <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
@@ -64,7 +76,7 @@ export default function CuadrosIA() {
                 className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition hover:bg-muted ${selected?.id === p.id ? "border-primary bg-primary/5" : ""}`}
               >
                 <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-muted text-xs font-semibold">
-                  {p.foto_url ? <img src={p.foto_url} alt="" className="h-full w-full object-cover" /> : `${p.nombres?.[0] ?? ""}${p.apellidos?.[0] ?? ""}`}
+                  <PersonPortrait person={p} className="h-full w-full" />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{p.nombres} {p.apellidos}</span>
@@ -77,37 +89,28 @@ export default function CuadrosIA() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>Vista previa editable</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Vista previa</CardTitle></CardHeader>
             <CardContent>
-              <div className="mx-auto max-w-xl rounded-3xl border bg-gradient-to-br from-white via-emerald-50 to-violet-50 p-8 text-center shadow-sm">
-                <div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-white text-xl font-semibold ring-1 ring-border">
-                  {selected?.foto_url ? <img src={selected.foto_url} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-8 w-8 text-muted-foreground" />}
+              {result ? <img src={result} alt="Cuadro genealógico generado" className="mx-auto max-h-[65dvh] max-w-full object-contain" /> : <div className="mx-auto max-w-xl rounded-3xl border bg-gradient-to-br from-white via-emerald-50 to-violet-50 p-8 text-center shadow-sm">
+                <div ref={portraitRef} className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-white text-xl font-semibold ring-1 ring-border">
+                  {selected ? <PersonPortrait person={selected} className="h-full w-full" /> : <UserRound className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 <h2 className="mt-4 text-3xl font-semibold">{selected ? `${selected.nombres} ${selected.apellidos}` : "Selecciona una persona"}</h2>
                 <p className="mt-1 text-muted-foreground">{selected?.nac_fecha?.slice(0, 4) ?? "Nacimiento no registrado"}-{selected?.defuncion_fecha?.slice(0, 4) ?? "Vive o sin dato"}</p>
-                <div className="mt-6 rounded-2xl bg-white/70 p-4 text-left text-sm text-muted-foreground">
-                  <strong className="text-foreground">Resumen IA:</strong> preparado para generar una biografía basada solo en datos, fuentes e hipótesis marcadas.
-                </div>
-              </div>
+              </div>}
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button><Sparkles className="h-4 w-4" /> Generar con IA</Button>
-                <Button variant="outline"><Download className="h-4 w-4" /> PNG/PDF</Button>
-                <Button variant="outline"><Printer className="h-4 w-4" /> Imprimir</Button>
+                <Button onClick={generate} disabled={!selected || busy}><Sparkles className="h-4 w-4" /> {busy ? "Generando…" : "Generar cuadro"}</Button>
+                <Button variant="outline" onClick={() => download("png")} disabled={!result}><Download className="h-4 w-4" /> PNG</Button>
+                <Button variant="outline" onClick={() => download("pdf")} disabled={!result}><Download className="h-4 w-4" /> PDF</Button>
+                <Button variant="outline" onClick={() => window.print()} disabled={!result}><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {TEMPLATES.map(({ title, icon: Icon, desc }) => (
-              <Card key={title}>
-                <CardContent className="p-4">
-                  <Icon className="mb-3 h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">{title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {result && createPortal(<div className="geneai-print-poster hidden">
+            <style>{`@media print {body > :not(.geneai-print-poster){display:none!important} .geneai-print-poster{display:block!important} .geneai-print-poster img{max-width:100%;max-height:95vh;margin:auto;display:block}}`}</style>
+            <img src={result} alt="" />
+          </div>, document.body)}
         </div>
       </div>
     </div>

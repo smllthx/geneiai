@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import { Calendar, Cake, Heart, Cross, Sparkles } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-type Persona = { id: string; nombres: string; apellidos: string; nac_fecha: string | null; defuncion_fecha: string | null; matrimonio_fecha: string | null; viva: string | null };
+type Persona = { id: string; nombres: string; apellidos: string; foto_url: string | null; nac_fecha: string | null; defuncion_fecha: string | null; matrimonio_fecha: string | null; viva: string | null };
 type Evento = { id: string; persona_id: string; tipo: string; fecha: string | null; descripcion: string | null };
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -27,7 +28,7 @@ export default function Calendario() {
   useEffect(() => {
     (async () => {
       const [{ data: p }, { data: e }] = await Promise.all([
-        supabase.from("personas").select("id,nombres,apellidos,nac_fecha,defuncion_fecha,matrimonio_fecha,viva").limit(1000),
+        supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,defuncion_fecha,matrimonio_fecha,viva").limit(1000),
         supabase.from("eventos").select("id,persona_id,tipo,fecha,descripcion").not("fecha", "is", null).limit(1000),
       ]);
       setPersonas((p ?? []) as any);
@@ -117,9 +118,9 @@ function EventoRow({ item, mostrarMes }: { item: any; mostrarMes?: boolean }) {
   const Icon = item.icon;
   const inner = (
     <div className="glass flex items-center gap-3 rounded-2xl px-4 py-3 transition hover:bg-foreground/5">
-      <div className={`grid h-10 w-10 place-items-center rounded-full bg-foreground/5 ${item.color}`}>
+      {item.persona ? <PersonPortrait person={item.persona} className="h-10 w-10 shrink-0 rounded-full" /> : <div className={`grid h-10 w-10 place-items-center rounded-full bg-foreground/5 ${item.color}`}>
         <Icon className="h-5 w-5" />
-      </div>
+      </div>}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium">{item.titulo}</p>
         <p className="text-xs text-muted-foreground">

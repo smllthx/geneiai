@@ -1,5 +1,4 @@
 import PersonPortrait from "@/components/PersonPortrait";
-import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyPerson } from "./types";
 import AddRelativeButton, { type RelativeKind } from "./AddRelativeButton";
@@ -59,13 +58,7 @@ export default function PersonNode({ person, selected, dimmed, showPortrait = tr
       <span className={`absolute inset-x-0 top-0 h-1 ${person.incomplete ? "bg-muted-foreground/40" : lineageBar[person.lineage]}`} />
       <div className="flex gap-3">
         {showPortrait && <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary ring-1 ring-primary/20">
-          {person.avatarUrl ? (
-            <PersonPortrait src={person.avatarUrl} name={fullName} className="h-full w-full object-cover" />
-          ) : person.initials ? (
-            person.initials
-          ) : (
-            <UserRound className="h-5 w-5" />
-          )}
+          <PersonPortrait personId={person.id} src={person.avatarUrl} name={fullName} className="h-full w-full" />
         </div>}
         <div className="min-w-0 flex-1">
           <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">{person.givenNames}</h3>

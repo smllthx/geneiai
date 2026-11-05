@@ -1,3 +1,5 @@
+import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
@@ -8,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import SectionPlaceholder from "@/components/SectionPlaceholder";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -82,6 +84,8 @@ export default function PersonaDetail() {
   const [coincidencias, setCoincidencias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!isNew);
+  const loadedPersonId = useRef<string>();
+  const [retryKey, setRetryKey] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(isNew);
@@ -103,43 +107,45 @@ export default function PersonaDetail() {
   useEffect(() => {
     if (!idValid) { setFetching(false); return; }
     if (!isNew && editMode) return;
+    let active = true;
     (async () => {
       try {
-        setFetching(true); setFetchError(null); setNotFound(false);
-        const activeTreeId = await getActiveTreeId(user?.id ?? null);
-        const ap = await fetchAllPeople<any>("*", { treeId: activeTreeId });
-        setAllPersonas(ap ?? []);
-        if (isNew) { setFetching(false); return; }
-        const { data, error } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-        if (error) throw error;
-        if (!data) { setNotFound(true); setFetching(false); return; }
-        setP(data);
-        const initial = { ...(data as any) };
-        delete initial.id;
-        autoSaveSignature.current = JSON.stringify(initial);
-        pushRecent(data.id, "viewed");
-        const [{ data: ev }, { data: rel }, { data: hip }, { data: inf }] = await Promise.all([
+        if (loadedPersonId.current !== id) setFetching(true);
+        setFetchError(null); setNotFound(false);
+        const people = getActiveTreeId(user?.id).then(treeId => fetchAllPeople<any>("*", { treeId }));
+        if (isNew) {
+          const all = await people;
+          if (active) setAllPersonas(all);
+          return;
+        }
+        const [all, person, ev, rel, hip, inf, docs, photos, matches] = await Promise.all([
+          people,
+          supabase.from("personas").select("*").eq("id", id!).maybeSingle(),
           supabase.from("eventos").select("*").eq("persona_id", id!).order("fecha", { ascending: true }),
           supabase.from("relaciones").select("*, pariente:personas!relaciones_pariente_id_fkey(*)").or(`persona_id.eq.${id},pariente_id.eq.${id}`),
           supabase.from("hipotesis").select("*").contains("personas", [id!]),
           supabase.from("generated_inferences").select("*").eq("person_id", id!).order("confidence_score", { ascending: false }),
-        ]);
-        setEventos(ev ?? []); setRelaciones(rel ?? []); setHipos(hip ?? []); setInferences(inf ?? []);
-        const [{ data: d }, { data: ft }, { data: co }] = await Promise.all([
           supabase.from("documentos").select("*").contains("personas_mencionadas", [id!]),
           supabase.from("fotos").select("*").contains("personas_ids", [id!]).order("created_at", { ascending: false }),
           supabase.from("coincidencias").select("*").or(`ref_a.eq.${id},ref_b.eq.${id}`),
         ]);
-        setDocs(d ?? []); setFotos(ft ?? []); setCoincidencias(co ?? []);
-      } catch (e: any) {
-        setFetchError(e?.message ?? "Error al cargar la persona");
-      } finally { setFetching(false); }
+        if (!active) return;
+        if (person.error) throw person.error;
+        if (!person.data) { setNotFound(true); return; }
+        setAllPersonas(all);
+        setP(person.data);
+        const { id: viewedId, ...initial } = person.data;
+        autoSaveSignature.current = JSON.stringify(initial);
+        if (loadedPersonId.current !== viewedId) pushRecent(viewedId, "viewed");
+        loadedPersonId.current = viewedId;
+        setEventos(ev.data ?? []); setRelaciones(rel.data ?? []); setHipos(hip.data ?? []); setInferences(inf.data ?? []);
+        setDocs(docs.data ?? []); setFotos(photos.data ?? []); setCoincidencias(matches.data ?? []);
+      } catch (e) {
+        if (active) setFetchError(e instanceof Error ? e.message : "Error al cargar la persona");
+      } finally { if (active) setFetching(false); }
     })();
-  }, [id, isNew, idValid, rtReloadKey, editMode]);
-
-
-
-
+    return () => { active = false; };
+  }, [id, isNew, idValid, rtReloadKey, editMode, retryKey, user?.id]);
 
   const save = async () => {
     setLoading(true);
@@ -255,22 +261,14 @@ export default function PersonaDetail() {
       </div>
     );
   }
-  if (fetching) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
+  if (fetching) return <SectionPlaceholder />;
   if (fetchError) {
     return (
       <div className="mx-auto max-w-xl pt-10 text-center">
         <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
         <h1 className="mt-2 font-serif text-2xl">No se pudo cargar la persona</h1>
         <p className="mt-2 text-sm text-muted-foreground">{fetchError}</p>
-        <Button className="mt-4" onClick={() => window.location.reload()}>Reintentar</Button>
+        <Button className="mt-4" onClick={() => setRetryKey(value => value + 1)}>Reintentar</Button>
       </div>
     );
   }
@@ -1030,13 +1028,7 @@ function FamiliaSeccion({
                   to={`/personas/${x.id}`}
                   className="flex flex-1 items-start gap-3 px-6 py-3 transition hover:bg-foreground/5"
                 >
-                  {x.foto_url ? (
-                    <img src={x.foto_url} alt={`${x.nombres}`} className="h-12 w-12 shrink-0 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cyan-500/20 text-sm font-medium text-cyan-200">
-                      {(x.nombres?.[0] ?? "?").toUpperCase()}
-                    </div>
-                  )}
+                  <PersonPortrait person={x} className="h-12 w-12 shrink-0 rounded-full" />
                   <div className="min-w-0 flex-1">
                     <div className="break-words text-xl font-extrabold leading-snug">
                       {x.nombres} {x.apellidos}
@@ -1568,12 +1560,7 @@ function PersonaQuickMenu({
     setCuadroUrl(null);
     setCuadroLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generar-cuadro-persona", {
-        body: { persona_id: personaId, person_id: personaId, persona },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setCuadroUrl(data.imageUrl);
+      setCuadroUrl(await generatePersonPoster(persona));
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo generar el cuadro");
       setCuadroOpen(false);
@@ -1584,10 +1571,7 @@ function PersonaQuickMenu({
 
   const descargarCuadro = () => {
     if (!cuadroUrl) return;
-    const a = document.createElement("a");
-    a.href = cuadroUrl;
-    a.download = `cuadro-${(persona.nombres + "-" + persona.apellidos).replace(/\s+/g, "_")}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
+    void downloadPersonPoster(cuadroUrl, personaId, "png").catch(() => toast.error("No se pudo exportar el cuadro."));
   };
 
   return (
@@ -1669,11 +1653,7 @@ function PersonaQuickMenu({
                 <div key={node.id} className="flex flex-col items-center">
                   {idx > 0 && <div className="h-10 w-px bg-border" />}
                   <Link to={`/personas/${node.id}`} className="flex flex-col items-center text-center">
-                    {node.foto_url ? (
-                      <img src={node.foto_url} alt={node.nombres} className="h-12 w-12 rounded-full object-cover ring-2 ring-primary/20" />
-                    ) : (
-                      <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/15 text-primary ring-2 ring-primary/20">{node.nombres?.[0] ?? "?"}</div>
-                    )}
+                    <PersonPortrait person={node} className="h-12 w-12 rounded-full ring-2 ring-primary/20" />
                     <div className="mt-1 max-w-[180px] truncate text-xs font-bold">{node.nombres} {node.apellidos}</div>
                     <div className="text-[10px] text-muted-foreground">{yearOf(node.nac_fecha) ?? "?"} - {yearOf(node.defuncion_fecha) ?? (node.viva === "si" ? "vive" : "?")} · {node.id === personaId ? "Antepasado" : idx === parentescoPath.length - 1 ? "Yo" : "Línea familiar"}</div>
                   </Link>

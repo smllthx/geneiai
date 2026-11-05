@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Baby, FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { runExport, type ExportKind } from "@/lib/personaExports";
+import type { ExportKind } from "@/lib/personaExports";
 import { supabase } from "@/integrations/supabase/client";
 
 const ITEMS: { kind: ExportKind; label: string; icon: any; desc: string }[] = [
@@ -23,6 +23,7 @@ export default function PersonaExports({ personaId, personaNombre }: { personaId
     setBusy(kind);
     const t = toast.loading("Generando PDF…");
     try {
+      const { runExport } = await import("@/lib/personaExports");
       await runExport(kind, personaId);
       toast.dismiss(t);
       toast.success("PDF descargado");

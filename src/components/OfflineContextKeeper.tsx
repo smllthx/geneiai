@@ -17,11 +17,9 @@ export default function OfflineContextKeeper() {
       } catch {}
     };
     save();
-    const timer = window.setInterval(save, 5000);
     window.addEventListener("beforeunload", save);
     window.addEventListener("pagehide", save);
     return () => {
-      window.clearInterval(timer);
       window.removeEventListener("beforeunload", save);
       window.removeEventListener("pagehide", save);
     };

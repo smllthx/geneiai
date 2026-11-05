@@ -1,3 +1,5 @@
+import PersonPortrait from "@/components/PersonPortrait";
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
@@ -5,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GitBranch, Heart, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -31,7 +33,7 @@ export default function Familias() {
     const familiasQuery = supabase.from("familias").select("*").order("created_at", { ascending: false });
     const [{ data: f }, p, r] = await Promise.all([
       activeTreeId ? (familiasQuery as any).or(`arbol_id.eq.${activeTreeId},arbol_id.is.null`) : familiasQuery,
-      fetchAllPeople<any>("id,nombres,apellidos,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
+      fetchAllPeople<any>("id,nombres,apellidos,foto_url,variantes_nombre,nac_fecha,nac_rango_ini,nac_rango_fin,defuncion_fecha", { treeId: activeTreeId }),
       fetchAllRelations<any>("id,persona_id,pariente_id,tipo", { treeId: activeTreeId }),
     ]);
     setFamilias(f ?? []); setPersonas(p ?? []); setRelaciones(r ?? []);
@@ -113,7 +115,7 @@ export default function Familias() {
                   <Input className="mb-2" value={personQuery} onChange={(e) => setPersonQuery(e.target.value)} placeholder="Buscar persona por nombre o código" />
                   <Select value={head} onValueChange={setHead}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
-                    <SelectContent>{filteredPeople.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos} · {personaCode(p.id)}</SelectItem>)}</SelectContent>
+                    <SelectContent>{filteredPeople.map((p) => <PersonSelectItem key={p.id} person={p} suffix={personaCode(p.id)} />)}</SelectContent>
                   </Select>
                 </div>
                 <Button onClick={crear} disabled={!nombre}>Crear</Button>
@@ -136,7 +138,7 @@ export default function Familias() {
             return (
               <GlassCard key={f.id} interactive>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent"><Heart className="h-5 w-5" /></div>
+                  {head ? <PersonPortrait personId={head.id} src={head.foto_url} name={[head.nombres, head.apellidos].join(" ")} className="h-10 w-10 shrink-0 rounded-xl" /> : <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent"><Heart className="h-5 w-5" /></div>}
                   <div className="min-w-0 flex-1">
                     <h3 className="font-display text-lg font-semibold">{f.nombre}</h3>
                     {head && (
@@ -215,7 +217,7 @@ function FamilyEditor({ family, personas, onDone }: { family: any; personas: any
               <Input className="mb-2" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar persona por nombre o código" />
               <Select value={head} onValueChange={setHead}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
-                <SelectContent>{filtered.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos} · {personaCode(p.id)}</SelectItem>)}</SelectContent>
+                <SelectContent>{filtered.map((p) => <PersonSelectItem key={p.id} person={p} suffix={personaCode(p.id)} />)}</SelectContent>
               </Select>
             </div>
             <div className="flex justify-between gap-2">

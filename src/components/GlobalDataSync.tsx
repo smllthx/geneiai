@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,8 +16,6 @@ export default function GlobalDataSync() {
   useEffect(() => {
     if (!user?.id) return;
     let disposed = false;
-    const broadcast = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(`genaia-sync-${user.id}`) : null;
-    let lastNotice = 0;
     let syncTimer: number | null = null;
     const isEditing = () =>
       document.body.dataset.geneiaiEditing === "1" ||
@@ -38,17 +35,12 @@ export default function GlobalDataSync() {
       const table = !refreshAll && dirtyTables.size === 1 ? [...dirtyTables][0] : undefined;
       window.dispatchEvent(new CustomEvent("genaia:data-changed", { detail: { table, source: remoteChange ? "remote" : "resume" } }));
       void queryClient.invalidateQueries({ refetchType: "active" });
-      // An event is not a confirmation that a network fetch or save succeeded.
-      if (remoteChange && Date.now() - lastNotice > 6000) {
-        lastNotice = Date.now();
-        toast.info("Cambios en otra sesión", { description: "Consultando la información actualizada…", duration: 1600 });
-      }
       pending = false;
       remoteChange = false;
       refreshAll = false;
       dirtyTables.clear();
     };
-    const notifyChange = (source: "remote" | "tab" | "resume", table?: string) => {
+    const notifyChange = (source: "remote" | "resume", table?: string) => {
       if (disposed) return;
       pending = true;
       remoteChange ||= source === "remote";
@@ -57,9 +49,6 @@ export default function GlobalDataSync() {
       // Keep the first deadline: a busy stream must not postpone refresh forever.
       if (syncTimer === null) syncTimer = window.setTimeout(flush, 1000);
     };
-    broadcast?.addEventListener("message", (event) => {
-      if (!disposed && event.data?.type === "data-changed") notifyChange("tab", event.data.table);
-    });
     const channel = supabase.channel(`global-sync-${user.id}`);
     TABLES.forEach((table) => {
       channel.on(
@@ -67,7 +56,6 @@ export default function GlobalDataSync() {
         { event: "*", schema: "public", table, filter: `user_id=eq.${user.id}` },
         () => {
           if (disposed) return;
-          broadcast?.postMessage({ type: "data-changed", table });
           notifyChange("remote", table);
         },
       );
@@ -82,25 +70,27 @@ export default function GlobalDataSync() {
     const profileChannel = supabase.channel(`profile-sync-${user.id}`);
     profileChannel.on("postgres_changes" as any, { event: "*", schema: "public", table: "profiles", filter: `id=eq.${user.id}` }, () => {
       if (disposed) return;
-      broadcast?.postMessage({ type: "data-changed", table: "profiles" });
       notifyChange("remote", "profiles");
     });
     profileChannel.subscribe();
     const resume = () => {
       if (!disposed && document.visibilityState !== "hidden" && navigator.onLine) notifyChange("resume");
     };
-    document.addEventListener("visibilitychange", resume);
+    const onVisible = () => {
+      if (pending && syncTimer === null && document.visibilityState === "visible") flush();
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) resume();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", resume);
-    window.addEventListener("pageshow", resume);
-    const refreshTimer = window.setInterval(resume, 60_000);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       disposed = true;
       if (syncTimer !== null) window.clearTimeout(syncTimer);
-      window.clearInterval(refreshTimer);
-      document.removeEventListener("visibilitychange", resume);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", resume);
-      window.removeEventListener("pageshow", resume);
-      broadcast?.close();
+      window.removeEventListener("pageshow", onPageShow);
       supabase.removeChannel(channel);
       supabase.removeChannel(profileChannel);
     };

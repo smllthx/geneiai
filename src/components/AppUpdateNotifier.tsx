@@ -10,53 +10,35 @@ export default function AppUpdateNotifier() {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
-    let checking = false;
-    let lastCheck = 0;
-    try {
-      if (localStorage.getItem('geneai:release-seen') !== currentRelease.version) setRelease(currentRelease);
-    } catch { /* Private windows may block storage. */ }
-    const check = async (workerReady = false) => {
-      if (checking || document.visibilityState === 'hidden' || !navigator.onLine) return;
-      if (!workerReady && Date.now() - lastCheck < 60_000) return;
-      checking = true; lastCheck = Date.now();
+    const onShow = async () => {
+      setRelease(currentRelease);
+      setReady(false);
       try {
-        const latest = await fetchAppRelease();
-        if (active && (workerReady || latest.version !== currentRelease.version)) {
-          setRelease(latest); setReady(true);
+        const [latest, registration] = await Promise.all([
+          fetchAppRelease(),
+          navigator.serviceWorker?.getRegistration(),
+        ]);
+        if (active) {
+          setRelease(open => open ? latest : null);
+          setReady(Boolean(registration?.waiting) || latest.version !== currentRelease.version);
         }
-      } catch {
-        if (active && workerReady) { setRelease(currentRelease); setReady(true); }
-      } finally { checking = false; }
+      } catch { /* Installed notes remain available offline. */ }
     };
-    const onReady = () => { void check(true); };
-    const onResume = () => { void check(); };
-    const onShow = () => { setRelease(currentRelease); };
     const onClearCache = async () => {
       if (isAppEditing()) { toast('Guarda o cierra la edición antes de recargar.'); return; }
       const ok = await clearAppCache();
       if (ok && !isAppEditing()) window.location.reload();
       else toast('No se pudo recargar. Vuelve a intentarlo.');
     };
-    if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.getRegistration().then((r) => { if (active && r?.waiting) onReady(); }).catch(() => undefined);
-    }
-    void check();
-    window.addEventListener('genaia:update-ready', onReady);
     window.addEventListener('geneai:show-release', onShow);
     window.addEventListener('genaia:clear-cache', onClearCache);
-    document.addEventListener('visibilitychange', onResume);
-    window.addEventListener('online', onResume);
     return () => {
       active = false;
-      window.removeEventListener('genaia:update-ready', onReady);
       window.removeEventListener('geneai:show-release', onShow);
       window.removeEventListener('genaia:clear-cache', onClearCache);
-      document.removeEventListener('visibilitychange', onResume);
-      window.removeEventListener('online', onResume);
     };
   }, []);
   const dismiss = () => {
-    if (!ready) { try { localStorage.setItem('geneai:release-seen', currentRelease.version); } catch {} }
     setRelease(null);
   };
   const update = async () => {

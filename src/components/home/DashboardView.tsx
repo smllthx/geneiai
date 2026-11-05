@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Check, ChevronRight, Clock3, Compass, FileText, GitBranch, Image, MapPin, Plus, Search, Sparkles, Upload, UserRound, Users } from "lucide-react";
@@ -47,9 +48,8 @@ function TreeIllustration() {
 
 function PersonRow({ person }: { person: DashboardPerson }) {
   const fullName = [person.nombres, person.apellidos].filter(Boolean).join(" ");
-  const initials = [person.nombres, person.apellidos].map(part => part?.trim()[0] ?? "").join("") || "?";
   return <Link to={`/personas/${person.id}`} className="home-person-row">
-    {person.foto_url ? <img className="home-avatar" src={person.foto_url} alt="" loading="lazy" /> : <span className="home-avatar" aria-hidden="true">{initials}</span>}
+    <PersonPortrait person={person} className="home-avatar" />
     <span className="home-person-name">{fullName || "Persona sin nombre"}<small>Ver historia familiar</small></span>
     <ChevronRight size={16} aria-hidden="true" />
   </Link>;

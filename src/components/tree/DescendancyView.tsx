@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyRelationship, TreeNode } from "./types";
@@ -23,7 +24,8 @@ export default function DescendancyView({ nodes, relationships, centerId, onSele
       <div className="mx-auto max-w-3xl space-y-4">
         <div className="glass-card p-5 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Vista descendente</p>
-          <button type="button" onClick={() => center && onSelect(center.id)} className="mt-2 text-left text-2xl font-semibold text-foreground">
+          <button type="button" onClick={() => center && onSelect(center.id)} className="mt-2 flex items-center gap-3 text-left text-2xl font-semibold text-foreground">
+            {center && <PersonPortrait personId={center.data.person.id} src={center.data.person.avatarUrl} name={[center.data.person.givenNames, center.data.person.surnames].join(" ")} className="h-12 w-12 shrink-0 rounded-full" />}
             {center?.data.person.givenNames} {center?.data.person.surnames}
           </button>
           <p className="text-sm text-slate-500">Persona principal, cónyuges, hijos y descendencia expandible.</p>
@@ -47,7 +49,8 @@ export default function DescendancyView({ nodes, relationships, centerId, onSele
                 onClick={() => onSelect(child.id)}
                 className="flex w-full items-center justify-between rounded-2xl border border-border/70 bg-card/40 p-3 text-left transition hover:bg-foreground/5"
               >
-                <span>
+                <PersonPortrait personId={child.data.person.id} src={child.data.person.avatarUrl} name={[child.data.person.givenNames, child.data.person.surnames].join(" ")} className="mr-3 h-10 w-10 shrink-0 rounded-full" />
+                <span className="flex-1">
                   <span className="block font-medium text-foreground">{child.data.person.givenNames} {child.data.person.surnames}</span>
                   <span className="text-xs text-muted-foreground">{child.data.person.birth ?? "s/f"} · {child.data.person.mainPlace ?? "Lugar no registrado"}</span>
                 </span>

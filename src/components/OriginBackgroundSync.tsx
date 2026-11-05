@@ -56,11 +56,9 @@ export default function OriginBackgroundSync() {
       if (!table || RELEVANT_TABLES.has(table)) schedule(table ?? "cambio");
     };
     window.addEventListener("genaia:data-changed", onChanged);
-    const interval = window.setInterval(() => schedule("revision_periodica"), 5 * 60_000);
 
     return () => {
       window.removeEventListener("genaia:data-changed", onChanged);
-      window.clearInterval(interval);
       if (timer.current) window.clearTimeout(timer.current);
     };
   }, [user?.id]);

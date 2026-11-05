@@ -324,9 +324,7 @@ export default function Configuracion() {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return toast.error("Sesión requerida");
     if (!rawKey || rawKey.includes("•")) {
-      toast.info("La API key guardada se mantiene igual. Reiniciando para aplicar la configuración IA…");
-      await supabase.auth.refreshSession();
-      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 700);
+      toast.info("La clave guardada sigue activa.");
       return;
     }
     const clean = rawKey.trim();
@@ -335,13 +333,8 @@ export default function Configuracion() {
     value.openai_api_key = clean;
     const { error } = await supabase.from("app_config").upsert(value, { onConflict: "user_id" });
     if (error) return toast.error(error.message);
-    toast.success("ChatGPT quedó guardado. Reiniciando la app para aplicar IA en todas las secciones…");
-    try {
-      localStorage.setItem("genaia:ai-config-updated", String(Date.now()));
-      await supabase.auth.refreshSession();
-    } finally {
-      window.setTimeout(() => window.location.assign("/inicio?ia=actualizada"), 900);
-    }
+    setAiCfg({ openai_api_key: `••••••••${clean.slice(-4)}`, hasKey: true });
+    toast.success("Clave de OpenAI guardada.");
   };
 
   const clearOpenAIKey = async () => {
@@ -378,7 +371,7 @@ export default function Configuracion() {
     if (!user) return toast.error("Sesión requerida");
     const { data, error } = await supabase
       .from("personas")
-      .select("id,nombres,apellidos,nac_fecha,nac_lugar")
+      .select("id,nombres,apellidos,nac_fecha,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais)")
       .eq("user_id", user.id);
     if (error) return toast.error(error.message);
     const full = accountProfile.nombre_completo.toLowerCase();
@@ -388,7 +381,7 @@ export default function Configuracion() {
         let score = 0;
         for (const word of full.split(/\s+/).filter(Boolean)) if (personText.includes(word)) score += 2;
         if (accountProfile.fecha_nacimiento && p.nac_fecha === accountProfile.fecha_nacimiento) score += 5;
-        if (accountProfile.lugar_nacimiento && `${p.nac_lugar ?? ""}`.toLowerCase().includes(accountProfile.lugar_nacimiento.toLowerCase())) score += 2;
+        if (accountProfile.lugar_nacimiento && [p.lugar?.ciudad, p.lugar?.pais].filter(Boolean).join(", ").toLowerCase().includes(accountProfile.lugar_nacimiento.toLowerCase())) score += 2;
         return { p, score };
       })
       .sort((a, b) => b.score - a.score)[0];
@@ -559,11 +552,11 @@ export default function Configuracion() {
               value={aiCfg.openai_api_key}
               onChange={(e) => setAiCfg({ ...aiCfg, openai_api_key: e.target.value })}
             />
-            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar y reiniciar</Button>
+            <Button onClick={() => saveOpenAIKey(aiCfg.openai_api_key)}>Guardar</Button>
             {aiCfg.hasKey && <Button variant="outline" onClick={clearOpenAIKey}>Borrar key</Button>}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {aiCfg.hasKey ? "Tu API key está guardada. Si acabas de cambiarla, usa Guardar y reiniciar para refrescar la sesión." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
+            {aiCfg.hasKey ? "Tu clave está guardada y se usará en la próxima consulta." : "Sin API key guardada: las funciones de ChatGPT pedirán configurar OpenAI antes de procesar IA."}
           </p>
           <p className="text-[11px] text-muted-foreground">
             Si no quedan créditos, recarga billing en OpenAI o crea una API key nueva en tu proyecto manual de OpenAI.

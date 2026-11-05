@@ -1,6 +1,7 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Loader2, MapPin, Calendar, User, Heart, Users, Briefcase, Share2 } from "lucide-react";
+import { Loader2, MapPin, Calendar, Heart, Users, Briefcase, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { SUPABASE_URL } from '@/integrations/supabase/client';
@@ -71,11 +72,7 @@ export default function PersonaPublica() {
         <div className="archivo-card overflow-hidden rounded-3xl">
           <div className="relative h-32 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent">
             <div className="absolute -bottom-12 left-6 grid h-24 w-24 place-items-center overflow-hidden rounded-full border-4 border-background bg-muted">
-              {ficha.foto_url ? (
-                <img src={ficha.foto_url} alt={`${ficha.nombres} ${ficha.apellidos}`} className="h-full w-full object-cover" />
-              ) : (
-                <User className="h-10 w-10 text-muted-foreground" />
-              )}
+              <PersonPortrait src={ficha.foto_url} name={[ficha.nombres, ficha.apellidos].filter(Boolean).join(" ")} className="h-full w-full" />
             </div>
           </div>
 

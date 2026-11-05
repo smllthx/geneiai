@@ -1,3 +1,4 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,7 @@ type FotoRow = {
   fecha: string | null; fecha_aprox: string | null; lugar_id: string | null;
   personas_ids: string[] | null; created_at: string;
 };
-type Persona = { id: string; nombres: string; apellidos: string };
+type Persona = { id: string; nombres: string; apellidos: string; foto_url?: string | null };
 type Lugar = { id: string; ciudad: string | null; pais: string | null; lat: number | null; lng: number | null };
 type FotoTag = { id: string; foto_id: string; persona_id: string; x: number; y: number; w: number; h: number };
 
@@ -52,7 +53,7 @@ export default function Fotos() {
       const fotosQuery = supabase.from("fotos").select("*").order("created_at", { ascending: false });
       const [{ data: f, error: fotosError }, p, { data: l, error: lugaresError }] = await Promise.all([
         applyTreeScope(fotosQuery as any, treeId),
-        fetchAllPeople<Persona>("id,nombres,apellidos", { treeId }),
+        fetchAllPeople<Persona>("id,nombres,apellidos,foto_url", { treeId }),
         supabase.from("lugares").select("id,ciudad,pais,lat,lng"),
       ]);
       if (fotosError) throw fotosError;
@@ -156,7 +157,7 @@ export default function Fotos() {
         <DialogHeader><DialogTitle>Subir nueva foto</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <div><Label>Persona de la foto (opcional)</Label><Select value={uploadPerson || "none"} onValueChange={value => setUploadPerson(value === "none" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sin vincular</SelectItem>{personas.map(person => <SelectItem key={person.id} value={person.id}>{person.nombres} {person.apellidos}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label>Persona de la foto (opcional)</Label><Select value={uploadPerson || "none"} onValueChange={value => setUploadPerson(value === "none" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Sin vincular</SelectItem>{personas.map(person => <PersonSelectItem key={person.id} person={person} />)}</SelectContent></Select></div>
           {uploadPerson && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={asPortrait} onChange={event => setAsPortrait(event.target.checked)} /> Usar como retrato en la ficha y el árbol</label>}
           <div><Label>Título</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
           <div><Label>Descripción</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
@@ -433,7 +434,7 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
           <Select value={pickPersona} onValueChange={setPickPersona}>
             <SelectTrigger className="w-[240px]"><SelectValue placeholder="Elegir persona…" /></SelectTrigger>
             <SelectContent>
-              {personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}
+              {personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}
             </SelectContent>
           </Select>
           <Button size="sm" onClick={saveTag} disabled={!pickPersona}>Guardar</Button>
@@ -445,7 +446,7 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
         <span className="text-xs font-semibold text-primary">Usar esta foto como retrato</span>
         <Select value={portraitPerson} onValueChange={setPortraitPerson}>
           <SelectTrigger className="h-9 min-w-[190px] flex-1"><SelectValue placeholder="Elegir persona…" /></SelectTrigger>
-          <SelectContent>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+          <SelectContent>{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
         </Select>
         <Button size="sm" onClick={() => void useAsPortrait()} disabled={!portraitPerson || portraitBusy}>{portraitBusy ? "Guardando…" : "Aplicar"}</Button>
         <span className="basis-full text-[11px] text-muted-foreground">Para recortar una parte exacta, abre la ficha de la persona y ajusta el encuadre del retrato.</span>

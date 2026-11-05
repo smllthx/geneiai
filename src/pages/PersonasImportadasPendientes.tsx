@@ -1,5 +1,6 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
-import { Link2, Loader2, Search, Sparkles, UserCheck, UserRound, X } from "lucide-react";
+import { Link2, Loader2, Search, Sparkles, UserCheck, X } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -176,7 +177,7 @@ export default function PersonasImportadasPendientes() {
                   <CardContent className="grid gap-4 p-4 xl:grid-cols-[1fr_1.2fr]">
                     <div className="flex gap-3">
                       <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-muted">
-                        {person.foto_url ? <img src={person.foto_url} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-5 w-5 text-muted-foreground" />}
+                        <PersonPortrait person={person} className="h-full w-full" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

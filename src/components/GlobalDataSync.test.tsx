@@ -60,7 +60,7 @@ it("removes pending refreshes when the session is unmounted", () => {
   expect(sync.invalidate).not.toHaveBeenCalled();
 });
 
-it('refreshes the shared profile and recovers missed events while foregrounded', () => {
+it('refreshes the shared profile once and leaves an idle foreground tab alone', () => {
   const changed = vi.fn();
   window.addEventListener('genaia:data-changed', changed);
   const view = render(<GlobalDataSync />);
@@ -68,9 +68,9 @@ it('refreshes the shared profile and recovers missed events while foregrounded',
   expect(sync.invalidate).toHaveBeenCalledTimes(1);
   expect((changed.mock.calls[0][0] as CustomEvent).detail.table).toBeUndefined();
   act(() => { vi.advanceTimersByTime(60_000); });
-  expect(sync.invalidate).toHaveBeenCalledTimes(2);
+  expect(sync.invalidate).toHaveBeenCalledTimes(1);
   view.unmount();
   act(() => { vi.advanceTimersByTime(120_000); });
-  expect(sync.invalidate).toHaveBeenCalledTimes(2);
+  expect(sync.invalidate).toHaveBeenCalledTimes(1);
   window.removeEventListener('genaia:data-changed', changed);
 });

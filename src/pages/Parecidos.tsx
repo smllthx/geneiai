@@ -1,9 +1,11 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/glass";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Scan, Sparkles, Loader2, Users, Camera, ShieldAlert } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -112,7 +114,7 @@ export default function Parecidos() {
             const hecho = !!rasgosByPersona[p.id];
             return (
               <div key={p.id} className="flex items-center gap-3 rounded-xl bg-foreground/5 p-2">
-                <img src={p.foto_url!} alt={p.nombres} className="h-12 w-12 rounded-lg object-cover" />
+                <PersonPortrait person={p} className="h-12 w-12 shrink-0 rounded-lg" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{p.nombres} {p.apellidos}</p>
                   <p className="text-[10px] text-muted-foreground">{hecho ? "Analizada" : "Sin analizar"}</p>
@@ -165,7 +167,7 @@ export default function Parecidos() {
             <SelectTrigger className="w-[260px]"><SelectValue placeholder="Persona base" /></SelectTrigger>
             <SelectContent>
               {personas.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>
+                <PersonSelectItem key={p.id} person={p} />
               ))}
             </SelectContent>
           </Select>
@@ -192,7 +194,7 @@ export default function Parecidos() {
               {parecidos.length === 0 && <p className="text-sm text-muted-foreground">Aún no hay otras personas analizadas para comparar.</p>}
               {parecidos.map((p) => (
                 <Link key={p.persona.id} to={`/personas/${p.persona.id}`} className="flex items-center gap-3 rounded-xl bg-foreground/5 p-2 transition hover:bg-foreground/10">
-                  {p.persona.foto_url ? <img src={p.persona.foto_url} alt="" className="h-12 w-12 rounded-lg object-cover" /> : <div className="h-12 w-12 rounded-lg bg-foreground/10" />}
+                  <PersonPortrait person={p.persona} className="h-12 w-12 shrink-0 rounded-lg" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{p.persona.nombres} {p.persona.apellidos}</p>
                     <p className="text-[11px] text-muted-foreground">
@@ -231,13 +233,13 @@ function PhotoCompareColumn({ label, value, onChange, personas, persona, rasgo, 
         <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
         <SelectContent>
           {personas.map((p: Persona) => (
-            <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>
+            <PersonSelectItem key={p.id} person={p} />
           ))}
         </SelectContent>
       </Select>
       <div className="mt-4 overflow-hidden rounded-3xl bg-black/20">
-        {persona?.foto_url ? (
-          <img src={persona.foto_url} alt="" className="h-72 w-full object-cover" />
+        {persona ? (
+          <PersonPortrait person={persona} className="h-72 w-full" />
         ) : (
           <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">Sin retrato principal</div>
         )}

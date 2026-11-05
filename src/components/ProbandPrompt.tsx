@@ -1,7 +1,8 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Sparkles, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +28,7 @@ export default function ProbandPrompt() {
       if (!prof || prof.proband_id || prof.proband_asked) return;
       const { data: p } = await supabase
         .from("personas")
-        .select("id,nombres,apellidos,nac_fecha")
+        .select("id,nombres,apellidos,foto_url,nac_fecha")
         .order("apellidos");
       if (!p?.length) return;
       setPersonas((p as any) ?? []);
@@ -79,10 +80,7 @@ export default function ProbandPrompt() {
             <SelectTrigger><SelectValue placeholder="Elegí la persona principal" /></SelectTrigger>
             <SelectContent>
               {personas.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.nombres} {p.apellidos}
-                  {p.nac_fecha ? ` · ${new Date(p.nac_fecha).getUTCFullYear()}` : ""}
-                </SelectItem>
+                <PersonSelectItem key={p.id} person={p} suffix={p.nac_fecha?.slice(0, 4)} />
               ))}
             </SelectContent>
           </Select>

@@ -1,10 +1,11 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { padresDe } from "@/lib/kinship";
 import { ancestorLayers } from "@/lib/treeRendering";
 
 type Persona = {
-  id: string; nombres: string; apellidos: string; sexo?: string | null;
+  id: string; nombres: string; apellidos: string; sexo?: string | null; foto_url?: string | null;
   nac_fecha?: string | null; defuncion_fecha?: string | null; viva?: string | null;
 };
 type Rel = { persona_id: string; pariente_id: string; tipo: string };
@@ -50,6 +51,7 @@ export default function DynastyView({
         onClick={() => navigate(`/personas/${pid}`)}
         className={`glass min-w-[110px] max-w-[150px] rounded-xl ring-2 ${borderColor} ${bg} px-2 py-1.5 text-left transition-all hover:scale-[1.04]`}
       >
+        <PersonPortrait person={p} className="mb-1 h-9 w-9 rounded-full" />
         <div className="truncate text-[11px] font-semibold leading-tight">{p.nombres}</div>
         <div className="truncate text-[10px] text-foreground/80">{p.apellidos}</div>
         {(yearOf(p.nac_fecha) || yearOf(p.defuncion_fecha)) && (

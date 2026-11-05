@@ -48,11 +48,9 @@ export const PersonCard = memo(function PersonCard({
   const lifespan = yN || yD ? `${yN ?? "?"}–${yD ?? (p.viva === "si" ? "Vive" : "?")}` : "—";
   const isF = p.sexo === "femenino";
   const isM = p.sexo === "masculino";
-  const sexSymbol = isF ? "♀" : isM ? "♂" : "◌";
   // FamilySearch-style colored top bar
   const topBar = isF ? "bg-pink-400" : isM ? "bg-sky-400" : "bg-foreground/20";
   const avatarBg = isF ? "bg-pink-100 dark:bg-pink-950/40" : isM ? "bg-sky-100 dark:bg-sky-950/40" : "bg-foreground/5";
-  const avatarFg = isF ? "text-pink-600 dark:text-pink-300" : isM ? "text-sky-600 dark:text-sky-300" : "text-foreground/50";
   const pct = Math.round(completeness(p) * 100);
 
   return (
@@ -68,13 +66,7 @@ export const PersonCard = memo(function PersonCard({
       <div className={cn("h-1.5 w-full", topBar)} />
       <div className="flex flex-col items-center px-2 pb-2 pt-2.5">
         <div className={cn("mb-1.5 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/70 dark:ring-foreground/10", avatarBg)}>
-          {p.foto_url ? (
-            <PersonPortrait src={p.foto_url} name={`${p.nombres} ${p.apellidos}`} className="h-full w-full object-cover" />
-          ) : (
-            <span className={cn("font-serif text-3xl font-bold leading-none", avatarFg)} aria-label={isF ? "Mujer" : isM ? "Hombre" : "Sexo no registrado"}>
-              {sexSymbol}
-            </span>
-          )}
+          <PersonPortrait person={p} className="h-full w-full" />
         </div>
         <div className="line-clamp-2 w-full text-center font-display text-[13.5px] font-extrabold leading-tight tracking-tight">
           <span className="gen-name">{p.nombres}</span> <span className="gen-surname">{p.apellidos}</span>

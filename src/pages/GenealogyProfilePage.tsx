@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, Brain, Calendar, Edit3, FileText, GitBranch, GitCompare, Heart, History, Image, Loader2, MapPinned, Network, NotebookText, Printer, Route, Search, Star, Trash2, Users, WandSparkles } from "lucide-react";
@@ -34,7 +35,7 @@ function PersonMini({ person }: { person: any }) {
   return (
     <Link to={`/personas/${person.id}/ficha`} className="flex items-center gap-3 rounded-xl border border-slate-200 p-2 transition hover:bg-slate-50">
       <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-        {person.foto_url ? <img src={person.foto_url} alt={fullName(person)} className="h-full w-full object-cover" /> : `${person.nombres?.[0] ?? ""}${person.apellidos?.[0] ?? ""}`}
+        <PersonPortrait person={person} className="h-full w-full" />
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-slate-900">{fullName(person)}</p>
@@ -52,7 +53,7 @@ function ProfileHeader({ persona, sourcesCount, incomplete, onAi }: { persona: a
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-50 to-violet-50 text-xl font-semibold text-slate-700 ring-1 ring-slate-200">
-            {persona.foto_url ? <img src={persona.foto_url} alt={fullName(persona)} className="h-full w-full object-cover" /> : `${persona.nombres?.[0] ?? ""}${persona.apellidos?.[0] ?? ""}`}
+            <PersonPortrait person={persona} className="h-full w-full" />
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Ficha genealógica</p>

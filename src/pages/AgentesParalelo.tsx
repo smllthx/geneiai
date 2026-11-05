@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -42,10 +42,35 @@ const newTask = (): Task => ({
 });
 
 export default function AgentesParalelo() {
+  const [params] = useSearchParams();
+  const personId = params.get("persona");
   const [tasks, setTasks] = useState<Task[]>([newTask()]);
   const [runs, setRuns] = useState<Run[]>([]);
   const [launching, setLaunching] = useState(false);
   const [progress, setProgress] = useState({ total: 0, done: 0, ok: 0 });
+
+  useEffect(() => {
+    if (!personId) return;
+    const controller = new AbortController();
+    void (async () => {
+      const { data, error } = await supabase.from("personas")
+        .select("nombres,apellidos,nac_fecha,nac_lugar,defuncion_fecha,defuncion_lugar")
+        .eq("id", personId).abortSignal(controller.signal).maybeSingle();
+      if (controller.signal.aborted) return;
+      if (error || !data) { toast.error("No se pudo cargar la persona para preparar las tareas."); return; }
+      const name = [data.nombres, data.apellidos].filter(Boolean).join(" ");
+      const birth = [data.nac_fecha, data.nac_lugar].filter(Boolean).join(", ");
+      const death = [data.defuncion_fecha, data.defuncion_lugar].filter(Boolean).join(", ");
+      const details = `Persona: ${name}. Nacimiento: ${birth || "sin registrar"}. Defunción: ${death || "sin registrar"}.`;
+      setTasks(current => current.some(task => task.prompt.trim()) ? current : [
+        ["Historia familiar", "Resume los hechos documentados e identifica los datos que faltan."],
+        ["Ascendientes", "Propón fuentes concretas para identificar y verificar a sus padres."],
+        ["Descendencia", "Diseña una búsqueda de registros de matrimonios y nacimientos de sus hijos."],
+        ["Cronología", "Revisa la coherencia de las fechas y propone la siguiente verificación."],
+      ].map(([titulo, prompt]) => ({ ...newTask(), titulo, prompt: `${details} ${prompt}` })));
+    })();
+    return () => controller.abort();
+  }, [personId]);
 
   const loadRuns = async () => {
     const { data } = await supabase

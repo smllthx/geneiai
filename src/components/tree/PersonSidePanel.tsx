@@ -1,3 +1,4 @@
+import PersonPortrait from "@/components/PersonPortrait";
 import { Brain, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GenealogyPerson } from "./types";
@@ -22,7 +23,8 @@ export default function PersonSidePanel({ person, onClose, onEdit, onAiEvidence 
   return (
     <aside className="absolute right-4 top-4 z-20 flex max-h-[calc(100%-2rem)] w-[360px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
-        <div>
+        <PersonPortrait personId={person.id} src={person.avatarUrl} name={fullName} className="h-12 w-12 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-emerald-700">Ficha genealógica</p>
           <h2 className="mt-1 text-xl font-semibold leading-tight text-slate-950">{fullName}</h2>
           <p className="mt-1 text-xs text-slate-500">{person.id}</p>

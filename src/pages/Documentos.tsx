@@ -1,3 +1,4 @@
+import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +49,7 @@ export default function Documentos() {
       const docsQuery = supabase.from("documentos").select("*").order("created_at", { ascending: false });
       const [{ data, error }, ps] = await Promise.all([
         applyTreeScope(docsQuery as any, treeId),
-        fetchAllPeople<any>("id,nombres,apellidos", { treeId }),
+        fetchAllPeople<any>("id,nombres,apellidos,foto_url", { treeId }),
       ]);
       if (error) throw error;
       setItems(data ?? []); setPersonas(ps ?? []);
@@ -275,7 +276,7 @@ export default function Documentos() {
         </Select>
         <Select value={fPersona} onValueChange={setFPersona}>
           <SelectTrigger><SelectValue placeholder="Persona" /></SelectTrigger>
-          <SelectContent className="max-h-64"><SelectItem value="all">Toda persona</SelectItem>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+          <SelectContent className="max-h-64"><SelectItem value="all">Toda persona</SelectItem>{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
         </Select>
         <div className="flex gap-1">
           <Input type="date" value={fDesde} onChange={(e) => setFDesde(e.target.value)} title="Desde" />
@@ -316,7 +317,7 @@ export default function Documentos() {
             <div className="mt-1 flex flex-col gap-2 sm:flex-row">
               <Select value={draftPersona} onValueChange={setDraftPersona}>
                 <SelectTrigger><SelectValue placeholder="Elegir persona" /></SelectTrigger>
-                <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
               </Select>
               <Button
                 type="button"
@@ -394,7 +395,7 @@ export default function Documentos() {
               <div className="mt-1 flex flex-col gap-2 sm:flex-row">
                 <Select value={editPersona} onValueChange={setEditPersona}>
                   <SelectTrigger><SelectValue placeholder="Elegir persona" /></SelectTrigger>
-                  <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <SelectItem key={p.id} value={p.id}>{p.nombres} {p.apellidos}</SelectItem>)}</SelectContent>
+                  <SelectContent className="max-h-64"><SelectItem value="none">Elegir persona</SelectItem>{personas.map((p) => <PersonSelectItem key={p.id} person={p} />)}</SelectContent>
                 </Select>
                 <Button
                   type="button"
