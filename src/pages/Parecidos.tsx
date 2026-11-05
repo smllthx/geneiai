@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/
 import { toast } from "sonner";
 import { Scan, Sparkles, Loader2, Users, Camera, ShieldAlert } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { compararRasgos, estimacionGenetica, parentescoFraccion } from "@/lib/parecido";
+import { compararRasgos } from "@/lib/parecido";
 
 type Persona = { id: string; nombres: string; apellidos: string; foto_url: string | null };
 type Rasgo = { id: string; persona_id: string; foto_url: string; rasgos: any; resumen: string | null; created_at: string };
@@ -71,9 +71,7 @@ export default function Parecidos() {
         (r) => (r.persona_id === selected && r.pariente_id === other.id) ||
                (r.persona_id === other.id && r.pariente_id === selected),
       );
-      const parentesco = rel ? parentescoFraccion(rel.tipo) : null;
-      const adn = estimacionGenetica(parentesco, score);
-      out.push({ persona: other, score, comunes, parentesco: rel?.tipo ?? null, adn });
+      out.push({ persona: other, score, comunes, parentesco: rel?.tipo ?? null });
     }
     return out.sort((a, b) => b.score - a.score).slice(0, 10);
   }, [selected, rasgosByPersona, personas, relaciones]);
@@ -89,9 +87,7 @@ export default function Parecidos() {
   const directComparison = rasgosSel && rasgosCompare
     ? compararRasgos(rasgosSel.rasgos ?? {}, rasgosCompare.rasgos ?? {})
     : null;
-  const directAdn = directComparison
-    ? estimacionGenetica(parentescoFraccion(directRel?.tipo), directComparison.score)
-    : null;
+
 
   return (
     <div className="space-y-6">
@@ -137,7 +133,7 @@ export default function Parecidos() {
               <div className="text-4xl font-black tabular-nums">{directComparison ? `${directComparison.score}%` : "--"}</div>
               <div className="text-xs text-muted-foreground">parecido visual</div>
               <div className="mt-2 text-sm font-semibold">{directRel?.tipo ? `Relación: ${directRel.tipo}` : "Sin relación directa registrada"}</div>
-              <div className="text-xs text-muted-foreground">ADN estimado: {directAdn !== null ? `${(directAdn * 100).toFixed(1)}%` : "--"}</div>
+
             </div>
           </div>
           <PhotoCompareColumn label="Persona B" value={compareWith} onChange={setCompareWith} personas={personas} rasgo={rasgosCompare} persona={personaCompare} analizar={analizar} running={running} />
@@ -198,7 +194,7 @@ export default function Parecidos() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{p.persona.nombres} {p.persona.apellidos}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {p.parentesco ? `${p.parentesco} · ` : ""}{p.comunes.length} rasgos comunes · ADN estim. {(p.adn * 100).toFixed(1)}%
+                      {p.parentesco ? `${p.parentesco} · ` : ""}{p.comunes.length} rasgos comunes
                     </p>
                     {p.comunes.length > 0 && (
                       <p className="mt-0.5 truncate text-[10px] text-muted-foreground">

@@ -1,3 +1,4 @@
+import { applyTreeScope } from "../../shared/treeScope.js";
 import { getActiveTreeId, getBearer, getSupabase, getUserOrThrow, json, jsonApiError, openAIJson, suggestionTitle } from "../_lib/geneai.js";
 
 export default async function handler(req: any, res: any) {
@@ -10,10 +11,10 @@ export default async function handler(req: any, res: any) {
     if (!person_id) throw new Error("Falta person_id");
 
     const [{ data: persona, error: personaError }, { data: relaciones }, { data: candidatos }, { data: documentos }] = await Promise.all([
-      sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,ocupacion,notas,arbol_id").eq("id", person_id).maybeSingle(),
-      sb.from("relaciones").select("tipo,persona_id,pariente_id,notas").or(`persona_id.eq.${person_id},pariente_id.eq.${person_id}`).limit(120),
-      sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,arbol_id").limit(250),
-      sb.from("documentos").select("id,titulo,resumen,fecha,personas_mencionadas").contains("personas_mencionadas", [person_id]).limit(25),
+      applyTreeScope(sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,ocupacion,notas,arbol_id"), treeId).eq("id", person_id).maybeSingle().throwOnError(),
+      applyTreeScope(sb.from("relaciones").select("tipo,persona_id,pariente_id,notas"), treeId).or(`persona_id.eq.${person_id},pariente_id.eq.${person_id}`).limit(120).throwOnError(),
+      applyTreeScope(sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,arbol_id"), treeId).limit(250).throwOnError(),
+      applyTreeScope(sb.from("documentos").select("id,titulo,resumen,fecha,personas_mencionadas"), treeId).contains("personas_mencionadas", [person_id]).limit(25).throwOnError(),
     ]);
     if (personaError) throw personaError;
     if (!persona) throw new Error("Persona no encontrada");
@@ -61,7 +62,10 @@ export default async function handler(req: any, res: any) {
   ]
 }`);
 
-    const rows = Array.isArray((ai as any).suggestions) ? (ai as any).suggestions.slice(0, 30).map((s: any) => ({
+    const candidateIds = new Set((candidatos ?? []).map(p => p.id));
+    const rows = Array.isArray((ai as any).suggestions) ? (ai as any).suggestions
+      .filter((s: any) => s && (!s.target_person_id || (s.target_person_id !== person_id && candidateIds.has(s.target_person_id))))
+      .slice(0, 30).map((s: any) => ({
       user_id: user.id,
       arbol_id: treeId,
       person_id,

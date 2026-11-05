@@ -67,12 +67,12 @@ export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (pat
       const path = `${user.id}/retrato-${p.id}-${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage.from("fotos").upload(path, cropped, { upsert: true, contentType: "image/jpeg" });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
-      const { error: photoError } = await supabase.from("fotos").insert(withTreeScope({ user_id: user.id, url: publicUrl, storage_path: path, titulo: `Retrato de ${p.nombres} ${p.apellidos}`, personas_ids: [p.id] }, p.arbol_id ?? null));
+      const photoReference = `storage://fotos/${path}`;
+      const { error: photoError } = await supabase.from("fotos").insert(withTreeScope({ user_id: user.id, url: photoReference, storage_path: path, titulo: `Retrato de ${p.nombres} ${p.apellidos}`, personas_ids: [p.id] }, p.arbol_id ?? null));
       if (photoError) throw photoError;
-      await savePersonPortrait(p.id, publicUrl);
+      await savePersonPortrait(p.id, photoReference);
       toast.success("Retrato actualizado");
-      onUpdated?.({ foto_url: publicUrl });
+      onUpdated?.({ foto_url: photoReference });
       setCropUrl(null);
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo subir el retrato");

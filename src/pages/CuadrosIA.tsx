@@ -2,7 +2,7 @@ import PersonPortrait from "@/components/PersonPortrait";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Download, Printer, Sparkles, UserRound } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -16,14 +16,13 @@ export default function CuadrosIA() {
   const [selected, setSelected] = useState<any>(null);
   const [poster, setPoster] = useState<{ id: string; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const portraitRef = useRef<HTMLDivElement>(null);
   const result = poster?.id === selected?.id ? poster?.url : undefined;
   const [searchParams] = useSearchParams();
   const personaParam = searchParams.get("persona");
 
   useEffect(() => {
     (async () => {
-      const selectCols = "id,nombres,apellidos,nac_fecha,nac_fecha_aprox,defuncion_fecha,foto_url,ocupacion,lugar:lugares!personas_nac_lugar_id_fkey(ciudad,pais),nacionalidad";
+      const selectCols = "id,nombres,apellidos,nac_fecha,nac_fecha_aprox,defuncion_fecha,foto_url";
       const { data } = await supabase.from("personas").select(selectCols).order("updated_at", { ascending: false }).limit(24);
       let rows = data ?? [];
       let initial = personaParam ? rows.find((p) => p.id === personaParam) : null;
@@ -43,8 +42,7 @@ export default function CuadrosIA() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const portrait = portraitRef.current?.querySelector("img")?.currentSrc;
-      const url = await generatePersonPoster({ ...selected, nac_lugar: [selected.lugar?.ciudad, selected.lugar?.pais].filter(Boolean).join(", ") }, portrait ?? selected.foto_url);
+      const url = await generatePersonPoster(selected.id);
       setPoster({ id: selected.id, url });
     } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo generar el cuadro."); }
     finally { setBusy(false); }
@@ -92,7 +90,7 @@ export default function CuadrosIA() {
             <CardHeader><CardTitle>Vista previa</CardTitle></CardHeader>
             <CardContent>
               {result ? <img src={result} alt="Cuadro genealógico generado" className="mx-auto max-h-[65dvh] max-w-full object-contain" /> : <div className="mx-auto max-w-xl rounded-3xl border bg-gradient-to-br from-white via-emerald-50 to-violet-50 p-8 text-center shadow-sm">
-                <div ref={portraitRef} className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-white text-xl font-semibold ring-1 ring-border">
+                <div className="mx-auto grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-white text-xl font-semibold ring-1 ring-border">
                   {selected ? <PersonPortrait person={selected} className="h-full w-full" /> : <UserRound className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 <h2 className="mt-4 text-3xl font-semibold">{selected ? `${selected.nombres} ${selected.apellidos}` : "Selecciona una persona"}</h2>

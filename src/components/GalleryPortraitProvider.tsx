@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeReload } from "@/hooks/use-realtime-reload";
+import { createPhotoAccess } from "@/lib/photoAccess";
+import { PhotoAccessContext } from "./PhotoImage";
 import { GalleryPortraitContext } from "./PersonPortrait";
 
 // Called once for the signed-in shell, when a visible portrait needs a fallback.
@@ -19,7 +21,7 @@ async function loadGalleryPortraits(userId: string, signal: AbortSignal) {
       if (photo.personas_ids?.length !== 1) continue;
       const id = photo.personas_ids[0];
       const urls = photos.get(id) ?? [];
-      const fromStorage = photo.storage_path && supabase.storage.from("fotos").getPublicUrl(photo.storage_path).data.publicUrl;
+      const fromStorage = photo.storage_path && `storage://fotos/${photo.storage_path}`;
       for (const url of [fromStorage, photo.url?.trim()]) {
         if (url && !urls.includes(url)) urls.push(url);
       }
@@ -43,6 +45,8 @@ export default function GalleryPortraitProvider({ userId, children }: { userId?:
       .catch(() => { /* Saved portraits and initials remain available offline. */ });
     return () => controller.abort();
   }, [requested, userId, revision]);
+  const access = useMemo(() => userId ? createPhotoAccess(userId, (paths, expiry) =>
+    supabase.storage.from("fotos").createSignedUrls(paths, expiry)) : undefined, [userId]);
   const value = useMemo(() => ({ photos, request }), [photos, request]);
-  return <GalleryPortraitContext.Provider value={value}>{children}</GalleryPortraitContext.Provider>;
+  return <PhotoAccessContext.Provider value={access}><GalleryPortraitContext.Provider value={value}>{children}</GalleryPortraitContext.Provider></PhotoAccessContext.Provider>;
 }

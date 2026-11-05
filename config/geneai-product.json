@@ -16,6 +16,7 @@
     "Los retratos acompañan a las personas en el inicio, el árbol, las búsquedas y las fichas.",
     "El árbol dedica más espacio a las personas y el abanico muestra sus nombres y apellidos completos.",
     "La sincronización responde a los cambios del archivo. Las novedades se consultan desde Configuración.",
-    "Las claves de IA se aplican al guardar y las fichas se actualizan sin reiniciar la página."
+    "Las claves de IA se aplican al guardar y las fichas se actualizan sin reiniciar la página.",
+    "Puedes conectar tu árbol a ChatGPT o Claude con OAuth y revocar cada conexión desde Configuración."
   ]
 }

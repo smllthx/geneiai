@@ -22,7 +22,7 @@ it("generates for the selected person, enables exports and clears the prior prev
   expect(screen.getByRole("button", { name: "PDF" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Generar cuadro" }));
   await screen.findByAltText("Cuadro genealógico generado");
-  expect(actions.generatePersonPoster).toHaveBeenCalledWith(expect.objectContaining({ id: "p1", nac_lugar: "Valparaíso, Chile" }), undefined);
+  expect(actions.generatePersonPoster).toHaveBeenCalledWith("p1");
   fireEvent.click(screen.getByRole("button", { name: "PDF" }));
   expect(actions.downloadPersonPoster).toHaveBeenCalledWith("data:image/png;base64,aW1hZ2U=", "p1", "pdf");
   fireEvent.click(screen.getByRole("button", { name: /María Vega/ }));

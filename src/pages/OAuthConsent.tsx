@@ -1,3 +1,4 @@
+import { mcpClientForCallback } from "@/lib/mcpCallback";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, ExternalLink, Loader2, LockKeyhole, ShieldCheck, X } from "lucide-react";
@@ -15,20 +16,6 @@ type AuthorizationDetails = {
   user: { id: string; email: string };
   scope: string;
 };
-
-function isTrustedWorkRedirect(raw: string) {
-  try {
-    const url = new URL(raw);
-    const callbackId = url.pathname.slice("/connector/oauth/".length);
-    return url.protocol === "https:"
-      && url.hostname === "chatgpt.com"
-      && url.pathname.startsWith("/connector/oauth/")
-      && callbackId.length >= 8
-      && !callbackId.includes("/");
-  } catch {
-    return false;
-  }
-}
 
 const scopeLabels: Record<string, string> = {
   openid: "Confirmar tu identidad",
@@ -79,8 +66,8 @@ export default function OAuthConsent() {
         return;
       }
       const authorization = data as AuthorizationDetails;
-      if (!isTrustedWorkRedirect(authorization.redirect_uri)) {
-        setError("Esta solicitud no proviene de una conexión oficial de ChatGPT Work.");
+      if (!mcpClientForCallback(authorization.redirect_uri)) {
+        setError("La dirección de retorno del conector no está autorizada.");
         setLoading(false);
         return;
       }
@@ -98,15 +85,15 @@ export default function OAuthConsent() {
     setSubmitting(action);
     setError("");
     if (action === "approve") {
-      if (!user || !isTrustedWorkRedirect(details.redirect_uri)) {
-        setError("No se pudo verificar esta conexión de ChatGPT Work.");
+      if (!user || !mcpClientForCallback(details.redirect_uri)) {
+        setError("No se pudo verificar el conector.");
         setSubmitting(null);
         return;
       }
       const { error: trustError } = await (supabase as any).from("work_oauth_clients").upsert({
         user_id: user.id,
         client_id: details.client.id,
-        client_name: details.client.name || "ChatGPT Work",
+        client_name: mcpClientForCallback(details.redirect_uri),
         client_uri: details.client.uri || null,
         redirect_uri: details.redirect_uri,
         active: true,
@@ -131,7 +118,7 @@ export default function OAuthConsent() {
   };
 
   const requestedScopes = details?.scope.split(/\s+/).filter(Boolean) ?? [];
-  const clientName = details?.client.name?.trim() || "ChatGPT Work";
+  const clientName = (details && mcpClientForCallback(details.redirect_uri)) || "el conector";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
@@ -162,7 +149,7 @@ export default function OAuthConsent() {
             ) : details ? (
               <>
                 <div className="rounded-lg border border-border/70 bg-background p-4">
-                  <p className="mb-3 text-sm font-medium">Al permitirlo, Work podrá:</p>
+                  <p className="mb-3 text-sm font-medium">Acciones que autorizas en {clientName}</p>
                   <ul className="space-y-2.5 text-sm text-muted-foreground">
                     <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Buscar y consultar personas de tu árbol activo.</li>
                     <li className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Crear o corregir personas cuando tú lo pidas.</li>
@@ -185,7 +172,7 @@ export default function OAuthConsent() {
 
                 <div className="flex gap-2 rounded-lg bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>Work usará tu misma cuenta y los mismos datos de GENEAI. No podrá borrar personas y cada cambio quedará sujeto a los permisos de tu árbol.</span>
+                  <span>{clientName} trabajará con tu cuenta y tu árbol activo. Puedes revocar este permiso desde Configuración.</span>
                 </div>
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   Cuenta: {details.user.email}

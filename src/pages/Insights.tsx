@@ -1,3 +1,4 @@
+import { requestBiographyProposal } from "@/lib/biographyProposal";
 import PersonPortrait from "@/components/PersonPortrait";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useState } from "react";
@@ -98,9 +99,8 @@ export default function Insights() {
   const generarBio = async (personaId: string) => {
     setGenBio(personaId);
     try {
-      const { error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: personaId } });
-      if (error) throw error;
-      toast.success("Biografía solicitada — se actualizará en segundos.");
+      await requestBiographyProposal(personaId);
+      toast.success("Biografía preparada. Puedes revisarla en Sugerencias.");
     } catch (e: any) { toast.error(e.message ?? "No se pudo generar"); }
     finally { setGenBio(null); }
   };

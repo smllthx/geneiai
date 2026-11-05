@@ -1,3 +1,5 @@
+import { requestBiographyProposal } from "@/lib/biographyProposal";
+import PhotoImage from "@/components/PhotoImage";
 import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -336,14 +338,10 @@ export default function PersonaDetail() {
   const generarBiografia = async () => {
     const t = toast.loading("Escribiendo biografía con IA…");
     try {
-      const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
+      if (!id) throw new Error("Selecciona una persona.");
+      const suggestion = await requestBiographyProposal(id);
       toast.dismiss(t);
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success("Biografía generada y guardada en Notas");
-      notify("Biografía generada", { body: `${p.nombres} ${p.apellidos}`, url: `/personas/${id}`, tag: `bio-${id}` });
-      const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-      if (fresh) setP(fresh);
+      toast.success("Biografía pendiente de revisión", { action: { label: "Revisar", onClick: () => navigate(`/investigacion?tab=sugerencias&propuesta=${encodeURIComponent(suggestion)}`) } });
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
   };
 
@@ -668,16 +666,16 @@ export default function PersonaDetail() {
                     const path = `${u.id}/${crypto.randomUUID()}.${ext}`;
                     const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
                     if (upErr) throw upErr;
-                    const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
+                    const photoReference = `storage://fotos/${path}`;
                     const { error: insErr } = await supabase.from("fotos").insert(withTreeScope({
-                      user_id: u.id, url: publicUrl, storage_path: path,
+                      user_id: u.id, url: photoReference, storage_path: path,
                       titulo: `${p.nombres} ${p.apellidos}`,
                       personas_ids: [id],
                     }, p.arbol_id ?? null));
                     if (insErr) throw insErr;
                     if (!p.foto_url) {
-                      await savePersonPortrait(id, publicUrl);
-                      setP({ ...p, foto_url: publicUrl });
+                      await savePersonPortrait(id, photoReference);
+                      setP({ ...p, foto_url: photoReference });
                     }
                     const { data: ft } = await supabase.from("fotos").select("*").contains("personas_ids", [id]).order("created_at", { ascending: false });
                     setFotos(ft ?? []);
@@ -711,7 +709,7 @@ export default function PersonaDetail() {
               {fotos.map((f: any) => (
                 <div key={f.id} className="glass overflow-hidden rounded-2xl">
                   <div className="aspect-square overflow-hidden">
-                    <img src={f.url} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
+                    <PhotoImage src={f.url} storagePath={f.storage_path} alt={f.titulo ?? ""} className="h-full w-full object-cover" loading="lazy" />
                   </div>
                   <div className="space-y-1 p-2">
                     {f.titulo && <p className="truncate text-xs font-medium">{f.titulo}</p>}
@@ -923,18 +921,7 @@ export default function PersonaDetail() {
           <Card className="archivo-card">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="font-serif text-lg">Biografía y notas</CardTitle>
-              {!isNew && <Button size="sm" variant="secondary" onClick={async () => {
-                const t = toast.loading("Escribiendo biografía con IA…");
-                try {
-                  const { data, error } = await supabase.functions.invoke("biografia-auto", { body: { person_id: id } });
-                  toast.dismiss(t);
-                  if (error) throw error;
-                  if (data?.error) throw new Error(data.error);
-                  toast.success("Biografía generada");
-                  const { data: fresh } = await supabase.from("personas").select("*").eq("id", id!).maybeSingle();
-                  if (fresh) setP(fresh);
-                } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
-              }}><Sparkles className="h-3.5 w-3.5" /> Generar con IA</Button>}
+              {!isNew && <Button size="sm" variant="secondary" onClick={generarBiografia}><Sparkles className="h-3.5 w-3.5" /> Generar con IA</Button>}
             </CardHeader>
             <CardContent>
               <p className="mb-2 text-xs text-muted-foreground">
@@ -1334,7 +1321,7 @@ function BusquedasSugeridas({ persona, lugar, disabled }: any) {
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
         ok++;
-        totalSug += data?.sugerencias ?? data?.sugerencias_creadas ?? 0;
+        totalSug += data?.sugerencias_creadas ?? (Array.isArray(data?.sugerencias) ? data.sugerencias.length : Number(data?.sugerencias) || 0);
         totalHip += data?.hipotesis_creadas ?? 0;
         setStates((s) => ({ ...s, [a.key]: { status: "done", ms, result: data } }));
       } catch (e: any) {
@@ -1375,7 +1362,7 @@ function BusquedasSugeridas({ persona, lugar, disabled }: any) {
             {agents.map((a) => {
               const st = states[a.key];
               const sumario = st.result
-                ? `${st.result.sugerencias ?? st.result.sugerencias_creadas ?? 0} sug · ${st.result.hipotesis_creadas ?? 0} hip`
+                ? `${st.result.sugerencias_creadas ?? (Array.isArray(st.result.sugerencias) ? st.result.sugerencias.length : Number(st.result.sugerencias) || 0)} sug · ${st.result.hipotesis_creadas ?? 0} hip`
                 : st.status === "error" ? (st.error ?? "error")
                 : st.status === "running" ? "ejecutando…"
                 : "en espera";
@@ -1560,7 +1547,7 @@ function PersonaQuickMenu({
     setCuadroUrl(null);
     setCuadroLoading(true);
     try {
-      setCuadroUrl(await generatePersonPoster(persona));
+      setCuadroUrl(await generatePersonPoster(personaId));
     } catch (e: any) {
       toast.error(e.message ?? "No se pudo generar el cuadro");
       setCuadroOpen(false);

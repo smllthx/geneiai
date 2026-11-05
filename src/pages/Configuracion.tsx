@@ -85,7 +85,7 @@ function WorkConnectionCard() {
   }, []);
 
   const revoke = async (clientId: string) => {
-    if (!window.confirm("¿Desconectar ChatGPT Work de tu cuenta GENEAI?")) return;
+    if (!window.confirm("¿Desconectar este asistente de tu cuenta de GENEAI?")) return;
     setRevoking(clientId);
     const { error: trustError } = await (supabase as any).from("work_oauth_clients")
       .update({ active: false })
@@ -98,7 +98,7 @@ function WorkConnectionCard() {
     const { error } = await supabase.auth.oauth.revokeGrant({ clientId });
     setRevoking("");
     if (error) return toast.error("GENEAI bloqueó el acceso, pero falta retirar el permiso OAuth. Vuelve a intentarlo.");
-    toast.success("ChatGPT Work fue desconectado de GENEAI.");
+    toast.success("Conector desconectado.");
     loadGrants();
   };
 
@@ -106,13 +106,14 @@ function WorkConnectionCard() {
     <Card className="archivo-card mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-serif text-xl">
-          <MessagesSquare className="h-5 w-5" /> ChatGPT Work
+          <MessagesSquare className="h-5 w-5" /> Conectar ChatGPT o Claude
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Usa GENEAI y Work al mismo tiempo. Work consulta y modifica el mismo árbol activo con tu autorización; no crea una copia de tus datos.
+          Añade un conector MCP personalizado en ChatGPT o Claude. Pega esta dirección, selecciona OAuth e inicia sesión con tu cuenta de GENEAI.
         </p>
+        <Input aria-label="Dirección MCP de GENEAI" readOnly value="https://geneiai.vercel.app/mcp" onFocus={event => event.target.select()} />
         <div className="rounded-xl border border-border/70 bg-card/45 p-4">
           {loading ? (
             <p className="text-sm text-muted-foreground">Comprobando conexiones…</p>
@@ -123,7 +124,7 @@ function WorkConnectionCard() {
                   <div>
                     <div className="flex items-center gap-2 font-medium">
                       <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                      {grant.client.name || "ChatGPT Work"} conectado
+                      {grant.client.name || "Asistente"} conectado
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Acceso concedido {grant.granted_at ? new Date(grant.granted_at).toLocaleDateString("es-CL") : ""}
@@ -141,14 +142,14 @@ function WorkConnectionCard() {
               <div>
                 <p className="font-medium">Listo para conectar</p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Al activar GENEAI en Work aparecerá una pantalla de permiso. Ninguna persona se puede borrar desde esta conexión.
+                  GENEAI te mostrará los permisos antes de conectar tu árbol.
                 </p>
               </div>
             </div>
           )}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          La conexión con Work no usa ni muestra la API key privada configurada para las funciones IA internas de GENEAI.
+          Puedes revocar el acceso de cada asistente desde esta sección.
         </p>
       </CardContent>
     </Card>

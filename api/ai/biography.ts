@@ -1,3 +1,4 @@
+import { applyTreeScope } from "../../shared/treeScope.js";
 import { getActiveTreeId, getBearer, getSupabase, getUserOrThrow, json, jsonApiError, openAIJson } from "../_lib/geneai.js";
 
 export default async function handler(req: any, res: any) {
@@ -10,10 +11,10 @@ export default async function handler(req: any, res: any) {
     if (!person_id) throw new Error("Falta person_id");
 
     const [{ data: persona }, { data: eventos }, { data: relaciones }, { data: documentos }] = await Promise.all([
-      sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,ocupacion,religion,viva,notas").eq("id", person_id).maybeSingle(),
-      sb.from("eventos").select("tipo,fecha,fecha_aprox,lugar_original,descripcion,certeza").eq("persona_id", person_id).order("fecha", { ascending: true }).limit(80),
-      sb.from("relaciones").select("tipo,pariente_id,persona_id,notas").or(`persona_id.eq.${person_id},pariente_id.eq.${person_id}`).limit(120),
-      sb.from("documentos").select("id,titulo,tipo,fecha,resumen,cita").contains("personas_mencionadas", [person_id]).limit(30),
+      applyTreeScope(sb.from("personas").select("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,defuncion_fecha,nacionalidad,ocupacion,religion,viva,notas"), treeId).eq("id", person_id).maybeSingle().throwOnError(),
+      applyTreeScope(sb.from("eventos").select("tipo,fecha,fecha_aprox,lugar_original,descripcion,certeza"), treeId).eq("persona_id", person_id).order("fecha", { ascending: true }).limit(80).throwOnError(),
+      applyTreeScope(sb.from("relaciones").select("tipo,pariente_id,persona_id,notas"), treeId).or(`persona_id.eq.${person_id},pariente_id.eq.${person_id}`).limit(120).throwOnError(),
+      applyTreeScope(sb.from("documentos").select("id,titulo,tipo,fecha,resumen,cita"), treeId).contains("personas_mencionadas", [person_id]).limit(30).throwOnError(),
     ]);
     if (!persona) throw new Error("Persona no encontrada");
 

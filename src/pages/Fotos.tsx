@@ -1,3 +1,4 @@
+import PhotoImage from "@/components/PhotoImage";
 import PersonSelectItem from "@/components/PersonSelectItem";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -78,13 +79,13 @@ export default function Fotos() {
       const { error: upErr } = await supabase.storage.from("fotos").upload(path, file);
       if (upErr) throw upErr;
       const treeId = await getActiveTreeId(user.id);
-      const { data: { publicUrl } } = supabase.storage.from("fotos").getPublicUrl(path);
+      const photoReference = `storage://fotos/${path}`;
       const { data: inserted, error: insErr } = await supabase.from("fotos").insert(withTreeScope({
-        user_id: user.id, url: publicUrl, storage_path: path,
+        user_id: user.id, url: photoReference, storage_path: path,
         titulo, descripcion: desc, fecha_aprox: fechaAprox, personas_ids: uploadPerson ? [uploadPerson] : [],
       }, treeId)).select().single();
       if (insErr) throw insErr;
-      if (uploadPerson && asPortrait) await savePersonPortrait(uploadPerson, publicUrl);
+      if (uploadPerson && asPortrait) await savePersonPortrait(uploadPerson, photoReference);
       toast.success(uploadPerson && asPortrait ? "Foto subida y retrato actualizado" : "Foto subida");
       setFile(null); setTitulo(""); setDesc(""); setFechaAprox(""); setUploadPerson(""); setAsPortrait(true); setOpen(false);
       load();
@@ -199,7 +200,7 @@ export default function Fotos() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {memorias.map((m) => (
                   <button key={m.id} onClick={() => setDetalle(m.cover)} className="glass group relative aspect-[4/3] overflow-hidden rounded-3xl text-left">
-                    <img src={m.cover.url} alt={m.titulo} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
+                    <PhotoImage src={m.cover.url} storagePath={m.cover.storage_path} alt={m.titulo} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                       <p className="font-serif text-xl drop-shadow-md">{m.titulo}</p>
@@ -221,7 +222,7 @@ export default function Fotos() {
                     <button onClick={() => setDetalle(fp[0])} className="block w-full text-left">
                       <div className="grid aspect-square grid-cols-2 grid-rows-2 gap-0.5">
                         {fp.slice(0, 4).map((f) => (
-                          <img key={f.id} src={f.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          <PhotoImage key={f.id} src={f.url} storagePath={f.storage_path} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ))}
                         {Array.from({ length: Math.max(0, 4 - fp.length) }).map((_, i) => (
                           <div key={i} className="bg-muted/40" />
@@ -259,7 +260,7 @@ export default function Fotos() {
                   {lugaresConFotos.map((x) => (
                     <GlassCard key={x.lugar.id} className="overflow-hidden p-0">
                       <div className="grid aspect-video grid-cols-3 gap-0.5">
-                        {x.fotos.slice(0, 3).map((f) => <img key={f.id} src={f.url} alt="" className="h-full w-full object-cover" loading="lazy" />)}
+                        {x.fotos.slice(0, 3).map((f) => <PhotoImage key={f.id} src={f.url} storagePath={f.storage_path} alt="" className="h-full w-full object-cover" loading="lazy" />)}
                       </div>
                       <div className="p-3">
                         <p className="font-medium">{[x.lugar.ciudad, x.lugar.pais].filter(Boolean).join(", ") || "Lugar"}</p>
@@ -294,7 +295,7 @@ function Mosaic({ fotos, onOpen }: { fotos: FotoRow[]; onOpen: (f: FotoRow) => v
         <button key={f.id} onClick={() => onOpen(f)}
           className={`glass group overflow-hidden rounded-2xl text-left transition-transform hover:scale-[1.02] ${i % 7 === 0 ? "row-span-2 col-span-2" : ""}`}>
           <div className={i % 7 === 0 ? "aspect-square" : "aspect-square"}>
-            <img src={f.url} alt={f.titulo ?? "foto"} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+            <PhotoImage src={f.url} storagePath={f.storage_path} alt={f.titulo ?? "foto"} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
           </div>
         </button>
       ))}
@@ -408,7 +409,7 @@ function FotoDetalle({ foto, personas, onClose, onDeleted }: {
         onPointerCancel={onPointerUp}
         style={{ touchAction: tagMode ? "none" : "auto" }}
       >
-        <img src={foto.url} alt={foto.titulo ?? ""} className="block max-h-[60vh] w-full object-contain pointer-events-none select-none" draggable={false} />
+        <PhotoImage src={foto.url} storagePath={foto.storage_path} alt={foto.titulo ?? ""} className="block max-h-[60vh] w-full object-contain pointer-events-none select-none" draggable={false} />
         {tags.map((t) => (
           <div key={t.id} className="absolute group/tag border-2 border-primary/80 rounded-md"
             style={{ left: `${t.x}%`, top: `${t.y}%`, width: `${t.w}%`, height: `${t.h}%` }}>
