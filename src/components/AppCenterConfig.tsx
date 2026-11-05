@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, RotateCcw, Wand2 } from "lucide-react";
+import { Sparkles, RotateCcw, Wand2 } from "@/components/icons";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { setPreset, setMobileItems, DEFAULT_MOBILE, type NavPreset } from "@/lib/navConfig";

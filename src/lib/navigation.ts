@@ -1,13 +1,11 @@
-import {
-  Activity, Archive, BookOpen, Calendar, ChartPie, Compass, Dna, FileSearch, FileText, Fingerprint,
-  GitBranch, Heart, Home, Image, Images, Inbox, Landmark, ListChecks, ListOrdered, MapPin, Merge,
-  Network, Scan, Settings, ShoppingBag, Sparkles, TestTube, Upload, Users, type LucideIcon,
-} from "lucide-react";
+import { geneIcon, type GeneIconProps } from "@/components/GeneIcon";
+import type { ComponentType } from "react";
+const Activity = geneIcon("timeline"), Archive = geneIcon("archive"), BookOpen = geneIcon("book"), Calendar = geneIcon("calendar"), ChartPie = geneIcon("fan"), Compass = geneIcon("compass"), Dna = geneIcon("dna"), FileSearch = geneIcon("search"), FileText = geneIcon("document"), Fingerprint = geneIcon("user"), GitBranch = geneIcon("tree"), Heart = geneIcon("people"), Home = geneIcon("home"), Image = geneIcon("photo"), Images = geneIcon("photos"), Inbox = geneIcon("mail"), Landmark = geneIcon("building"), ListChecks = geneIcon("checklist"), ListOrdered = geneIcon("tag"), MapPin = geneIcon("pin"), Merge = geneIcon("merge"), Network = geneIcon("branches"), Scan = geneIcon("compare"), Settings = geneIcon("settings"), ShoppingBag = geneIcon("flask"), Sparkles = geneIcon("spark"), TestTube = geneIcon("flask"), Upload = geneIcon("upload"), Users = geneIcon("people");
 
-export type NavItem = { to: string; label: string; icon: LucideIcon; external?: boolean };
-export type NavSection = { key: string; label: string; icon: LucideIcon; direct?: boolean; items: NavItem[] };
+export type NavItem = { to: string; label: string; icon: ComponentType<Omit<GeneIconProps, "name">>; external?: boolean };
+export type NavSection = { key: string; label: string; icon: ComponentType<Omit<GeneIconProps, "name">>; direct?: boolean; items: NavItem[] };
 
-export const navigationGroups: NavSection[] = [
+const sections: NavSection[] = [
   { key: "primary", label: "Inicio", icon: Home, direct: true, items: [
     { to: "/inicio", label: "Inicio", icon: Home },
   ] },
@@ -34,15 +32,15 @@ export const navigationGroups: NavSection[] = [
   { key: "photos", label: "Fotos", icon: Image, items: [
     { to: "/fotos", label: "Galería familiar", icon: Images },
     { to: "/parecidos", label: "Rasgos y parecidos", icon: Scan },
+    { to: "https://www.myheritage.es/live-memory", label: "LiveMemory™", icon: Sparkles, external: true },
   ] },
   { key: "research", label: "Investigación", icon: FileSearch, items: [
     { to: "/investigacion", label: "Centro de investigación", icon: FileSearch },
     { to: "/documentos", label: "Documentos", icon: FileText },
     { to: "/fuentes", label: "Fuentes", icon: BookOpen },
+    { to: "/hipotesis", label: "Hipótesis", icon: Compass },
+    { to: "/inferencias", label: "Inferencias", icon: Sparkles },
     { to: "/asistente", label: "Genealogista IA", icon: Sparkles },
-  ] },
-  { key: "memories", label: "LiveMemory™", icon: Sparkles, direct: true, items: [
-    { to: "https://www.myheritage.es/live-memory", label: "LiveMemory™", icon: Sparkles, external: true },
   ] },
   { key: "inbox", label: "Bandeja de entrada", icon: Inbox, direct: true, items: [
     { to: "/bandeja-de-entrada", label: "Bandeja de entrada", icon: Inbox },
@@ -63,3 +61,6 @@ export const navigationGroups: NavSection[] = [
     { to: "/configuracion", label: "Configuración", icon: Settings },
   ] },
 ];
+
+const order = ["primary", "tree", "archive", "discoveries", "research", "photos", "dna", "inbox", "utility"];
+export const navigationGroups = order.map(key => sections.find(section => section.key === key)!);

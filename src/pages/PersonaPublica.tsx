@@ -1,7 +1,7 @@
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Loader2, MapPin, Calendar, Heart, Users, Briefcase, Share2 } from "lucide-react";
+import { Loader2, MapPin, Calendar, Heart, Users, Briefcase, Share2 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { SUPABASE_URL } from '@/integrations/supabase/client';

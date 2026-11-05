@@ -1,3 +1,4 @@
+import LanguagePicker from "@/components/LanguagePicker";
 import { currentRelease } from "@/lib/appRelease";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound, GitBranch, Plus, MessagesSquare, Unplug } from "lucide-react";
+import { Mail, Trash2, RefreshCw, Upload, Link as LinkIcon, ShieldCheck, Sparkles, UserRound, GitBranch, Plus, MessagesSquare, Unplug } from "@/components/icons";
 import { toast } from "sonner";
 import MenusConfig from "@/components/MenusConfig";
 import AppCenterConfig from "@/components/AppCenterConfig";
@@ -494,6 +495,7 @@ export default function Configuracion() {
   return (
     <div>
       <PageHeader title="Configuración" subtitle="Cuenta, persona central, IA, conexiones, menús y actualizaciones remotas." />
+      <div className="mb-6 max-w-md rounded-xl border bg-card p-3"><LanguagePicker /></div>
       <InstallAppCard />
           <Button variant="outline" onClick={() => window.dispatchEvent(new Event("geneai:show-release"))}>Novedades de GENEAI {currentRelease.version}</Button>
 

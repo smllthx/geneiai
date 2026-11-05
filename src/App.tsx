@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
@@ -75,7 +76,7 @@ function SessionScope({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   // Only the fictional design gallery is independent of account connectivity.
   // All account routes still mount AuthProvider and their existing route guard.
-  return pathname === "/diseno" ? <>{children}</> : <AuthProvider>{children}</AuthProvider>;
+  return pathname === "/diseno" ? <LanguageProvider>{children}</LanguageProvider> : <AuthProvider><LanguageProvider>{children}</LanguageProvider></AuthProvider>;
 }
 
 function AppServices() {

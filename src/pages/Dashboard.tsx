@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Search, Lightbulb, Brain, Users } from "lucide-react";
+import { Plus, FileText, Search, Lightbulb, Brain, Users } from "@/components/icons";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 
 export default function Dashboard() {

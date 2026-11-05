@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Bot, Send, Sparkles, Loader2, User, Wand2, ListChecks, Check, X, ArrowUp } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, User, Wand2, ListChecks, Check, X, ArrowUp } from "@/components/icons";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { isCreditOrAiError, localAssistantReply } from "@/lib/offlineAi";

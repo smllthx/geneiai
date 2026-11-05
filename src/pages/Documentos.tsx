@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X, Sparkles } from "lucide-react";
+import { ExternalLink, Plus, Save, Trash2, Upload, Search, LayoutGrid, List, FileText, Image as ImageIcon, ScanLine, UserPlus, X, Sparkles } from "@/components/icons";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import { extractDocumentAI } from "@/lib/aiApi";
 

@@ -1,35 +1,38 @@
+import { geneIcon } from "./GeneIcon";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan, ListOrdered } from "lucide-react";
+import { Home, GitBranch, Users, Image as ImageIcon, Sparkles, Calendar, FileText, Heart, Bot, Compass, Dna, BookOpen, Settings, KeyRound, Upload, Lightbulb, Scan, ListOrdered } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { getMobileItems } from "@/lib/navConfig";
 
 const ALL = {
-  "/inicio": { label: "Inicio", icon: Home },
-  "/arbol": { label: "Árbol", icon: GitBranch },
-  "/personas": { label: "Personas", icon: Users },
-  "/apellidos": { label: "Apellidos", icon: ListOrdered },
-  "/familias": { label: "Familia", icon: Heart },
-  "/sugerencias": { label: "Tareas", icon: Lightbulb },
-  "/fotos": { label: "Fotos", icon: ImageIcon },
-  "/documentos": { label: "Docs", icon: FileText },
-  "/calendario": { label: "Fechas", icon: Calendar },
-  "/investigacion": { label: "Investigación", icon: Sparkles },
-  "/asistente": { label: "ChatGPT", icon: Bot },
-  "/origen-ancestral": { label: "ADN", icon: Dna },
-  "/cuadros-ia": { label: "Cuadros", icon: ImageIcon },
-  "/insights": { label: "Insights", icon: Lightbulb },
-  "/coincidencias": { label: "Coincidencias", icon: Compass },
-  "/adn": { label: "ADN", icon: Dna },
-  "/parecidos": { label: "Parecidos", icon: Scan },
-  "/fuentes": { label: "Fuentes", icon: BookOpen },
-  "/importar": { label: "Importar", icon: Upload },
-  "/credenciales": { label: "Credenciales", icon: KeyRound },
-  "/configuracion": { label: "Ajustes", icon: Settings },
+  "/inicio": { label: "Inicio", icon: geneIcon("home") },
+  "/arbol": { label: "Árbol", icon: geneIcon("tree") },
+  "/personas": { label: "Personas", icon: geneIcon("people") },
+  "/apellidos": { label: "Apellidos", icon: geneIcon("tag") },
+  "/familias": { label: "Familia", icon: geneIcon("people") },
+  "/sugerencias": { label: "Tareas", icon: geneIcon("bulb") },
+  "/fotos": { label: "Fotos", icon: geneIcon("photos") },
+  "/documentos": { label: "Docs", icon: geneIcon("document") },
+  "/calendario": { label: "Fechas", icon: geneIcon("calendar") },
+  "/investigacion": { label: "Investigación", icon: geneIcon("search") },
+  "/asistente": { label: "ChatGPT", icon: geneIcon("spark") },
+  "/origen-ancestral": { label: "ADN", icon: geneIcon("dna") },
+  "/cuadros-ia": { label: "Cuadros", icon: geneIcon("photos") },
+  "/insights": { label: "Insights", icon: geneIcon("bulb") },
+  "/coincidencias": { label: "Coincidencias", icon: geneIcon("compass") },
+  "/adn": { label: "ADN", icon: geneIcon("dna") },
+  "/parecidos": { label: "Parecidos", icon: geneIcon("compare") },
+  "/fuentes": { label: "Fuentes", icon: geneIcon("book") },
+  "/importar": { label: "Importar", icon: geneIcon("upload") },
+  "/credenciales": { label: "Credenciales", icon: geneIcon("user") },
+  "/configuracion": { label: "Ajustes", icon: geneIcon("settings") },
 } as const;
 
 export default function MobileBottomNav() {
+  const { t } = useLanguage();
   const previewHome = useLocation().pathname === "/diseno";
   const navRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
@@ -72,7 +75,7 @@ export default function MobileBottomNav() {
           }
         >
           <Icon className="h-5 w-5" />
-          <span className="max-w-full break-words text-center leading-tight">{label}</span>
+          <span className="max-w-full break-words text-center leading-tight">{t(label)}</span>
         </NavLink>
       ))}
     </nav>

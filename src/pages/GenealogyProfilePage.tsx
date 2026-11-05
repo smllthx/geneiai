@@ -3,7 +3,7 @@ import { birthLabel, lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, Brain, Calendar, Edit3, FileText, GitBranch, GitCompare, Heart, History, Image, Loader2, MapPinned, Network, NotebookText, Printer, Route, Search, Star, Trash2, Users, WandSparkles } from "lucide-react";
+import { AlertTriangle, Brain, Calendar, Edit3, FileText, GitBranch, GitCompare, Heart, History, Image, Loader2, MapPinned, Network, NotebookText, Printer, Route, Search, Star, Trash2, Users, WandSparkles } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

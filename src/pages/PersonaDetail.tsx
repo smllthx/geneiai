@@ -1,3 +1,4 @@
+import CountryFlag from "@/components/CountryFlag";
 import BirthDateField from "@/components/BirthDateField";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { lifeDates } from "@/lib/personDates";
@@ -21,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar, RefreshCw, Star, Route, Copy, Info, Network, ListChecks } from "lucide-react";
+import { Trash2, Save, ArrowLeft, Globe, AlertTriangle, Sparkles, GitBranch, Pencil, MoreVertical, Users, Share2, Search, Image as ImageIcon, Download, Calendar, RefreshCw, Star, Route, Copy, Info, Network, ListChecks } from "@/components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { calcularParentesco, construirCaminoParentesco } from "@/lib/parentesco";
@@ -916,7 +917,7 @@ function PersonEditor({ id }: { id?: string }) {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <TimelineVisual eventos={eventos} persona={p} />
+          <TimelineVisual eventos={eventos} persona={p} lugares={lugares} />
           {!isNew && <ContextoHistorico personaId={id!} />}
           {!isNew && <div className="mt-4"><RecentChanges personaId={id!} /></div>}
         </TabsContent>
@@ -1439,7 +1440,7 @@ function Field({ label, value }: { label: string; value: any }) {
         {empty ? (
           <span className="text-muted-foreground">Dato no registrado</span>
         ) : country ? (
-          <span className="country-chip text-base" data-country={country}>{value}</span>
+          <span className="inline-flex items-center gap-2 text-base"><CountryFlag country={country} />{value}</span>
         ) : value}
       </div>
     </div>

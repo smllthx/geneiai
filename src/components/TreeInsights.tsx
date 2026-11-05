@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Lightbulb, Sparkles, Compass, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
+import { Lightbulb, Sparkles, Compass, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "@/components/icons";
 
 type Stats = {
   sugerenciasPendientes: number;

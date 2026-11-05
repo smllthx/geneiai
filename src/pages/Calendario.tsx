@@ -1,10 +1,11 @@
+import { MarriageIcon } from "@/components/GeneIcon";
 import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
-import { Calendar, Cake, Heart, Cross, Sparkles } from "lucide-react";
+import { Calendar, Cake, Heart, Cross, Sparkles } from "@/components/icons";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type Persona = { id: string; nombres: string; apellidos: string; foto_url: string | null; nac_fecha: string | null; defuncion_fecha: string | null; matrimonio_fecha: string | null; viva: string | null };
@@ -49,7 +50,7 @@ export default function Calendario() {
       }
       if (p.matrimonio_fecha) {
         const d = new Date(p.matrimonio_fecha);
-        out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: "matrimonio", titulo: `Aniversario boda · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.matrimonio_fecha), icon: Heart, color: "text-rose-500" });
+        out.push({ fecha: d, mes: d.getUTCMonth(), dia: d.getUTCDate(), tipo: "matrimonio", titulo: `Aniversario boda · ${p.nombres} ${p.apellidos}`, persona: p, years: diffYears(p.matrimonio_fecha), icon: MarriageIcon, color: "text-rose-500" });
       }
       if (p.defuncion_fecha) {
         const d = new Date(p.defuncion_fecha);

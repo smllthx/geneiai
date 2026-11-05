@@ -1,7 +1,7 @@
 import { Component, ReactNode, useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Bug, Loader2, RefreshCw, Sparkles, X, Power } from "lucide-react";
+import { AlertTriangle, Bug, Loader2, RefreshCw, Sparkles, X, Power } from "@/components/icons";
 import { applyHeal, type HealAction } from "@/lib/self-heal";
 
 type CapturedError = {

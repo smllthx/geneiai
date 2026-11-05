@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, History, Loader2 } from "lucide-react";
+import { Sparkles, History, Loader2 } from "@/components/icons";
 import { toast } from "sonner";
 
 type Punto = { anio: string | number; titulo: string; detalle: string; categoria: string };

@@ -3,7 +3,7 @@ import PersonPortrait from "@/components/PersonPortrait";
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { UserPlus } from "lucide-react";
+import { UserPlus } from "@/components/icons";
 
 export type PersonaLite = BirthFields & {
   id: string;

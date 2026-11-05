@@ -1,3 +1,4 @@
+import DesignAssets from "@/components/DesignAssets";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, Laptop, Smartphone, Tablet } from "lucide-react";
@@ -30,6 +31,7 @@ type Device = keyof typeof devices;
 
 export default function DesignPreview() {
   const [params, setParams] = useSearchParams();
+  const view = params.get("view") || "home";
   const canvas = params.get("canvas") === "1";
   const requested = params.get("device");
   const device: Device = requested === "iphone" || requested === "ipad" ? requested : "mac";
@@ -48,23 +50,24 @@ export default function DesignPreview() {
     return () => observer.disconnect();
   }, [canvas]);
 
-  if (canvas) return <AppLayout preview><DashboardView {...example} /></AppLayout>;
+  if (canvas) return <AppLayout preview>{view === "timeline" || view === "icons" || view === "flags" ? <DesignAssets view={view} /> : <DashboardView {...example} />}</AppLayout>;
 
-  const changeDevice = (value: Device) => setParams({ device: value, mode: installed ? "app" : "web" });
+  const changeDevice = (value: Device) => setParams({ device: value, mode: installed ? "app" : "web", view });
   return <div className="design-gallery">
     <header className="design-gallery-header"><BrandLogo showText size={36} /><Link to="/inicio">Abrir mi archivo <ArrowUpRight size={15} /></Link></header>
-    <div className="design-gallery-heading"><p className="home-eyebrow">GENEAI · Nuevo diseño</p><h1>Tu historia. En cada pantalla.</h1><p>Una interfaz adaptable, con luz, profundidad y espacio para lo que importa.</p></div>
+    <div className="design-gallery-heading"><p className="home-eyebrow">GENEAI · Nuevo diseño</p><h1>Tu historia. En cada pantalla.</h1><p>Los diseños de GENEAI, con iconos propios, banderas y cronologías interactivas.</p></div>
     <div className="design-gallery-controls">
       <div className="design-device-picker" role="group" aria-label="Dispositivo">{Object.entries(devices).map(([key, item]) => <button key={key} type="button" aria-pressed={device === key} onClick={() => changeDevice(key as Device)}><item.icon size={18} />{item.label}</button>)}</div>
-      <div className="design-mode-picker" role="group" aria-label="Versión"><button aria-pressed={!installed} onClick={() => setParams({ device, mode: "web" })}>Navegador</button><button aria-pressed={installed} onClick={() => setParams({ device, mode: "app" })}>App web</button></div>
+      <div className="design-mode-picker" role="group" aria-label="Versión"><button aria-pressed={!installed} onClick={() => setParams({ device, mode: "web", view })}>Navegador</button><button aria-pressed={installed} onClick={() => setParams({ device, mode: "app", view })}>App web</button></div>
       <AppearancePicker />
     </div>
+    <div className="design-device-picker my-4 flex flex-wrap justify-center gap-2" role="group" aria-label="Vista de diseño">{[["home", "Inicio"], ["timeline", "Cronología"], ["icons", "Iconos"], ["flags", "Banderas"]].map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => setParams({ device, mode: installed ? "app" : "web", view: key })}>{label}</button>)}</div>
     <p className="design-example-note">Vista de diseño con datos ficticios. Los accesos del archivo requieren iniciar sesión.</p>
     <div className="design-stage" ref={stageRef}>
       <div className={`design-device-frame design-device-${device}`} style={{ width: size.width * scale, height: (size.height + (installed ? 0 : 40)) * scale }}>
         <div style={{ width: size.width, transform: `scale(${scale})`, transformOrigin: "top left" }}>
           {!installed && <div className="design-browser-chrome"><span /><span /><span /><div>geneiai.vercel.app</div><ArrowUpRight size={14} /></div>}
-          <iframe key={`${device}-${installed}-${appearance}`} title={`GENEAI en ${size.label}, ${installed ? "app web" : "navegador"}`} src={`/diseno?canvas=1&device=${device}&mode=${installed ? "app" : "web"}`} width={size.width} height={size.height} />
+          <iframe key={`${device}-${installed}-${appearance}`} title={`GENEAI en ${size.label}, ${installed ? "app web" : "navegador"}`} src={`/diseno?canvas=1&device=${device}&mode=${installed ? "app" : "web"}&view=${view}`} width={size.width} height={size.height} />
         </div>
       </div>
     </div>

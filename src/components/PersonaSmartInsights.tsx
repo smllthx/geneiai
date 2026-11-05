@@ -1,6 +1,6 @@
 import { birthLabel } from "@/lib/personDates";
 import { useEffect, useState } from "react";
-import { ChevronDown, Lightbulb, RefreshCw } from "lucide-react";
+import { ChevronDown, Lightbulb, RefreshCw } from "@/components/icons";
 import { localPersonaInsight } from "@/lib/offlineAi";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);

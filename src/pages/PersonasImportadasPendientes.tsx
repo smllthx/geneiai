@@ -2,7 +2,7 @@ import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import { birthLabel, lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useMemo, useState } from "react";
-import { Link2, Loader2, Search, Sparkles, UserCheck, X } from "lucide-react";
+import { Link2, Loader2, Search, Sparkles, UserCheck, X } from "@/components/icons";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText, Sparkles, Brain, Loader2 } from "lucide-react";
+import { Upload, AlertTriangle, CheckCircle2, FileDown, Link2, RefreshCw, Download, FileText, Sparkles, Brain, Loader2 } from "@/components/icons";
 import { parseGedcom } from "@/lib/import/gedcom";
 import { readCSV, readXLSX, readJSON, parseTabular } from "@/lib/import/tabular";
 import { persistImport, type ImportSummary } from "@/lib/import/persist";

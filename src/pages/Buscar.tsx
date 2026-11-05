@@ -4,7 +4,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, Building2, ExternalLink, Cross, FileSearch, Image, Library, Loader2, Map, Search, Sparkles, Trees, Users } from "lucide-react";
+import { BookOpen, Building2, ExternalLink, Cross, FileSearch, Image, Library, Loader2, Map, Search, Sparkles, Trees, Users } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { expandTerm, fuzzyScore, norm } from "@/lib/search/fuzzy";
 import { personaCode, matchesCode, normalizeCode } from "@/lib/personaCode";

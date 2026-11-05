@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link2, Sparkles, Loader2, FileText, Check, GitBranchPlus } from "lucide-react";
+import { Link2, Sparkles, Loader2, FileText, Check, GitBranchPlus } from "@/components/icons";
 import { toast } from "sonner";
 import PersonSearchSelect from "@/components/PersonSearchSelect";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";

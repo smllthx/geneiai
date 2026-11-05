@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Search, Sparkles, X } from "lucide-react";
+import { Check, Loader2, Search, Sparkles, X } from "@/components/icons";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import AISuggestionsPanel from "@/components/ai/AISuggestionsPanel";

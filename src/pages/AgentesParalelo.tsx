@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "lucide-react";
+import { Plus, Trash2, Play, Loader2, CheckCircle2, AlertCircle, Layers } from "@/components/icons";
 import { toast } from "sonner";
 import { getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 

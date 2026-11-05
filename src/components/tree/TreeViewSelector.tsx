@@ -1,4 +1,4 @@
-import { GitBranch, ListTree, Network, Orbit, Route } from "lucide-react";
+import { GitBranch, ListTree, Network, Orbit, Route } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import type { TreeViewMode } from "./types";
 

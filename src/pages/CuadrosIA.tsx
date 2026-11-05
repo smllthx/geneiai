@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { generatePersonPoster, downloadPersonPoster } from "@/lib/personPoster";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Download, Printer, Sparkles, UserRound } from "lucide-react";
+import { Download, Printer, Sparkles, UserRound } from "@/components/icons";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,7 @@ import { requestBiographyProposal } from "@/lib/biographyProposal";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Baby, FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "lucide-react";
+import { Baby, FileDown, Network, FileText, ScrollText, PieChart, UserSquare2, Loader2, Sparkles } from "@/components/icons";
 import { toast } from "sonner";
 import type { ExportKind } from "@/lib/personaExports";
 

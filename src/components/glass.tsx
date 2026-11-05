@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +22,13 @@ export function GlassCard({
 export function SectionHeader({
   eyebrow, title, subtitle, actions,
 }: { eyebrow?: string; title: string; subtitle?: string; actions?: ReactNode }) {
+  const { t } = useLanguage();
   return (
     <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p>}
-        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">{title}</h1>
-        {subtitle && <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>}
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">{t(title)}</h1>
+        {subtitle && <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{t(subtitle)}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

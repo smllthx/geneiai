@@ -6,7 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, Brain, Lightbulb, CheckCircle2 } from "@/components/icons";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { notify } from "@/lib/notifications";

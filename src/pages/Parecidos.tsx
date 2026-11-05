@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/glass";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Scan, Sparkles, Loader2, Users, Camera, ShieldAlert } from "lucide-react";
+import { Scan, Sparkles, Loader2, Users, Camera, ShieldAlert } from "@/components/icons";
 import PageHeader from "@/components/PageHeader";
 import { compararRasgos } from "@/lib/parecido";
 
