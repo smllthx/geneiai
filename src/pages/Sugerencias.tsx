@@ -281,6 +281,12 @@ export default function Sugerencias() {
                             {toDisplayText(s.descripcion) && (
                               <div className="text-xs text-muted-foreground">{toDisplayText(s.descripcion)}</div>
                             )}
+                            {s.tipo === "posible_duplicado" && typeof s.payload?.ref_a === "string" && typeof s.payload?.ref_b === "string" && (
+                              <div className="my-2 flex flex-wrap gap-2">
+                                <Button asChild variant="outline" size="sm"><Link to={`/personas/${encodeURIComponent(s.payload.ref_a)}`}>Abrir primera ficha</Link></Button>
+                                <Button asChild variant="outline" size="sm"><Link to={`/personas/${encodeURIComponent(s.payload.ref_b)}`}>Abrir segunda ficha</Link></Button>
+                              </div>
+                            )}
                             {s.payload && <details open={s.id === requestedId || undefined} className="mt-1 text-xs">
                               <summary className="cursor-pointer">Datos propuestos</summary>
                               <dl className="mt-2 space-y-1">

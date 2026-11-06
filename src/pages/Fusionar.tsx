@@ -117,15 +117,14 @@ export default function Fusionar() {
 
   const escanear = async () => {
     setScanning(true);
-    const t = toast.loading("IA buscando personas duplicadas…");
+    const t = toast.loading("Buscando variantes y posibles duplicados…");
     try {
       const { data, error } = await supabase.functions.invoke("detectar-duplicados", {});
       toast.dismiss(t);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`${data.pares?.length ?? 0} pares candidatos`);
-      const { data: c } = await supabase.from("coincidencias").select("*").eq("tipo", "duplicado").eq("estado", "pendiente").order("score", { ascending: false });
-      setDuplicados(c ?? []);
+      toast.success(`${data.propuestas_creadas ?? 0} propuestas para comparar`);
+      navigate("/sugerencias");
     } catch (e: any) { toast.dismiss(t); toast.error(e.message ?? "Error"); }
     finally { setScanning(false); }
   };
