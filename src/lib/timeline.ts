@@ -16,13 +16,15 @@ export type TimelineItem = { id: string; person?: TimelinePerson; type: string; 
 export const eventTypes: Record<string, { label: string; icon: string }> = {
   nacimiento: { label: "Nacimiento", icon: "birth" }, bautismo: { label: "Bautismo", icon: "baptism" },
   matrimonio: { label: "Matrimonio", icon: "marriage" }, defuncion: { label: "Defunción", icon: "death" },
-  entierro: { label: "Entierro", icon: "death" }, migracion: { label: "Migración", icon: "ship" },
+  entierro: { label: "Entierro", icon: "burial" }, migracion: { label: "Migración", icon: "ship" },
   residencia: { label: "Residencia", icon: "home" }, ocupacion: { label: "Oficio", icon: "work" },
   viaje: { label: "Viaje", icon: "ship" }, censo: { label: "Censo", icon: "document" },
   documento: { label: "Documento", icon: "document" }, evento: { label: "Evento", icon: "spark" },
 };
 export function eventType(value: string): string {
   const key = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/sepultura|inhumacion|entierro/.test(key)) return "entierro";
+  if (/muerte|fallecimiento|defuncion/.test(key)) return "defuncion";
   if (/migracion/.test(key)) return "migracion";
   if (/domicilio/.test(key)) return "residencia";
   if (/oficio|profesion/.test(key)) return "ocupacion";

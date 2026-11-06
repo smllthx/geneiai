@@ -4,6 +4,8 @@ import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Polyline } from "react-leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import "leaflet/dist/leaflet.css";
+import { geneIconDataUrl } from "@/components/GeneIcon";
+import { eventType, eventTypes } from "@/lib/timeline";
 
 type Lugar = { id: string; ciudad: string | null; pais: string | null; lat: number | null; lng: number | null };
 type LatLng = [number, number];
@@ -20,18 +22,18 @@ type EventMarker = {
   lugar: string;
 };
 
-const EVENT_STYLE: Record<EventoTipo, { symbol: string; color: string; label: string }> = {
-  nacimiento: { symbol: "✦", color: "#39bdf8", label: "Nacimiento" },
-  bautismo: { symbol: "≈", color: "#67e8f9", label: "Bautismo / rito" },
-  matrimonio: { symbol: "∞", color: "#f5c84c", label: "Matrimonio / unión" },
-  defuncion: { symbol: "✝", color: "#a78bfa", label: "Defunción" },
-  entierro: { symbol: "▣", color: "#c4b5fd", label: "Entierro" },
-  inmigracion: { symbol: "⛵", color: "#fb923c", label: "Inmigración" },
-  viaje: { symbol: "↗", color: "#f97316", label: "Viaje / traslado" },
-  residencia: { symbol: "⌂", color: "#34d399", label: "Residencia" },
-  censo: { symbol: "▤", color: "#60a5fa", label: "Censo / padrón" },
-  ocupacion: { symbol: "⚒", color: "#94a3b8", label: "Ocupación" },
-  otro: { symbol: "•", color: "#e5e7eb", label: "Otro hecho" },
+const EVENT_STYLE: Record<EventoTipo, { color: string; label: string }> = {
+  nacimiento: { color: "#39bdf8", label: "Nacimiento" },
+  bautismo: { color: "#67e8f9", label: "Bautismo / rito" },
+  matrimonio: { color: "#f5c84c", label: "Matrimonio / unión" },
+  defuncion: { color: "#a78bfa", label: "Defunción" },
+  entierro: { color: "#c4b5fd", label: "Entierro" },
+  inmigracion: { color: "#fb923c", label: "Inmigración" },
+  viaje: { color: "#f97316", label: "Viaje / traslado" },
+  residencia: { color: "#34d399", label: "Residencia" },
+  censo: { color: "#60a5fa", label: "Censo / padrón" },
+  ocupacion: { color: "#94a3b8", label: "Ocupación" },
+  otro: { color: "#e5e7eb", label: "Otro hecho" },
 };
 
 function placeLabel(lugar?: Lugar | null) {
@@ -80,9 +82,9 @@ function eventIcon(tipo: EventoTipo) {
     className: "",
     html: `<span style="
       display:grid;place-items:center;width:28px;height:28px;border-radius:999px;
-      background:${style.color};color:#071114;border:2px solid rgba(255,255,255,.9);
-      box-shadow:0 8px 20px rgba(0,0,0,.24);font-weight:800;font-size:14px;
-    ">${style.symbol}</span>`,
+      background:hsl(var(--card));border:1.5px solid ${style.color};
+      box-shadow:0 8px 20px rgba(0,0,0,.24);
+    "><img alt="" width="22" height="22" src="${geneIconDataUrl(eventTypes[eventType(tipo)].icon)}" /></span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });

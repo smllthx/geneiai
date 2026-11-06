@@ -10,6 +10,14 @@ export type GeneIconProps = SVGProps<SVGSVGElement> & { name: string; size?: num
 const artwork = new Map([...sprite.matchAll(/<symbol id="([^"]+)"[^>]*>([\s\S]*?)<\/symbol>/g)]
   .map(([, name, content]) => [name, content]));
 
+const imageUrls = new Map<string, string>();
+/** Isolated SVG image for non-React surfaces such as Leaflet markers. */
+export function geneIconDataUrl(name: string) {
+  const key = artwork.has(name) ? name : "spark";
+  if (!imageUrls.has(key)) imageUrls.set(key, `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${artwork.get(key)}</svg>`)}`);
+  return imageUrls.get(key)!;
+}
+
 /** Local vector artwork. Colors are part of the shapes, never an emoji or a CSS filter. */
 export const GeneIcon = forwardRef<SVGSVGElement, GeneIconProps>(function GeneIcon({ name, size = 24, title, className = "", ...props }, ref) {
   const instance = useId();

@@ -1,7 +1,7 @@
 import { localizeDateLabel } from "@/lib/language";
 import { GeneIcon } from "./GeneIcon";
 import CountryFlag from "./CountryFlag";
-import { eventTypes } from "@/lib/timeline";
+import { eventType, eventTypes } from "@/lib/timeline";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { birthLabel, type BirthFields } from "@/lib/personDates";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ export default function PersonVitalFacts({ person, name, events = [], placeLabel
       <div className="border-b px-5 py-4 sm:col-span-2"><dt className="text-xs font-semibold text-muted-foreground">{t("Nombre")}</dt><dd className="mt-1 text-lg font-semibold">{name}</dd></div>
       {facts.map(([label, type, dateKey, placeKey]) => {
         // Canonical dates win; imported events supply missing vital information.
-        const candidates = events.filter(event => event.tipo.toLowerCase() === type);
+        const candidates = events.filter(event => eventType(event.tipo) === type);
         const event = person[dateKey]
           ? candidates.find(event => event.fecha === person[dateKey])
           : candidates.find(event => event.fecha || event.fecha_aprox) ?? candidates[0];
