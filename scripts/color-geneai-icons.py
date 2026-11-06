@@ -84,11 +84,11 @@ def supplied_icon(name, source):
             if (name == 'pin' and tag == 'circle') or (name in ('photo', 'photos') and tag == 'circle'):
                 shape.set('fill', '#ffffff')
                 shape.set('fill-opacity', '.65')
-            if name in ('search', 'zoom', 'globe'):
+            if name in ('search', 'zoom', 'globe') or (name == 'source' and tag == 'circle'):
                 shape.set('fill-opacity', '.25')
             fills.append(serialize(shape))
         # Filled silhouettes have a fine luminous edge, never a dark contour.
-        if closed and name not in ('search', 'zoom', 'circle', 'clock', 'globe', 'sliders', 'tools'):
+        if closed and name not in CONTROLS and name not in ('search', 'zoom', 'clock', 'globe', 'sliders', 'tools', 'source'):
             continue
         stroke = deepcopy(child)
         # Original internal marks become translucent highlights. The silhouette
@@ -107,6 +107,9 @@ def supplied_icon(name, source):
         elif name == 'calendar' and tag == 'path':
             strokes.append('<path d="M7.9 3.2v5.2M16.1 3.2v5.2"/>')
             stroke.set('d', 'M3.8 10.9h16.4M7.6 15h1.2M12 15h1.2')
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        elif name in ('clock', 'mail', 'compare') and tag == 'path':
             stroke.set('stroke', '#ffffff')
             stroke.set('stroke-opacity', '.72')
         stroke.set('fill', ink if tag == 'circle' and name == 'more' else 'none')
