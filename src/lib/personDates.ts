@@ -55,7 +55,8 @@ function exactParts(value?: string | null): [number, number, number] | null {
 }
 
 /** Completed years for full dates; explicit approximation for partial dates. */
-export function ageAt(person: BirthFields, end?: string | null): string | null {
+export function ageAt(person: BirthFields | null | undefined, end?: string | null): string | null {
+  if (!person) return null;
   const birth = exactParts(person.nac_fecha), finish = exactParts(end);
   if (birth && finish) {
     const years = finish[0] - birth[0] - Number(finish[1] < birth[1] || (finish[1] === birth[1] && finish[2] < birth[2]));
@@ -73,7 +74,7 @@ export function ageAt(person: BirthFields, end?: string | null): string | null {
   return low < 0 ? null : `aprox. ${low === high ? high : `${low}–${high}`} años`;
 }
 
-export function personAge(person: LifeFields, today = new Date().toISOString().slice(0, 10)): string | null {
-  if (person.viva === "si" && person.defuncion_fecha) return null;
+export function personAge(person: LifeFields | null | undefined, today = new Date().toISOString().slice(0, 10)): string | null {
+  if (!person || (person.viva === "si" && person.defuncion_fecha)) return null;
   return ageAt(person, person.defuncion_fecha || (person.viva === "si" ? today : null));
 }

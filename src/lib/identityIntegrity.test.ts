@@ -14,6 +14,7 @@ describe("reported people-search regressions",()=>{
   it("retains all matching people when calculating the count",()=>{expect(filterPeopleForQuery(Array.from({length:161},(_,i)=>({...people[1],id:String(i)})),"Francesco Sanguineti",{limit:Infinity})).toHaveLength(161);});
 });
 describe("completed age",()=>{
+  it("supports a profile that is still loading",()=>{expect(personAge(null)).toBeNull();expect(ageAt(undefined,"1911-06-06")).toBeNull();});
   it("Francesco died at 45 before his September birthday",()=>expect(personAge({nac_fecha:"1865-09-08",defuncion_fecha:"1911-06-06",viva:"no"})).toBe("45 años"));
   it.each([["1911-09-07","45 años"],["1911-09-08","46 años"],["1911-09-09","46 años"]])("birthday boundary %s",(end,result)=>expect(ageAt({nac_fecha:"1865-09-08"},end)).toBe(result));
   it("labels years and estimated births approximate",()=>{expect(ageAt({nac_fecha_aprox:"hacia 1880"},"1911-06-06")).toBe("aprox. 31 años");expect(ageAt({nac_rango_ini:1880,nac_rango_fin:1882},"1911")).toBe("aprox. 29–31 años");});
