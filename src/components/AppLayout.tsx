@@ -87,7 +87,7 @@ function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey
           <a key={to} href={to} target="_blank" rel="noopener noreferrer" data-external-browser="true"
             onClick={onNavigate} aria-label={`${t(label)} (MyHeritage, nueva pestaña)`}
             className={cn("flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 hover:bg-foreground/5", direct ? "font-semibold" : "text-sm")}>
-            <Icon className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1">{t(label)}<small className="block text-xs font-normal text-muted-foreground">MyHeritage</small></span><ExternalLink size={14} aria-hidden="true" />
+            <Icon className="h-6 w-6 shrink-0" /><span className="min-w-0 flex-1">{t(label)}<small className="block text-xs font-normal text-muted-foreground">MyHeritage</small></span><ExternalLink size={14} aria-hidden="true" />
           </a>
         );
         return (
@@ -117,7 +117,7 @@ function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey
               }
             >
               {customize && !isMobile && <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />}
-              <Icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 break-words">{t(label)}</span>
+              <Icon className="h-6 w-6 shrink-0" /> <span className="min-w-0 break-words">{t(label)}</span>
             </NavLink>
             {customize && <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
               <DropdownMenuTrigger asChild>
@@ -167,7 +167,7 @@ function SectionMenu({ onNavigate }: { onNavigate?: () => void }) {
           <button type="button" onClick={() => setOpen(current => current === key ? undefined : key)}
             aria-expanded={open === key} aria-controls={`${menuId}-${key}`}
             className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-foreground/5">
-            <Icon className="h-5 w-5 shrink-0" /><span className="flex-1">{t(label)}</span>
+            <Icon className="h-6 w-6 shrink-0" /><span className="flex-1">{t(label)}</span>
             <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open === key && "rotate-180")} />
           </button>
           <div id={`${menuId}-${key}`} hidden={open !== key} className="ml-3 border-l border-border/60 pl-1">

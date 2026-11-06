@@ -74,7 +74,7 @@ export default function MobileBottomNav() {
             )
           }
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-6 w-6" />
           <span className="max-w-full break-words text-center leading-tight">{t(label)}</span>
         </NavLink>
       ))}
