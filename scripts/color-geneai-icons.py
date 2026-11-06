@@ -1,7 +1,7 @@
 """Build glass icons from the user's immutable, original 24-unit SVG geometry.
 
 Color belongs to each shape, not a background tile or a CSS filter. Gradients
-are scoped inside each symbol so external SVG use works without page IDs.
+are scoped inside each symbol; GeneIcon embeds them with unique instance IDs.
 """
 from copy import deepcopy
 from pathlib import Path
@@ -12,13 +12,13 @@ import xml.etree.ElementTree as ET
 ET.register_namespace('', 'http://www.w3.org/2000/svg')
 OUT = Path(__file__).resolve().parent.parent / 'src/assets/icons'
 PALETTES = {
-    'blue': ('#bce7ff', '#66b9f4', '#4594d7'),
-    'mint': ('#b6f1df', '#63cdb0', '#3da68b'),
-    'gold': ('#ffe5ae', '#f0c56b', '#cc9b40'),
-    'coral': ('#ffd0c3', '#fa9c90', '#dc776e'),
-    'violet': ('#e3d3ff', '#b79aec', '#9275d1'),
-    'rose': ('#ffd6ed', '#eba7cd', '#c97eaf'),
-    'slate': ('#dde7f5', '#aebfd5', '#8299b5'),
+    'blue': ('#8bd7ff', '#349de1', '#2378ba'),
+    'mint': ('#82e2c5', '#28af8e', '#18856d'),
+    'gold': ('#ffdb87', '#dfa936', '#a6751b'),
+    'coral': ('#ffb1a0', '#ed7568', '#c4504d'),
+    'violet': ('#cfb1fa', '#a17add', '#7950b8'),
+    'rose': ('#f8b5dc', '#d675b0', '#ac4e89'),
+    'slate': ('#c5d6e9', '#8babc7', '#5f7e9e'),
 }
 GROUPS = {
     'mint': 'tree birth branches fan calendar check checklist sync',
@@ -50,8 +50,8 @@ def gradients(name, hue):
     light, color, deep = PALETTES[hue]
     return (
         f'<defs><linearGradient id="{name}-glass" gradientUnits="userSpaceOnUse" x1="4" y1="3" x2="19" y2="22">'
-        f'<stop stop-color="{light}" stop-opacity=".92"/><stop offset=".48" stop-color="{color}" stop-opacity=".82"/>'
-        f'<stop offset="1" stop-color="{deep}" stop-opacity=".96"/></linearGradient>'
+        f'<stop stop-color="{light}"/><stop offset=".42" stop-color="{color}"/>'
+        f'<stop offset="1" stop-color="{deep}"/></linearGradient>'
         f'<linearGradient id="{name}-ink" gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="19" y2="22">'
         f'<stop stop-color="{color}"/><stop offset="1" stop-color="{deep}"/></linearGradient>'
         f'<linearGradient id="{name}-edge" gradientUnits="userSpaceOnUse" x1="4" y1="3" x2="18" y2="21">'
@@ -115,7 +115,7 @@ def supplied_icon(name, source):
         stroke.set('fill', ink if tag == 'circle' and name == 'more' else 'none')
         strokes.append(serialize(stroke))
     return (gradients(name, COLORS.get(name, 'blue')) + ''.join(fills)
-            + f'<g fill="none" stroke="{ink}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'
+            + f'<g fill="none" stroke="{ink}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'
             + ''.join(strokes) + '</g>')
 
 

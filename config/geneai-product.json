@@ -4,8 +4,8 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.12",
-  "build": 312,
+  "version": "3.0.13",
+  "build": 313,
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
@@ -13,8 +13,7 @@
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Árbol en Retrato y Ramas con generaciones alineadas y líneas que conectan las fichas correspondientes.",
-    "Distribución adaptable a ramas desiguales, progenitores sin pareja y antepasados compartidos.",
-    "Centrado en la persona principal y ajuste al árbol completo al cambiar el tamaño de pantalla."
+    "Iconos integrados en la interfaz, sin depender de archivos SVG externos.",
+    "Colores más visibles y mayor tamaño en los menús, conservando los diseños de GENEAI."
   ]
 }
