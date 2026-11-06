@@ -1,7 +1,9 @@
+import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
+import { collectPages } from "@/lib/collectPages";
 import { usePeopleRevision } from "@/hooks/use-realtime-reload";
 import { lifeDates } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
@@ -15,17 +17,25 @@ export default function Coincidencias() {
   const [items, setItems] = useState<any[]>([]);
   const [personasMap, setPersonasMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(false);
-  const [filtro, setFiltro] = useState<"todas" | "alto" | "medio" | "pendientes">("todas");
+  const [filtro, setFiltro] = useState("todas");
+  const request = useRef(0);
 
   const load = async () => {
-    const [{ data: c }, { data: ps }] = await Promise.all([
-      supabase.from("coincidencias").select("*").order("score", { ascending: false }),
-      supabase.from("personas").select("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva"),
-    ]);
-    setItems(c ?? []);
-    setPersonasMap(new Map((ps ?? []).map((p: any) => [p.id, p])));
+    const current = ++request.current;
+    try {
+      const treeId = await getActiveTreeId();
+      if (!treeId) { setItems([]); setPersonasMap(new Map()); return; }
+      const [c, ps] = await Promise.all([
+        collectPages((from,to) => supabase.from("coincidencias").select("*").order("id").range(from,to)),
+        fetchAllPeople<any>("id,nombres,apellidos,foto_url,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva", {treeId,includeUnscoped:false}),
+      ]);
+      if(current !== request.current) return;
+      const people = new Map(ps.map(p=>[p.id,p]));
+      setItems(c.filter(item=>people.has(item.ref_a)&&people.has(item.ref_b)));
+      setPersonasMap(people);
+    } catch { if(current===request.current){setItems([]);setPersonasMap(new Map());toast.error("No se pudieron cargar las coincidencias del árbol actual.");} }
   };
-  useEffect(() => { load(); }, [peopleRevision]);
+  useEffect(() => { void load(); return () => {request.current++;}; }, [peopleRevision]);
 
   const detectar = async () => {
     setLoading(true);
@@ -42,23 +52,19 @@ export default function Coincidencias() {
   };
 
   const cambiarEstado = async (id: string, estado: "confirmada" | "rechazada") => {
-    await supabase.from("coincidencias").update({ estado }).eq("id", id);
-    load();
+    const { error } = await supabase.from("coincidencias").update({ estado }).eq("id", id).eq("estado", "pendiente");
+    if (error) { toast.error("No se pudo guardar la revisión."); return; }
+    void load();
   };
 
-  const visibles = items.filter((c) => {
-    if (filtro === "alto") return c.score >= 80;
-    if (filtro === "medio") return c.score >= 60 && c.score < 80;
-    if (filtro === "pendientes") return c.estado === "pendiente";
-    return true;
-  });
+  const visibles = items.filter(c => filtro === "todas" || c.estado === filtro);
 
   return (
     <div>
       <SectionHeader
         eyebrow="Detección automática"
         title="Coincidencias"
-        subtitle="Pares de personas potencialmente duplicadas o relacionadas, detectadas por nombre, fechas, lugar y sexo."
+        subtitle="Árbol actual · Candidatos por nombre, variantes, fechas y lugar. Revisa las fuentes antes de decidir."
         actions={
           <Button onClick={detectar} disabled={loading}>
             <Sparkles className="h-4 w-4" /> {loading ? "Detectando…" : "Detectar coincidencias"}
@@ -69,9 +75,9 @@ export default function Coincidencias() {
       <div className="mb-4 flex flex-wrap gap-2">
         {[
           { v: "todas", l: `Todas (${items.length})` },
-          { v: "alto", l: `Alta (${items.filter((c) => c.score >= 80).length})` },
-          { v: "medio", l: `Media (${items.filter((c) => c.score >= 60 && c.score < 80).length})` },
-          { v: "pendientes", l: `Pendientes (${items.filter((c) => c.estado === "pendiente").length})` },
+          { v: "pendiente", l: `Pendientes (${items.filter((c) => c.estado === "pendiente").length})` },
+          { v: "confirmada", l: `Confirmadas (${items.filter((c) => c.estado === "confirmada").length})` },
+          { v: "rechazada", l: `Descartadas (${items.filter((c) => c.estado === "rechazada").length})` },
         ].map((f) => (
           <button key={f.v} onClick={() => setFiltro(f.v as any)}
             className={`glass-pill ${filtro === f.v ? "ring-2 ring-primary" : ""}`}>{f.l}</button>
@@ -86,13 +92,11 @@ export default function Coincidencias() {
           {visibles.map((c) => {
             const a = personasMap.get(c.ref_a);
             const b = personasMap.get(c.ref_b);
-            const scoreColor = c.score >= 80 ? "text-primary" : c.score >= 60 ? "text-accent" : "text-muted-foreground";
             return (
               <GlassCard key={c.id} className="p-4">
                 <div className="flex items-center gap-2 text-sm mb-3">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className={`font-display text-2xl font-bold ${scoreColor}`}>{c.score}</span>
-                  <span className="text-xs text-muted-foreground">/100</span>
+                  <span className="font-semibold">Comparar fichas</span>
                   <span className="ml-auto glass-pill text-xs capitalize">{c.estado}</span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">

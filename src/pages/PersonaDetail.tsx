@@ -449,8 +449,10 @@ function PersonEditor({ id }: { id?: string }) {
         <div className="mb-4 min-w-0 overflow-x-auto rounded-2xl border bg-card/60"><TabsList aria-label="Secciones de la ficha" className="flex h-auto w-max min-w-full flex-nowrap justify-start gap-1 bg-transparent p-2">
           {[
             ["detalles", "Detalles"],
-            ["conyuges", `Cónyuges${fam.conyuges.length + fam.hijos.length > 0 ? ` (${fam.conyuges.length + fam.hijos.length})` : ""}`],
-            ["padres", `Padres${fam.padres.length + fam.hermanos.length > 0 ? ` (${fam.padres.length + fam.hermanos.length})` : ""}`],
+            ["conyuges", `Cónyuges (${fam.conyuges.length})`],
+            ["hijos", `Hijos (${fam.hijos.length})`],
+            ["padres", `Padres (${fam.padres.length})`],
+            ["hermanos", `Hermanos (${fam.hermanos.length})`],
             ["relaciones", `Red familiar${fam.otros.length > 0 ? ` (${fam.otros.length})` : ""}`],
             ["fuentes", `Fuentes${docs.length > 0 ? ` (${docs.length})` : ""}`],
             ["recuerdos", `Recuerdos${fotos.length > 0 ? ` (${fotos.length})` : ""}`],
@@ -587,7 +589,8 @@ function PersonEditor({ id }: { id?: string }) {
               setRelaciones(data ?? []);
             }} trigger={<Button size="sm" variant="outline">+ Cónyuge</Button>} />}
           />
-          <div className="h-3" />
+        </TabsContent>
+        <TabsContent value="hijos">
           <FamiliaSeccion
             titulo="Hijos"
             personas={fam.hijos}
@@ -634,7 +637,8 @@ function PersonEditor({ id }: { id?: string }) {
               }} trigger={<Button size="sm" variant="outline">+ Madre</Button>} />
             </div>}
           />
-          <div className="h-3" />
+        </TabsContent>
+        <TabsContent value="hermanos">
           <FamiliaSeccion
             titulo="Hermanos"
             personas={fam.hermanos}

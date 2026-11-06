@@ -33,9 +33,20 @@ palettes={
 }
 groups={'mint':'tree birth branches pin calendar check sync','gold':'archive folder tag ship bulb building','coral':'compass heart','violet':'dna search spark language flask compare merge','rose':'photos photo','slate':'tools settings sliders logout menu more expand close back chevron chevrondown arrow minus'}
 name_palette={n:k for k,v in groups.items() for n in v.split()}
+# Modern filled accents. Original supplied SVGs remain intact for provenance.
+refreshed={
+'birth':'<g transform="rotate(-17 7 13)" fill="#6bcbb1"><path d="M7.3 8c-2.9 0-4.1 2.5-3.1 5.2.7 1.9.6 2.3.3 4-.4 2.5 1.2 4.1 3.1 3.8 2.3-.3 2.7-2.5 2.1-4.5-.6-2-.1-2.8.7-4.2C11.3 10.2 9.7 8 7.3 8Z"/><ellipse cx="9" cy="5" rx="1.6" ry="2"/><circle cx="5.5" cy="5.1" r="1.2"/><circle cx="3.1" cy="6.6" r="1"/><circle cx="2.1" cy="8.9" r=".85"/></g><g transform="translate(12 -2) rotate(17 4 12)" fill="#ef9b8b"><path d="M4 8c2.7 0 3.8 2.5 2.9 5.1-.7 1.9-.6 2.2-.3 3.9.4 2.4-1.1 4-3 3.7-2.1-.3-2.6-2.4-2-4.4.5-2 .1-2.7-.7-4.1C0 10.1 1.7 8 4 8Z"/><ellipse cx="2.2" cy="5" rx="1.5" ry="1.9"/><circle cx="5.5" cy="5.2" r="1.15"/><circle cx="7.7" cy="6.7" r=".95"/><circle cx="8.5" cy="9" r=".8"/></g>',
+'archive':'<rect x="3" y="8" width="18" height="13" rx="3" fill="#e8b85d"/><rect x="2" y="3" width="20" height="6" rx="2" fill="#ffe0a0"/><rect x="8" y="12" width="8" height="3" rx="1.5" fill="#946d35"/>',
+'document':'<path d="M6 2h8l6 6v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#82bcec"/><path d="M14 2v4a2 2 0 0 0 2 2h4Z" fill="#cce9ff"/><path d="M7 12h9M7 16h6" stroke="#32699d" stroke-width="1.6" stroke-linecap="round"/>',
+'calendar':'<rect x="2" y="4" width="20" height="18" rx="4" fill="#a4e1ce"/><path d="M6 4h12a4 4 0 0 1 4 4v1H2V8a4 4 0 0 1 4-4Z" fill="#4caa90"/><path d="M7 2v4M17 2v4" stroke="#287e68" stroke-width="2" stroke-linecap="round"/><g fill="#368b73"><circle cx="7" cy="13" r="1.1"/><circle cx="12" cy="13" r="1.1"/><circle cx="17" cy="13" r="1.1"/><circle cx="7" cy="18" r="1.1"/><circle cx="12" cy="18" r="1.1"/></g>',
+'work':'<rect x="2" y="7" width="20" height="15" rx="4" fill="#ba9cde"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12q9 5 18 0" fill="none" stroke="#74549e" stroke-width="1.8"/><rect x="10" y="12" width="4" height="5" rx="1.4" fill="#e8d8ff"/>',
+}
 symbols=[]; names=[]
 for p in sorted(originals.glob('*.svg')):
- name=p.stem; names.append(name); elem=ET.fromstring(p.read_text()); stroke,fill,light=palettes[name_palette.get(name,'blue')]
+ name=p.stem; names.append(name)
+ if name in refreshed:
+  symbols.append(f'<symbol id="{name}" viewBox="0 0 24 24">{refreshed[name]}</symbol>'); continue
+ elem=ET.fromstring(p.read_text()); stroke,fill,light=palettes[name_palette.get(name,'blue')]
  content=backgrounds.get(name,'').replace('/>',f' fill="{fill}" stroke="none"/>')
  for i,child in enumerate(elem):
   tag=child.tag.split('}')[-1]; d=child.attrib.get('d','')
@@ -52,6 +63,7 @@ custom={
 'death':'<path d="M6 21V9a6 6 0 0 1 12 0v12Z" fill="#b6b9d6" stroke="#626487" stroke-width="1.5"/><path d="M3 21h18M10 9h4M10 12h4" stroke="#626487" stroke-width="1.5" stroke-linecap="round"/><path d="M12 18c-2-3 1-4 3-4-1 3-1 4-3 4Z" fill="#6ca68a"/>',
 'work':'<rect x="3" y="7" width="18" height="14" rx="2" fill="#c4a1e8" stroke="#78539d" stroke-width="1.5"/><path d="M8 7V4h8v3M3 12q9 5 18 0" fill="none" stroke="#78539d" stroke-width="1.5"/><rect x="10" y="12" width="4" height="4" rx="1" fill="#f1e0ff"/>',
 }
+custom.update({n:svg for n,svg in refreshed.items() if n not in names})
 for n,svg in custom.items():names.append(n);symbols.append(f'<symbol id="{n}" viewBox="0 0 24 24">{svg}</symbol>')
 (out/'geneai.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg">'+''.join(symbols)+'</svg>')
 (out/'names.json').write_text(json.dumps(names,ensure_ascii=False))

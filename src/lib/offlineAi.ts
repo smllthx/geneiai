@@ -1,4 +1,4 @@
-import { birthLabel, lifeDates } from "@/lib/personDates";
+import { birthLabel, lifeDates, personAge } from "@/lib/personDates";
 import { supabase } from "@/integrations/supabase/client";
 import { checkCoherence } from "@/lib/coherence";
 import { isAiProviderOrCreditError } from "@/lib/aiErrors";
@@ -14,7 +14,7 @@ export function localPersonaInsight(persona: any) {
   const born = y(persona?.nac_fecha);
   if (persona && !born && birthLabel(persona)) return `Nacimiento registrado: ${birthLabel(persona)}. Una partida de nacimiento o bautismo puede ayudar a precisar la fecha.`;
   const died = y(persona?.defuncion_fecha);
-  if (born && died) return `Vivió aproximadamente ${died - born} años; revisá si existen fotos, fuentes o eventos que completen esa etapa.`;
+  if (personAge(persona) && died) return `Vivió ${personAge(persona)}; revisá si existen fotos, fuentes o eventos que completen esa etapa.`;
   if (born) return `Pertenece a la generación nacida alrededor de ${born}; conviene buscar censos, bautismos y registros civiles de esa década.`;
   if (persona?.ocupacion) return `Su oficio registrado (${persona.ocupacion}) puede orientar búsquedas en padrones, gremios o prensa local.`;
   return "Faltan fechas o lugares clave: nacimiento, matrimonio, defunción y fuentes ayudan a completar el perfil.";

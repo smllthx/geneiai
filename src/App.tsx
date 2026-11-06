@@ -13,6 +13,7 @@ import ExternalLinkBrowser from "@/components/ExternalLinkBrowser";
 import AppUpdateNotifier from "@/components/AppUpdateNotifier";
 import SectionPlaceholder from "@/components/SectionPlaceholder";
 import Login from "./pages/Login";
+const MotorIdentidad = lazy(() => import("./pages/MotorIdentidad"));
 const DesignPreview = lazy(() => import("./pages/DesignPreview"));
 const Inicio = lazy(routeLoaders.Inicio);
 import SelfHealer, { AppErrorBoundary } from "@/components/SelfHealer";
@@ -126,6 +127,7 @@ const App = () => (
                   <Route path="/importadas-pendientes" element={<PersonasImportadasPendientes />} />
                   <Route path="/investigacion-externa" element={<InvestigacionExterna />} />
                   <Route path="/buscar" element={<Buscar />} />
+                  <Route path="/motor-identidad" element={<MotorIdentidad />} />
                   <Route path="/coincidencias" element={<Coincidencias />} />
                   <Route path="/adn" element={<ADN />} />
                   <Route path="/origen-ancestral" element={<Navigate to="/adn" replace />} />
