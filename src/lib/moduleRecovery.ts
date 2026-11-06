@@ -9,6 +9,39 @@ export function hasOpenEditor() {
     !!document.querySelector("[data-geneiai-editing='true'], form, textarea, input:not([type=hidden]), [contenteditable=true], [role=dialog], iframe"));
 }
 
+const failedAssets = new Set<string>();
+function isAppAsset(raw: string) {
+  try {
+    const url = new URL(raw);
+    return url.origin === location.origin && /^\/assets\/[^/]+\.(?:js|css)$/.test(url.pathname);
+  } catch { return false; }
+}
+
+/** Safari may retain a failed modulepreload in its resource cache across document reloads. */
+export function watchModuleRequests() {
+  window.addEventListener("error", event => {
+    const link = event.target;
+    if (link instanceof HTMLLinkElement && ["modulepreload", "stylesheet"].includes(link.rel) && isAppAsset(link.href)) {
+      failedAssets.add(link.href);
+      if (failedAssets.size > 8) failedAssets.delete(failedAssets.values().next().value!);
+    }
+  }, true);
+}
+
+export async function revalidateFailedAssets(signal: AbortSignal) {
+  const urls = new Set(failedAssets);
+  // Bare dynamic imports do not necessarily generate a link element.
+  for (const entry of performance.getEntriesByType?.("resource") as PerformanceResourceTiming[] ?? []) {
+    if (entry.transferSize === 0 && entry.decodedBodySize === 0 && isAppAsset(entry.name)) urls.add(entry.name);
+  }
+  await Promise.all([...urls].slice(-8).map(async url => {
+    try {
+      const response = await fetch(url, { cache: "reload", credentials: "omit", signal });
+      if (response.ok) await response.arrayBuffer();
+    } catch { /* An old file may no longer exist. The new entry can reference a replacement. */ }
+  }));
+}
+
 function entryScript(doc: Document) {
   const path = doc.querySelector<HTMLScriptElement>('script[type="module"][src]')?.getAttribute("src");
   if (!path) return null;
@@ -32,6 +65,7 @@ export async function recoverStaleView(signal: AbortSignal, reload = () => windo
     if (now - Number(sessionStorage.getItem(guard)) < 120_000) return;
     // If tab storage is blocked we leave retry to the user rather than risk a loop.
     sessionStorage.setItem(guard, String(now));
-    reload();
+    await revalidateFailedAssets(signal);
+    if (safe()) reload();
   } catch { /* Offline, aborted, or storage denied. The retry control remains available. */ }
 }

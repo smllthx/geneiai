@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { lazyView } from "./LazyView";
 
@@ -10,6 +10,6 @@ it("keeps the rest of the app mounted after a Safari chunk failure", async () =>
   expect(await screen.findByRole("alert")).toHaveTextContent("Esta sección no terminó de cargar");
   expect(screen.getByRole("textbox")).toHaveValue("nota pendiente");
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-  screen.getByRole("button", { name: "Volver a cargar" }).click();
-  expect(confirm).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole("button", { name: "Volver a cargar" }));
+  await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
 });

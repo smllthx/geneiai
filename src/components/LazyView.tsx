@@ -1,7 +1,8 @@
 import { lazy, useEffect, useState, type ComponentType } from "react";
-import { hasOpenEditor, isModuleLoadError, recoverStaleView } from "@/lib/moduleRecovery";
+import { hasOpenEditor, isModuleLoadError, recoverStaleView, revalidateFailedAssets } from "@/lib/moduleRecovery";
 
 function ModuleUnavailable({ editorWasOpen }: { editorWasOpen: boolean }) {
+  const [retrying, setRetrying] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -10,21 +11,25 @@ function ModuleUnavailable({ editorWasOpen }: { editorWasOpen: boolean }) {
     return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
   }, []);
   useEffect(() => {
-    if (!online || editorWasOpen) return;
+    if (!online || (!retrying && editorWasOpen)) return;
+    let current = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 3500);
-    void recoverStaleView(controller.signal).finally(() => window.clearTimeout(timeout));
-    return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [online, editorWasOpen]);
+    const run = async () => {
+      if (!retrying) return recoverStaleView(controller.signal);
+      await revalidateFailedAssets(controller.signal);
+      if (!current) return;
+      setRetrying(false);
+      if (navigator.onLine && (!hasOpenEditor() || window.confirm("Si recargas, podrías perder cambios sin guardar. ¿Recargar esta pestaña?"))) window.location.reload();
+    };
+    void run().finally(() => window.clearTimeout(timeout));
+    return () => { current = false; controller.abort(); window.clearTimeout(timeout); };
+  }, [online, editorWasOpen, retrying]);
 
-  const retry = () => {
-    if (hasOpenEditor() && !window.confirm("Si recargas, podrías perder cambios sin guardar. ¿Recargar esta pestaña?")) return;
-    window.location.reload();
-  };
   return <section role="alert" className="mx-auto my-8 max-w-md rounded-2xl border bg-card p-5">
     <h2 className="font-semibold">{online ? "Esta sección no terminó de cargar" : "Estás sin conexión"}</h2>
     <p className="my-3 text-sm text-muted-foreground">{online ? "Puedes volver a abrirla recargando esta pestaña." : "Cuando vuelva la conexión podrás abrir esta sección."}</p>
-    <button type="button" disabled={!online} onClick={retry} className="min-h-11 rounded-xl bg-primary px-4 text-primary-foreground disabled:opacity-50">Volver a cargar</button>
+    <button type="button" disabled={!online || retrying} onClick={() => setRetrying(true)} className="min-h-11 rounded-xl bg-primary px-4 text-primary-foreground disabled:opacity-50">Volver a cargar</button>
   </section>;
 }
 

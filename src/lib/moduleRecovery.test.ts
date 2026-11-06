@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { isModuleLoadError, recoverStaleView } from "./moduleRecovery";
+import { isModuleLoadError, recoverStaleView, revalidateFailedAssets, watchModuleRequests } from "./moduleRecovery";
 
 const shell = (build: string) => `<script type="module" src="/assets/index-${build}.js"></script>`;
 const response = (build: string) => new Response(shell(build), { headers: { "Content-Type": "text/html" } });
@@ -53,4 +53,17 @@ it("does not probe offline or from an inactive tab", async () => {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
   await check(); expect(fetch).not.toHaveBeenCalled();
+});
+
+it("revalidates the failed public module before the user retries, without touching account data", async () => {
+  watchModuleRequests();
+  for (const href of ["/assets/route-abc.js", "https://elsewhere.example/assets/third.js", "/api/health"]) {
+    const link = document.createElement("link");
+    link.rel = "modulepreload"; link.href = href; document.head.append(link);
+    link.dispatchEvent(new Event("error"));
+  }
+  await revalidateFailedAssets(new AbortController().signal);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledWith(`${location.origin}/assets/route-abc.js`,
+    expect.objectContaining({ cache: "reload", credentials: "omit" }));
 });
