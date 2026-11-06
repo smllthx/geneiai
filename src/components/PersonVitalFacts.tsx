@@ -17,7 +17,8 @@ const facts = [
 ] as const;
 function dateLabel(value?: string | null, locale = "es-CL") {
   if (!value) return null;
-  const date = new Date(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(`${value}T12:00:00Z`);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
@@ -33,7 +34,7 @@ export default function PersonVitalFacts({ person, name, events = [], placeLabel
         const event = person[dateKey]
           ? candidates.find(event => event.fecha === person[dateKey])
           : candidates.find(event => event.fecha || event.fecha_aprox) ?? candidates[0];
-        const date = (type === 'nacimiento' ? (person.nac_fecha ? dateLabel(person.nac_fecha, locale) : localizeDateLabel(birthLabel(person), language)) : dateLabel(person[dateKey], locale)) || dateLabel(event?.fecha, locale) || event?.fecha_aprox || (type === 'defuncion' && person.viva === 'si' ? 'Vive' : null);
+        const date = (type === 'nacimiento' ? (person.nac_fecha ? dateLabel(person.nac_fecha, locale) : localizeDateLabel(birthLabel(person), language)) : dateLabel(person[dateKey], locale)) || dateLabel(event?.fecha, locale) || event?.fecha_aprox || (type === 'defuncion' && person.viva === 'si' ? t('Vive') : null);
         const place = placeLabel(person[placeKey]) || placeLabel(event?.lugar_id) || event?.lugar_original;
         return <div key={type} className="min-w-0 border-b px-5 py-4">
           <dt className="flex items-center gap-2 text-xs font-semibold text-muted-foreground"><GeneIcon name={eventTypes[type].icon} size={21} />{t(label)}</dt>

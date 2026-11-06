@@ -8,6 +8,12 @@ export const isLanguage = (value: unknown): value is Language => value === "es" 
 export const localeFor = (language: Language) => languages.find(l => l.code === language)!.locale;
 // Only interface strings enter this dictionary. Names, transcriptions and research stay verbatim.
 export const messages: Record<string, [string, string]> = {
+  "Viaje": ["Journey", "Viaggio"], "Censo": ["Census", "Censimento"],
+  "Abrir buscador universal de personas": ["Open people search", "Apri ricerca persone"],
+  "Notificaciones": ["Notifications", "Notifiche"],
+  "El archivo de ejemplo no tiene notificaciones.": ["The example archive has no notifications.", "L’archivio di esempio non ha notifiche."],
+  "Archivo familiar privado": ["Private family archive", "Archivio familiare privato"],
+
   "Cerrar": ["Close", "Chiudi"], "Vista": ["View", "Vista"], "IA": ["AI", "IA"],
   "Resumen del archivo": ["Archive summary", "Riepilogo dell’archivio"],
   "Accesos al archivo": ["Archive shortcuts", "Accessi all’archivio"],

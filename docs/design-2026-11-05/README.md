@@ -33,7 +33,9 @@ Las referencias aportadas GENEAI1(1), GENEAI2(1) y GENEAI3(1) se aplican a los c
 
 ## Verificación
 
-Pruebas de regresión, TypeScript, build de producción y contrato compartido. Pruebas nuevas cubren fechas aproximadas, fuentes, duplicados de eventos, banderas sin inferencia, cambio de orientación y guardado/cancelación de idioma. La galería `/diseno` incorpora Inicio, Cronología, Iconos y Banderas con datos ficticios y no consulta registros de cuentas.
+193 pruebas de regresión aprobadas, TypeScript, build de producción y contrato compartido. Pruebas nuevas cubren fechas aproximadas, fuentes, duplicados de eventos, banderas sin inferencia, cambio de orientación y guardado/cancelación de idioma. La galería `/diseno` incorpora Inicio, Cronología, Iconos y Banderas con datos ficticios y no consulta registros de cuentas.
+
+Revisión visual en vista de escritorio y marco iPhone: detalle de matrimonio, alternancia horizontal/vertical, cambio a italiano y ausencia de desbordamiento horizontal en el marco móvil. Las cronologías del archivo filtran por árbol activo y sólo incluyen eventos de personas de ese árbol.
 
 La adaptación es del cliente web/PWA. No produce instaladores nuevos ni modifica autenticación, relaciones familiares o políticas de acceso.
 

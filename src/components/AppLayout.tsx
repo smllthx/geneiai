@@ -266,13 +266,13 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
         <div className="glass-strong sidebar-surface flex h-full flex-col rounded-3xl">
           <div className="sidebar-brand px-4 pt-5 pb-6">
             <div className="flex items-center gap-3">
-              <BrandLogo className="min-w-0 flex-1" size={34} showText subtitle="Historias que conectan" />
+              <BrandLogo className="min-w-0 flex-1" size={34} showText subtitle={t("Historias que conectan")} />
               <div className="ml-auto flex items-center gap-1">
                 <button
                   onClick={() => setSidebarCollapsed(true)}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
-                  aria-label="Ocultar menú"
-                  title="Ocultar menú"
+                  aria-label={t("Ocultar menú")}
+                  title={t("Ocultar menú")}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -281,9 +281,9 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2"><SectionMenu /></div>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
-            <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? "Archivo de ejemplo" : user?.email}</p>
+            <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? t("Archivo de ejemplo") : user?.email}</p>
             <Button variant="ghost" size="sm" className="mb-1 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
-              <RefreshCw className="h-4 w-4" /> Actualizar datos
+              <RefreshCw className="h-4 w-4" /> {t("Actualizar datos")}
             </Button>
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
               <LogOut className="h-4 w-4" /> {t(preview ? "Abrir mi archivo" : "Cerrar sesión")}
@@ -295,8 +295,8 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
       {/* Floating re-open arrow when sidebar is collapsed (desktop only) */}
       {!isMobile && !isWindowFrame && <button
         onClick={() => setSidebarCollapsed(false)}
-        aria-label="Mostrar menú"
-        title="Mostrar menú GENEAI"
+        aria-label={t("Mostrar menú")}
+        title={t("Mostrar menú")}
         className={cn(
           "fixed left-0 top-1/2 z-40 hidden -translate-y-1/2 items-center justify-center rounded-r-2xl border border-l-0 border-border bg-card/90 px-1.5 py-3 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-card hover:text-foreground hover:px-2 md:flex",
           sidebarCollapsed ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
@@ -309,7 +309,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
         {isMobile && !isWindowFrame && <div ref={headerRef} className="mobile-app-header glass-strong fixed z-40 flex items-center justify-between gap-1 rounded-2xl p-2">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label="Abrir menú">
+              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label={t("Abrir menú")}>
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -320,11 +320,11 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
-                <BrandLogo size={58} showText subtitle={preview ? "Archivo de ejemplo" : user?.email ?? "Archivo familiar privado"} />
+                <BrandLogo size={58} showText subtitle={preview ? t("Archivo de ejemplo") : user?.email ?? t("Archivo familiar privado")} />
               </div>
               <SectionMenu onNavigate={() => setMobileMenuOpen(false)} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
-                <RefreshCw className="h-4 w-4" /> Actualizar datos
+                <RefreshCw className="h-4 w-4" /> {t("Actualizar datos")}
               </Button>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
                 <LogOut className="h-4 w-4" /> {t(preview ? "Abrir mi archivo" : "Cerrar sesión")}
@@ -335,9 +335,9 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             <BrandLogo className="min-w-0" size={36} showText />
           </NavLink>
           <div className="flex items-center gap-1">
-            {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+            {preview ? <button className="toolbar-control" aria-label={t("Abrir buscador universal de personas")} onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
             <AdaptiveViewport inline />
-            {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
+            {preview ? <button className="toolbar-control" aria-label={t("Notificaciones")} onClick={() => toast.info(t("El archivo de ejemplo no tiene notificaciones."))}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
           </div>
         </div>}
         <main className={cn("app-main min-w-0 flex-1", isWindowFrame && "app-window-main")}>
@@ -347,9 +347,9 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
               <span className="toolbar-context">{t(preview ? "Archivo de ejemplo" : "Mi archivo familiar")}</span>
             </div>
             <div className="toolbar-capsule glass-strong">
-              {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+              {preview ? <button className="toolbar-control" aria-label={t("Abrir buscador universal de personas")} onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
               <SiriAssistant inline />
-              {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
+              {preview ? <button className="toolbar-control" aria-label={t("Notificaciones")} onClick={() => toast.info(t("El archivo de ejemplo no tiene notificaciones."))}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
               <span className="toolbar-divider" />
               <AdaptiveViewport inline />
             </div>

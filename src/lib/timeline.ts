@@ -18,6 +18,7 @@ export const eventTypes: Record<string, { label: string; icon: string }> = {
   matrimonio: { label: "Matrimonio", icon: "marriage" }, defuncion: { label: "Defunción", icon: "death" },
   entierro: { label: "Entierro", icon: "death" }, migracion: { label: "Migración", icon: "ship" },
   residencia: { label: "Residencia", icon: "home" }, ocupacion: { label: "Oficio", icon: "work" },
+  viaje: { label: "Viaje", icon: "ship" }, censo: { label: "Censo", icon: "document" },
   documento: { label: "Documento", icon: "document" }, evento: { label: "Evento", icon: "spark" },
 };
 export function eventType(value: string): string {
@@ -25,7 +26,7 @@ export function eventType(value: string): string {
   if (/migracion/.test(key)) return "migracion";
   if (/domicilio/.test(key)) return "residencia";
   if (/oficio|profesion/.test(key)) return "ocupacion";
-  if (/censo|fuente/.test(key)) return "documento";
+  if (/fuente/.test(key)) return "documento";
   return Object.keys(eventTypes).find(type => key.includes(type)) || "evento";
 }
 function dateFields(event: TimelineEvent): BirthFields {

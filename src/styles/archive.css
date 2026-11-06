@@ -33,6 +33,7 @@ body { background: hsl(var(--background)); }
 .home-feature-grid > .home-research { display: none; }
 .home-research-compact { display: block; }
 .home-surface, .home-discover, .home-shortcuts, .archivo-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: none; border-radius: 14px; }
+.home-discover { padding: 24px; }
 .home-shortcuts { padding: 8px 14px; }
 .home-detail { border-bottom: 1px solid hsl(var(--border)); }
 .home-detail:last-child { border-bottom: none; }
@@ -94,6 +95,7 @@ body { background: hsl(var(--background)); }
   .timeline-vertical .timeline-detail { margin-left: 0; padding: 16px; }
 }
 @media (max-width: 767px) {
+  .home-discover { padding: 20px; }
   .home-tree-card { grid-template-columns: minmax(0, 1fr) 100px; }
   .home-tree-copy { padding: 20px 0 20px 20px; }
   .home-tree-card .family-illustration { padding: 8px; }

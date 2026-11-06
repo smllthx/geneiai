@@ -28,6 +28,8 @@ describe("archive timelines", () => {
     expect(timelineDate(items[0], "en")).toBe("Sep 8, 1865");
     expect(eventType("Defunción")).toBe("defuncion");
     expect(eventType("emigracion")).toBe("migracion");
+    expect(eventType("viaje")).toBe("viaje");
+    expect(eventType("censo")).toBe("censo");
   });
 });
 
