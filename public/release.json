@@ -1,12 +1,11 @@
 {
-  "version": "3.0.10",
+  "version": "3.0.11",
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "changes": [
-    "Paneles de cristal más transparentes, huellas de bebé e iconos a color actualizados.",
-    "Buscador con prioridad por nombre completo y selector de árbol; edad y contadores de parentesco corregidos.",
-    "GEDCOM conserva cada familia, progenitores sin pareja y fechas aproximadas; protección de personas vivas reforzada.",
-    "Motor de identidad en la nube con comparación de fichas, variantes y revisión de propuestas."
+    "Iconos recuperados del primer paquete de diseño, con formas simples, colores por sección y acabado de cristal.",
+    "Argollas entrelazadas más finas, huellas de nacimiento y símbolos de eventos con el mismo estilo.",
+    "Catálogo visual organizado por navegación, historia familiar y herramientas."
   ],
   "nativeDistributionReady": false
 }

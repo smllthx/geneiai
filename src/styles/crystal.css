@@ -31,6 +31,12 @@ body {
 .timeline-detail { background: hsl(var(--background) / .45); border-radius: 18px; }
 .timeline-filters input, .timeline-filters select { background: hsl(var(--background) / .45); border-radius: 14px; }
 .icon-catalog > div, .flag-catalog > div { background: hsl(var(--card) / .55); border-color: hsl(var(--crystal-edge)); border-radius: 18px; }
+.icon-catalog-glass { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid hsl(var(--crystal-edge)); border-radius: 22px; background: linear-gradient(145deg, hsl(0 0% 100% / .045), transparent), hsl(var(--card) / .38); overflow: hidden; }
+.icon-catalog-glass > div { min-height: 116px; padding: 22px 10px; gap: 14px; background: transparent; border: 0; border-radius: 0; overflow-wrap: normal; color: hsl(var(--foreground) / .85); }
+.icon-catalog-glass > div .gene-icon { width: 36px; height: 36px; }
+@media (max-width: 480px) {
+  .icon-catalog-glass { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .mobile-app-header, .mobile-bottom-nav { background: hsl(var(--card) / .72); border-color: hsl(var(--crystal-edge)); backdrop-filter: saturate(160%) blur(22px); -webkit-backdrop-filter: saturate(160%) blur(22px); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .12), 0 6px 24px hsl(var(--crystal-shadow)); }
 /* Keep text legible and avoid stacked blur while scrolling a long mobile list. */
 @media (max-width: 767px) {

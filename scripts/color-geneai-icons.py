@@ -1,70 +1,145 @@
-"""Color the supplied GENEAI geometry; keep originals for repeatable builds."""
+"""Build glass icons from the user's immutable, original 24-unit SVG geometry.
+
+Color belongs to each shape, not a background tile or a CSS filter. Gradients
+are scoped inside each symbol so external SVG use works without page IDs.
+"""
+from copy import deepcopy
 from pathlib import Path
+import json
+import re
 import xml.etree.ElementTree as ET
-import json,re
+
 ET.register_namespace('', 'http://www.w3.org/2000/svg')
-root=Path(__file__).resolve().parent.parent
-out=root/'src/assets/icons'; originals=out/'original'
-# Filled silhouettes only where the original path is intentionally open.
-backgrounds={
-'home':'<path d="M5.4 9.1 12 3.8l6.6 5.3v11.3h-4.4v-5.8H9.8v5.8H5.4Z"/>',
-'archive':'<path d="M4.6 8.8h14.8v11.5H4.6Z"/>',
-'birth':'<path d="M12 13.6C7.7 14.1 4.7 11.6 4 7.3c4.6-.5 7.6 1.7 8 5.3Zm.1-2.1c.1-4.9 3-7.3 7.6-7.5.2 4.6-2.7 7.7-7.6 7.5Z"/>',
-'bulb':'<path d="M8.4 15.8c-.1-1.4-2.5-2.9-2.5-6.3a6.1 6.1 0 0 1 12.2 0c0 3.5-2.5 5-2.6 6.3Z"/>',
-'people':'<path d="M2.8 20c.3-4.1 2.9-6.3 6.5-6.3s6.2 2.2 6.5 6.3Z"/>',
-'user':'<path d="M4.8 20c.4-4.2 3.3-6.5 7.2-6.5s6.8 2.3 7.2 6.5Z"/>',
-'ship':'<path d="M6.7 7.5h10.6v6H6.7Z"/><path d="m3.7 14.3 8.3-2.8 8.3 2.8-2.7 4.9H6.4Z"/>',
-'flask':'<path d="M10.1 4h3.8v6.5l5.3 7.4c.8 1.2 0 2.6-1.4 2.6H6.2c-1.4 0-2.2-1.4-1.4-2.6l5.3-7.4Z"/>',
-'source':'<path d="M4.4 4.5h10.1l3 3.1v11.7H4.4Z"/>',
-'photos':'<path d="M4.5 16.4 3.1 6.3a1.3 1.3 0 0 1 1.1-1.5l11.5-1.6a1.3 1.3 0 0 1 1.5 1.1l.1.9Z"/>',
-'logout':'<path d="M10.4 4.1H4.1v15.8h6.3Z"/>',
-'upload':'<path d="M4.2 16h15.6v4H4.2Z"/>',
-'download':'<path d="M4.2 16h15.6v4H4.2Z"/>',
-'building':'<path d="M5 9h14v11H5Z"/>',
+OUT = Path(__file__).resolve().parent.parent / 'src/assets/icons'
+PALETTES = {
+    'blue': ('#bce7ff', '#66b9f4', '#4594d7'),
+    'mint': ('#b6f1df', '#63cdb0', '#3da68b'),
+    'gold': ('#ffe5ae', '#f0c56b', '#cc9b40'),
+    'coral': ('#ffd0c3', '#fa9c90', '#dc776e'),
+    'violet': ('#e3d3ff', '#b79aec', '#9275d1'),
+    'rose': ('#ffd6ed', '#eba7cd', '#c97eaf'),
+    'slate': ('#dde7f5', '#aebfd5', '#8299b5'),
 }
-palettes={
-'blue':('#3276b5','#73b9f0','#d4edff'),
-'mint':('#207e69','#64c9a5','#c4f1df'),
-'gold':('#98621f','#edb554','#ffe4a8'),
-'coral':('#b95652','#f18e82','#ffd5c7'),
-'violet':('#7552b1','#b394e6','#e8dcff'),
-'rose':('#ad5188','#e79fc9','#fbe0f1'),
-'slate':('#526887','#a3b5d0','#dde7f5'),
+GROUPS = {
+    'mint': 'tree birth branches fan calendar check checklist sync',
+    'gold': 'archive document source book ship',
+    'coral': 'compass heart pin bulb logout',
+    'violet': 'dna search spark flask compare merge folder layers clock timeline',
+    'rose': 'photos photo tag',
+    'slate': 'tools settings sliders building',
 }
-groups={'mint':'tree birth branches pin calendar check sync','gold':'archive folder tag ship bulb building','coral':'compass heart','violet':'dna search spark language flask compare merge','rose':'photos photo','slate':'tools settings sliders logout menu more expand close back chevron chevrondown arrow minus'}
-name_palette={n:k for k,v in groups.items() for n in v.split()}
-# Modern filled accents. Original supplied SVGs remain intact for provenance.
-refreshed={
-'birth':'<g transform="rotate(-17 7 13)" fill="#6bcbb1"><path d="M7.3 8c-2.9 0-4.1 2.5-3.1 5.2.7 1.9.6 2.3.3 4-.4 2.5 1.2 4.1 3.1 3.8 2.3-.3 2.7-2.5 2.1-4.5-.6-2-.1-2.8.7-4.2C11.3 10.2 9.7 8 7.3 8Z"/><ellipse cx="9" cy="5" rx="1.6" ry="2"/><circle cx="5.5" cy="5.1" r="1.2"/><circle cx="3.1" cy="6.6" r="1"/><circle cx="2.1" cy="8.9" r=".85"/></g><g transform="translate(12 -2) rotate(17 4 12)" fill="#ef9b8b"><path d="M4 8c2.7 0 3.8 2.5 2.9 5.1-.7 1.9-.6 2.2-.3 3.9.4 2.4-1.1 4-3 3.7-2.1-.3-2.6-2.4-2-4.4.5-2 .1-2.7-.7-4.1C0 10.1 1.7 8 4 8Z"/><ellipse cx="2.2" cy="5" rx="1.5" ry="1.9"/><circle cx="5.5" cy="5.2" r="1.15"/><circle cx="7.7" cy="6.7" r=".95"/><circle cx="8.5" cy="9" r=".8"/></g>',
-'archive':'<rect x="3" y="8" width="18" height="13" rx="3" fill="#e8b85d"/><rect x="2" y="3" width="20" height="6" rx="2" fill="#ffe0a0"/><rect x="8" y="12" width="8" height="3" rx="1.5" fill="#946d35"/>',
-'document':'<path d="M6 2h8l6 6v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="#82bcec"/><path d="M14 2v4a2 2 0 0 0 2 2h4Z" fill="#cce9ff"/><path d="M7 12h9M7 16h6" stroke="#32699d" stroke-width="1.6" stroke-linecap="round"/>',
-'calendar':'<rect x="2" y="4" width="20" height="18" rx="4" fill="#a4e1ce"/><path d="M6 4h12a4 4 0 0 1 4 4v1H2V8a4 4 0 0 1 4-4Z" fill="#4caa90"/><path d="M7 2v4M17 2v4" stroke="#287e68" stroke-width="2" stroke-linecap="round"/><g fill="#368b73"><circle cx="7" cy="13" r="1.1"/><circle cx="12" cy="13" r="1.1"/><circle cx="17" cy="13" r="1.1"/><circle cx="7" cy="18" r="1.1"/><circle cx="12" cy="18" r="1.1"/></g>',
-'work':'<rect x="2" y="7" width="20" height="15" rx="4" fill="#ba9cde"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12q9 5 18 0" fill="none" stroke="#74549e" stroke-width="1.8"/><rect x="10" y="12" width="4" height="5" rx="1.4" fill="#e8d8ff"/>',
+COLORS = {name: hue for hue, names in GROUPS.items() for name in names.split()}
+CONTROLS = set('arrow back chevron chevrondown close expand external menu minus more add circle'.split())
+
+# Fill open silhouettes while retaining their supplied outlines and proportions.
+SILHOUETTES = {
+    'home': '<path d="M5.4 9.1 12 3.8l6.6 5.3v10.3a1 1 0 0 1-1 1h-3.4v-5.8H9.8v5.8H6.4a1 1 0 0 1-1-1Z"/>',
+    'archive': '<path d="M4.6 8.8h14.8v9.9c0 .9-.7 1.6-1.6 1.6H6.2c-.9 0-1.6-.7-1.6-1.6Z"/>',
+    'bulb': '<path d="M8.4 15.8c-.1-1.4-2.5-2.9-2.5-6.3a6.1 6.1 0 0 1 12.2 0c0 3.5-2.5 5-2.6 6.3Z"/>',
+    'people': '<path d="M2.8 20c.3-4.1 2.9-6.3 6.5-6.3s6.2 2.2 6.5 6.3Z"/>',
+    'user': '<path d="M4.8 20c.4-4.2 3.3-6.5 7.2-6.5s6.8 2.3 7.2 6.5Z"/>',
+    'ship': '<path d="M6.7 7.5h10.6v6H6.7Z"/><path d="m3.7 14.3 8.3-2.8 8.3 2.8-2.7 4.9H6.4Z"/>',
+    'flask': '<path d="M10.1 4h3.8v6.5l5.3 7.4c.8 1.2 0 2.6-1.4 2.6H6.2c-1.4 0-2.2-1.4-1.4-2.6l5.3-7.4Z"/>',
+    'source': '<path d="M4.4 4.5h10.1l3 3.1v11.7H4.4Z"/>',
+    'photos': '<path d="M4.5 16.4 3.1 6.3a1.3 1.3 0 0 1 1.1-1.5l11.5-1.6a1.3 1.3 0 0 1 1.5 1.1l.1.9Z"/>',
+    'logout': '<path d="M10.4 4.1H5.6c-.9 0-1.5.6-1.5 1.5v12.8c0 .9.6 1.5 1.5 1.5h4.8Z"/>',
 }
-symbols=[]; names=[]
-for p in sorted(originals.glob('*.svg')):
- name=p.stem; names.append(name)
- if name in refreshed:
-  symbols.append(f'<symbol id="{name}" viewBox="0 0 24 24">{refreshed[name]}</symbol>'); continue
- elem=ET.fromstring(p.read_text()); stroke,fill,light=palettes[name_palette.get(name,'blue')]
- content=backgrounds.get(name,'').replace('/>',f' fill="{fill}" stroke="none"/>')
- for i,child in enumerate(elem):
-  tag=child.tag.split('}')[-1]; d=child.attrib.get('d','')
-  closed=tag in ('rect','circle','ellipse','polygon') or bool(re.search('[zZ]',d))
-  child.set('fill', (fill if i%2==0 else light) if closed else 'none')
-  # Tiny dots and tree nodes should be solid, not dark outlines.
-  if tag=='circle' and float(child.attrib.get('r',10))<2.2:child.set('fill',fill)
-  content+=ET.tostring(child,encoding='unicode').replace(' xmlns="http://www.w3.org/2000/svg"','')
- symbols.append(f'<symbol id="{name}" viewBox="0 0 24 24"><g fill="none" stroke="{stroke}" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">{content}</g></symbol>')
-custom={
-# Separate arcs make the two gold bands pass over and under each other.
-'marriage':'<g fill="none" stroke-linecap="round"><ellipse cx="8.5" cy="11" rx="5.5" ry="7" transform="rotate(-27 8.5 11)" stroke="#a66b1c" stroke-width="3.8"/><ellipse cx="8.5" cy="11" rx="5.5" ry="7" transform="rotate(-27 8.5 11)" stroke="#f4c967" stroke-width="2.3"/><ellipse cx="15.5" cy="13" rx="5.5" ry="7" transform="rotate(27 15.5 13)" stroke="#a66b1c" stroke-width="3.8"/><ellipse cx="15.5" cy="13" rx="5.5" ry="7" transform="rotate(27 15.5 13)" stroke="#efb84b" stroke-width="2.3"/><path d="M8.8 17.3c2.5.8 4.8-1 5.2-3.2" stroke="#a66b1c" stroke-width="3.8"/><path d="M8.8 17.3c2.5.8 4.8-1 5.2-3.2" stroke="#f4c967" stroke-width="2.3"/><path d="M3.5 7.2q.5-2 2-2.8M14.5 7.5q2.5-1 3.8.5" stroke="#fff2c3" stroke-width="1.1"/></g>',
-'baptism':'<path d="M12 2C10 5.8 6 8.8 6 12a6 6 0 0 0 12 0c0-3.2-4-6.2-6-10Z" fill="#72c9ef" stroke="#2d7ba3" stroke-width="1.5"/><path d="M9 12q0 3 3 3" fill="none" stroke="#e6f8ff" stroke-width="2" stroke-linecap="round"/><path d="M4 21h16M7 18h10" stroke="#5b9fbf" stroke-width="1.6" stroke-linecap="round"/>',
-'death':'<path d="M6 21V9a6 6 0 0 1 12 0v12Z" fill="#b6b9d6" stroke="#626487" stroke-width="1.5"/><path d="M3 21h18M10 9h4M10 12h4" stroke="#626487" stroke-width="1.5" stroke-linecap="round"/><path d="M12 18c-2-3 1-4 3-4-1 3-1 4-3 4Z" fill="#6ca68a"/>',
-'work':'<rect x="3" y="7" width="18" height="14" rx="2" fill="#c4a1e8" stroke="#78539d" stroke-width="1.5"/><path d="M8 7V4h8v3M3 12q9 5 18 0" fill="none" stroke="#78539d" stroke-width="1.5"/><rect x="10" y="12" width="4" height="4" rx="1" fill="#f1e0ff"/>',
-}
-custom.update({n:svg for n,svg in refreshed.items() if n not in names})
-for n,svg in custom.items():names.append(n);symbols.append(f'<symbol id="{n}" viewBox="0 0 24 24">{svg}</symbol>')
-(out/'geneai.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg">'+''.join(symbols)+'</svg>')
-(out/'names.json').write_text(json.dumps(names,ensure_ascii=False))
-print(f'Generated {len(names)} colored icons')
+
+
+def gradients(name, hue):
+    light, color, deep = PALETTES[hue]
+    return (
+        f'<defs><linearGradient id="{name}-glass" gradientUnits="userSpaceOnUse" x1="4" y1="3" x2="19" y2="22">'
+        f'<stop stop-color="{light}" stop-opacity=".92"/><stop offset=".48" stop-color="{color}" stop-opacity=".82"/>'
+        f'<stop offset="1" stop-color="{deep}" stop-opacity=".96"/></linearGradient>'
+        f'<linearGradient id="{name}-ink" gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="19" y2="22">'
+        f'<stop stop-color="{color}"/><stop offset="1" stop-color="{deep}"/></linearGradient>'
+        f'<linearGradient id="{name}-edge" gradientUnits="userSpaceOnUse" x1="4" y1="3" x2="18" y2="21">'
+        f'<stop stop-color="#ffffff" stop-opacity=".65"/><stop offset=".55" stop-color="{light}" stop-opacity=".18"/>'
+        f'<stop offset="1" stop-color="{deep}" stop-opacity=".28"/></linearGradient></defs>'
+    )
+
+
+def serialize(element):
+    return ET.tostring(element, encoding='unicode').replace(' xmlns="http://www.w3.org/2000/svg"', '')
+
+
+def supplied_icon(name, source):
+    ink = 'currentColor' if name in CONTROLS else f'url(#{name}-ink)'
+    glass, edge = f'url(#{name}-glass)', f'url(#{name}-edge)'
+    fills, strokes = [], []
+    if name in SILHOUETTES:
+        fills.append(f'<g fill="{glass}" stroke="{edge}" stroke-width=".6">{SILHOUETTES[name]}</g>')
+    for index, child in enumerate(source):
+        tag = child.tag.split('}')[-1]
+        closed = tag in ('rect', 'circle', 'ellipse', 'polygon')
+        closed_paths = re.findall(r'[Mm][^Mm]*?[Zz]', child.get('d', ''))
+        if (closed or closed_paths) and name not in CONTROLS:
+            shape = deepcopy(child)
+            if not closed:
+                shape.set('d', ' '.join(closed_paths))
+            shape.set('fill', glass)
+            shape.set('stroke', edge)
+            shape.set('stroke-width', '.6')
+            if (name == 'pin' and tag == 'circle') or (name in ('photo', 'photos') and tag == 'circle'):
+                shape.set('fill', '#ffffff')
+                shape.set('fill-opacity', '.65')
+            if name in ('search', 'zoom', 'globe') or (name == 'source' and tag == 'circle'):
+                shape.set('fill-opacity', '.25')
+            fills.append(serialize(shape))
+        # Filled silhouettes have a fine luminous edge, never a dark contour.
+        if closed and name not in CONTROLS and name not in ('search', 'zoom', 'clock', 'globe', 'sliders', 'tools', 'source'):
+            continue
+        stroke = deepcopy(child)
+        # Original internal marks become translucent highlights. The silhouette
+        # stays colored; removing enclosing strokes avoids the old cartoon edge.
+        if name == 'archive' and tag == 'path':
+            stroke.set('d', 'M9.2 12h5.6M11 14.4h2')
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        elif name == 'document':
+            stroke.set('d', 'M14 3.5v4.8h4.3M8.5 12h7M8.5 15.6h5.2')
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        elif (name == 'photo' and tag == 'path') or (name == 'photos' and index == 2):
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        elif name == 'calendar' and tag == 'path':
+            strokes.append('<path d="M7.9 3.2v5.2M16.1 3.2v5.2"/>')
+            stroke.set('d', 'M3.8 10.9h16.4M7.6 15h1.2M12 15h1.2')
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        elif name in ('clock', 'mail', 'compare') and tag == 'path':
+            stroke.set('stroke', '#ffffff')
+            stroke.set('stroke-opacity', '.72')
+        stroke.set('fill', ink if tag == 'circle' and name == 'more' else 'none')
+        strokes.append(serialize(stroke))
+    return (gradients(name, COLORS.get(name, 'blue')) + ''.join(fills)
+            + f'<g fill="none" stroke="{ink}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'
+            + ''.join(strokes) + '</g>')
+
+
+def event_icons():
+    foot = '<path d="M6.7 8.5c-2.1-.2-3.7 1.7-3 3.9.5 1.5.9 2.7.5 4.2-.5 2 .4 3.4 2 3.5 1.9.2 2.9-1.3 2.4-3.2-.5-1.8-.2-2.8.8-4.3 1.3-2-.3-3.9-2.7-4.1Z"/><ellipse cx="8.3" cy="5.7" rx="1.35" ry="1.65"/><circle cx="5.3" cy="5.8" r="1.05"/><circle cx="3.2" cy="7.1" r=".85"/><circle cx="2.1" cy="9.1" r=".65"/><circle cx="2.1" cy="11" r=".5"/>'
+    birth = '<g transform="rotate(-13 6 13)" fill="url(#birth-glass)">' + foot + '</g><g transform="translate(23 -1) scale(-1 1) rotate(-13 6 13)" fill="url(#birth-other-glass)">' + foot + '</g>'
+    marriage = '<g fill="none" stroke="url(#marriage-glass)" stroke-width="2.2" stroke-linecap="round"><ellipse cx="8.5" cy="10.7" rx="5.2" ry="6.3" transform="rotate(-27 8.5 10.7)"/><ellipse cx="15.4" cy="13" rx="5.2" ry="6.3" transform="rotate(27 15.4 13)"/><path d="M8.8 16.7c2.5.7 4.4-.8 4.9-3.2"/></g><path d="M3.6 7.3q.4-2 2.2-2.8M14.6 7.1q2.1-.7 3.7.5" fill="none" stroke="#fff6db" stroke-opacity=".8" stroke-width=".65" stroke-linecap="round"/>'
+    baptism = '<path d="M12 2.8C10 6.6 6.4 9.3 6.4 12.4a5.6 5.6 0 0 0 11.2 0C17.6 9.3 14 6.6 12 2.8Z" fill="url(#baptism-glass)" stroke="url(#baptism-edge)" stroke-width=".65"/><path d="M9 12.5q0 2.6 2.7 2.8" fill="none" stroke="#eefbff" stroke-opacity=".75" stroke-width="1.1" stroke-linecap="round"/><path d="M6 21h12" stroke="url(#baptism-ink)" stroke-width="1.4" stroke-linecap="round"/>'
+    death = '<path d="M6.4 20.5V9a5.6 5.6 0 0 1 11.2 0v11.5Z" fill="url(#death-glass)" stroke="url(#death-edge)" stroke-width=".65"/><path d="M4 20.5h16M10 9.5h4M10 12.8h3" fill="none" stroke="url(#death-ink)" stroke-width="1.35" stroke-linecap="round"/>'
+    work = '<path d="M8.3 7V5.2a1.7 1.7 0 0 1 1.7-1.7h4a1.7 1.7 0 0 1 1.7 1.7V7" fill="none" stroke="url(#work-ink)" stroke-width="1.4"/><rect x="3" y="7" width="18" height="13.3" rx="2.8" fill="url(#work-glass)" stroke="url(#work-edge)" stroke-width=".65"/><path d="M3.6 11.8q8.4 3.4 16.8 0" fill="none" stroke="url(#work-ink)" stroke-width="1.1"/><rect x="10.6" y="11.8" width="2.8" height="3.4" rx=".9" fill="#eee4ff" fill-opacity=".85"/>'
+    return {
+        'birth': gradients('birth', 'mint') + gradients('birth-other', 'coral') + birth,
+        'marriage': gradients('marriage', 'gold') + marriage,
+        'baptism': gradients('baptism', 'blue') + baptism,
+        'death': gradients('death', 'slate') + death,
+        'work': gradients('work', 'violet') + work,
+    }
+
+
+events = event_icons()
+icons = {p.stem: events.get(p.stem) or supplied_icon(p.stem, ET.fromstring(p.read_text()))
+         for p in sorted((OUT / 'original').glob('*.svg'))}
+icons.update({name: content for name, content in events.items() if name not in icons})
+symbols = [f'<symbol id="{name}" viewBox="0 0 24 24">{content}</symbol>' for name, content in icons.items()]
+(OUT / 'geneai.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg">' + ''.join(symbols) + '</svg>')
+(OUT / 'names.json').write_text(json.dumps(list(icons), ensure_ascii=False))
+print(f'Generated {len(icons)} glass icons from the supplied GENEAI geometry')

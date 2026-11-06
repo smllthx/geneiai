@@ -14,11 +14,44 @@ const items = buildTimeline([person], [
   { id: "migration", persona_id: person.id, tipo: "inmigracion", fecha_aprox: "ABT 1896", lugar_id: "cl", lugar_original: "Génova → Valparaíso, Chile", descripcion: "Viaje de ejemplo. Los datos de esta vista son ficticios." },
 ], places);
 
+const iconLabels: Record<string, string> = {
+  home: "Inicio", tree: "Árbol Genealógico", archive: "Archivo familiar", compass: "Descubrimientos",
+  search: "Investigación", photos: "Fotos", dna: "ADN", tools: "Herramientas y cuenta",
+  birth: "Nacimiento", marriage: "Matrimonio", baptism: "Bautismo", death: "Defunción",
+  ship: "Migración", work: "Profesión", people: "Familia", user: "Persona", pin: "Lugares",
+  calendar: "Calendario", timeline: "Línea de tiempo", heart: "Vínculos", document: "Documentos",
+  source: "Fuentes", book: "Archivo histórico", branches: "Parentescos", fan: "Abanico",
+  photo: "Fotografía", spark: "Asistente IA", bulb: "Pistas", flask: "Análisis", compare: "Comparar",
+  merge: "Fusionar", folder: "Carpeta", tag: "Etiquetas", layers: "Capas", globe: "Mundo",
+  language: "Idioma", mail: "Mensajes", clock: "Historial", settings: "Configuración",
+  sliders: "Preferencias", building: "Institución", grid: "Vista de cuadrícula", checklist: "Revisión",
+  sync: "Actualizar", upload: "Importar", download: "Exportar", filter: "Filtrar", zoom: "Acercar",
+  screen: "Pantalla", link: "Enlace", external: "Abrir enlace", logout: "Cerrar sesión",
+  menu: "Menú", more: "Más opciones", add: "Añadir", minus: "Reducir", check: "Confirmar",
+  close: "Cerrar", back: "Volver", arrow: "Continuar", chevron: "Siguiente", chevrondown: "Desplegar",
+  expand: "Ampliar", circle: "Seleccionar",
+};
+const navigationIcons = ["home", "tree", "archive", "compass", "search", "photos", "dna", "tools"];
+const eventIcons = ["birth", "marriage", "baptism", "death", "ship", "work", "people", "pin"];
+const iconGroups = [
+  { title: "Navegación", names: navigationIcons },
+  { title: "Historia familiar", names: eventIcons },
+  { title: "Acciones y herramientas", names: geneIconNames.filter(name => !navigationIcons.includes(name) && !eventIcons.includes(name)) },
+];
+
 export default function DesignAssets({ view }: { view: "timeline" | "icons" | "flags" }) {
   const { t, locale } = useLanguage();
   const [query, setQuery] = useState("");
   if (view === "timeline") return <div className="space-y-6"><h1 className="text-3xl font-semibold">{t("Línea de tiempo")}</h1><div className="rounded-xl border bg-card p-5"><h2 className="text-xl font-semibold">Elena Ríos Martínez</h2><p className="mt-1 text-sm text-muted-foreground">1865–1934 · {t("Archivo de ejemplo")}</p></div><GeneTimeline items={items} /></div>;
-  if (view === "icons") return <div className="space-y-6"><h1 className="text-3xl font-semibold">{t("Iconos de GENEAI")}</h1><div className="icon-catalog">{geneIconNames.map(name => <div key={name}><GeneIcon name={name} size={40} /><span>{name}</span></div>)}</div></div>;
+  if (view === "icons") return <div className="space-y-8">
+    <h1 className="text-3xl font-semibold">{t("Iconos de GENEAI")}</h1>
+    {iconGroups.map(group => <section key={group.title} className="space-y-3">
+      <h2 className="text-sm font-medium text-muted-foreground">{t(group.title)}</h2>
+      <div className="icon-catalog icon-catalog-glass">{group.names.map(name => <div key={name}>
+        <GeneIcon name={name} size={36} /><span>{t(iconLabels[name] || name)}</span>
+      </div>)}</div>
+    </section>)}
+  </div>;
   const countries = countryCodes.map(code => ({ code, name: countryName(code, locale) })).sort((a, b) => a.name.localeCompare(b.name, locale));
   return <div className="space-y-6"><h1 className="text-3xl font-semibold">{t("Banderas del mundo")}</h1><input className="min-h-11 w-full rounded-xl border bg-card px-4" aria-label={t("Buscar país…")} placeholder={t("Buscar país…")} value={query} onChange={e => setQuery(e.target.value)} /><div className="flag-catalog">{countries.filter(c => `${c.code} ${c.name}`.toLocaleLowerCase(locale).includes(query.toLocaleLowerCase(locale))).map(c => <div key={c.code}><CountryFlag country={c.code} /><span>{c.name}</span></div>)}</div></div>;
 }
