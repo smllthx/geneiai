@@ -24,7 +24,11 @@ export default defineConfig(({ mode }) => ({
       const revision = hash.digest("hex").slice(0, 12);
       const workerPath = path.resolve(options.dir ?? "dist", "sw.js");
       const worker = await readFile(workerPath, "utf8");
-      await writeFile(workerPath, worker.replaceAll("__GENEAI_BUILD_ID__", revision));
+      const host = process.env.VERCEL_URL ?? "";
+      const assetOrigin = process.env.VERCEL_ENV === "production" && /^geneiai-[a-z0-9]+-geneaia\.vercel\.app$/.test(host)
+        ? `https://${host}` : "";
+      await writeFile(workerPath, worker.replaceAll("__GENEAI_BUILD_ID__", revision)
+        .replace('"__GENEAI_DEPLOYMENT_ORIGIN__"', JSON.stringify(assetOrigin)));
     },
   }],
   resolve: {

@@ -19,7 +19,7 @@ export async function getActiveTreeId(userId?: string | null) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('No se encontró el perfil de esta cuenta.');
-  return ((data as any)?.active_arbol_id ?? null) as string | null;
+  return data.active_arbol_id;
 }
 
 export async function fetchAllPeople<T = any>(
@@ -72,10 +72,4 @@ export async function fetchAllRelations<T = any>(
 
 export function withTreeScope<T extends Record<string, any>>(row: T, treeId?: string | null): T {
   return treeId ? ({ ...row, arbol_id: treeId } as T) : row;
-}
-
-export async function getActiveTreeScopedIds() {
-  const treeId = await getActiveTreeId();
-  const personas = await fetchAllPeople<{ id: string }>("id", { treeId });
-  return { treeId, personIds: new Set(personas.map((p) => p.id)) };
 }

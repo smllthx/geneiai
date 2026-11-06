@@ -1,10 +1,11 @@
 {
-  "version": "3.0.14",
+  "version": "3.0.15",
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "changes": [
-    "Nacimiento con torta y velas dentro de un calendario; árbol con personas conectadas.",
-    "Defunción con una cruz y sepultura con una lápida, diferenciadas en fichas y cronologías."
+    "Las pestañas abiertas pueden recuperar secciones después de una actualización.",
+    "Cuando una sección pierde la conexión, puedes reintentar conservando la navegación.",
+    "La apertura del árbol carga primero los datos y controles necesarios para verlo."
   ],
   "nativeDistributionReady": false
 }

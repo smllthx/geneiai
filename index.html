@@ -19,6 +19,16 @@
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document.querySelector('meta[name="theme-color"]').content = dark ? '#111723' : '#f3f5fb';
       } catch (_) {}
+      // The entry module can fail before React is able to display its recovery UI.
+      window.addEventListener('error', function (event) {
+        if (!(event.target instanceof HTMLScriptElement) || event.target.type !== 'module') return;
+        function showRetry() {
+          const panel = document.getElementById('entry-retry');
+          if (panel) panel.hidden = false;
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showRetry, { once: true });
+        else showRetry();
+      }, true);
     </script>
 
     <!-- iOS standalone (Add to Home Screen) -->
@@ -42,7 +52,13 @@
     <meta name="twitter:image" content="/app-icon-512.png">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="entry-retry" role="alert" hidden style="max-width:28rem;margin:15vh auto;padding:1.5rem;font:1rem/1.5 system-ui">
+        <h1>GENEAI no pudo abrirse</h1>
+        <p>Comprueba tu conexión y vuelve a abrir esta página.</p>
+        <button type="button" onclick="location.reload()" style="font:inherit;padding:.6rem 1rem">Reintentar</button>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

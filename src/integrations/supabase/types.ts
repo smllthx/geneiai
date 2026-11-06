@@ -1072,6 +1072,7 @@ export type Database = {
       }
       personas: {
         Row: {
+          arbol_id: string | null
           apellidos: string
           bautismo_fecha: string | null
           bautismo_lugar_id: string | null
@@ -1105,6 +1106,7 @@ export type Database = {
           viva: Database["public"]["Enums"]["viva_status"]
         }
         Insert: {
+          arbol_id?: string | null
           apellidos: string
           bautismo_fecha?: string | null
           bautismo_lugar_id?: string | null
@@ -1138,6 +1140,7 @@ export type Database = {
           viva?: Database["public"]["Enums"]["viva_status"]
         }
         Update: {
+          arbol_id?: string | null
           apellidos?: string
           bautismo_fecha?: string | null
           bautismo_lugar_id?: string | null
@@ -1210,6 +1213,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_arbol_id: string | null
           created_at: string
           display_name: string | null
           id: string
@@ -1217,6 +1221,7 @@ export type Database = {
           proband_id: string | null
         }
         Insert: {
+          active_arbol_id?: string | null
           created_at?: string
           display_name?: string | null
           id: string
@@ -1224,6 +1229,7 @@ export type Database = {
           proband_id?: string | null
         }
         Update: {
+          active_arbol_id?: string | null
           created_at?: string
           display_name?: string | null
           id?: string

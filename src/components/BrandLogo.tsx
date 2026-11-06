@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo-tree.png";
 
 /**
  * GENEAI brand logo.
@@ -26,7 +25,7 @@ export default function BrandLogo({
       style={{ width: size, height: size }}
     >
       <img
-        src={logo}
+        src="/app-icon-192.png"
         alt="GENEAI"
         width={size}
         height={size}

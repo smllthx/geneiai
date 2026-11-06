@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazyView as lazy } from "@/components/LazyView";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardView, { type DashboardStats } from "@/components/home/DashboardView";
 import { useAuth } from "@/contexts/AuthContext";

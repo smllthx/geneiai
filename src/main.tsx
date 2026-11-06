@@ -1,3 +1,4 @@
+import { watchModuleRequests } from "./lib/moduleRecovery";
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
@@ -9,6 +10,7 @@ import { startAppearance } from "./lib/appearance";
 import { registerSW } from "./lib/pwa";
 import { startAppInstallation } from "./lib/appInstallation";
 
+watchModuleRequests();
 startAppearance();
 
 startAppInstallation();
