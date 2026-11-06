@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchAllPeople, fetchAllRelations } from "@/lib/peopleData";
 import Arbol from "./Arbol";
+import { supabase } from "@/integrations/supabase/client";
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({ user: { id: "user-1", email: "test@geneai.local" } }),
@@ -35,8 +36,9 @@ vi.mock("@/lib/peopleData", () => ({
 const chain = {
   select: vi.fn(() => chain),
   eq: vi.fn(() => chain),
-  maybeSingle: vi.fn(async () => ({ data: { proband_id: null }, error: null })),
-  limit: vi.fn(async () => ({ data: [], error: null })),
+  abortSignal: vi.fn(() => chain),
+  maybeSingle: vi.fn(async () => ({ data: { active_arbol_id: "tree-1", proband_id: null }, error: null })),
+  limit: vi.fn(() => chain),
   order: vi.fn(() => chain),
   insert: vi.fn(async () => ({ data: [], error: null })),
   update: vi.fn(() => chain),
@@ -72,6 +74,8 @@ describe("Arbol", () => {
     await waitFor(() => {
       expect(screen.getByText(/Selecciona una persona o crea la primera/i)).toBeInTheDocument();
     });
+    expect(supabase.from).not.toHaveBeenCalledWith("documentos");
+    expect(chain.select).toHaveBeenCalledWith("active_arbol_id,proband_id");
   });
 });
 

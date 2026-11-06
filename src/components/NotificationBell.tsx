@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { requestNotificationPermission, notificationPermission, subscribeToPush } from "@/lib/notifications";
 import { toast } from "sonner";
-import { applyTreeScope, getActiveTreeScopedIds } from "@/lib/peopleData";
+import { useAuth } from "@/contexts/AuthContext";
+import { applyTreeScope, getActiveTreeId } from "@/lib/peopleData";
 import { toDisplayText } from "@/lib/safeText";
 
 type Notificacion = { id: string; titulo: string; mensaje: string | null; url: string | null; leida: boolean | null; created_at: string };
@@ -19,6 +20,7 @@ type ResearchTask = { id: string; person_id: string | null; tipo: string; estado
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 export default function NotificationBell({ page = false }: { page?: boolean }) {
+  const userId = useAuth().user?.id;
   const [items, setItems] = useState<Notificacion[]>([]);
   const [sugs, setSugs] = useState<Sugerencia[]>([]);
   const [infs, setInfs] = useState<Inferencia[]>([]);
@@ -28,24 +30,26 @@ export default function NotificationBell({ page = false }: { page?: boolean }) {
   const [loadState, setLoadState] = useState<"pending" | "ready" | "error">("pending");
   const load = async () => {
     try {
-      const { treeId, personIds } = await getActiveTreeScopedIds();
+      if (!userId) return;
+      const treeId = await getActiveTreeId(userId);
       const results = await Promise.all([
         supabase.from("notificaciones").select("*").order("created_at", { ascending: false }).limit(30),
         applyTreeScope(supabase.from("sugerencias").select("*").eq("estado", "pendiente").order("confianza", { ascending: false }).limit(30) as any, treeId),
-        supabase.from("generated_inferences").select("*").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
+        supabase.from("generated_inferences").select("id,person_id,inferred_field,inferred_value,explanation,confidence_score,persona:personas!generated_inferences_person_id_fkey(arbol_id)").eq("status", "pending").order("confidence_score", { ascending: false }).limit(20),
         applyTreeScope(supabase.from("research_tasks").select("*").eq("estado", "pendiente").order("created_at", { ascending: false }).limit(30) as any, treeId),
       ]);
       if (results.some(result => result.error)) throw new Error("No se pudo consultar la bandeja.");
       const [{ data: n }, { data: s }, { data: i }, { data: t }] = results;
       setItems(n ?? []);
       setSugs(s ?? []);
-      setInfs((i ?? []).filter((row: any) => !row.person_id || personIds.has(row.person_id)));
+      setInfs((i ?? []).filter(row => !row.person_id || (row.persona && (!treeId || !row.persona.arbol_id || row.persona.arbol_id === treeId))));
       setTasks(t ?? []);
       setLoadState("ready");
     } catch { setLoadState("error"); }
   };
 
   useEffect(() => {
+    if (!userId) return;
     let active = true;
     setPerm(notificationPermission());
     load();
@@ -61,7 +65,7 @@ export default function NotificationBell({ page = false }: { page?: boolean }) {
       active = false;
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [userId]);
 
   const noLeidas = items.filter((i) => !i.leida).length;
   const total = noLeidas + sugs.length + infs.length + tasks.length;

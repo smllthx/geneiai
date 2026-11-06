@@ -254,7 +254,7 @@ function ArbolContent() {
 
 
   const { user: authUser } = useAuth();
-  const rtKey = useRealtimeReload(["personas", "relaciones", "documentos"], authUser?.id ?? null);
+  const rtKey = useRealtimeReload(["personas", "relaciones"], authUser?.id ?? null);
   useEffect(() => { if (rtKey > 0) setReloadKey((k) => k + 1); }, [rtKey]);
 
 
@@ -268,25 +268,18 @@ function ArbolContent() {
       setRefreshingTree(true);
       setTreeError(null);
       try {
-        const activeTreeId = await getActiveTreeId(authUser.id);
-        const [p, r, profile, docs] = await Promise.all([
-          fetchAllPeople<PersonaLite>("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
-          fetchAllRelations("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId: activeTreeId, signal: abort.signal }),
-          supabase.from("profiles").select("proband_id").eq("id", authUser.id).maybeSingle(),
-          supabase.from("documentos").select("personas_mencionadas").limit(5000),
+        const profile = await supabase.from("profiles").select("active_arbol_id,proband_id").eq("id", authUser.id).abortSignal(abort.signal).maybeSingle();
+        if (profile.error) throw profile.error;
+        if (!profile.data) throw new Error("No se encontró el perfil de esta cuenta.");
+        const treeId = profile.data.active_arbol_id ?? null;
+        const [p, r] = await Promise.all([
+          fetchAllPeople<PersonaLite>("id,nombres,apellidos,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,viva,nacionalidad,foto_url,arbol_id", { treeId, signal: abort.signal }),
+          fetchAllRelations("id,persona_id,pariente_id,tipo,notas,arbol_id", { treeId, signal: abort.signal }),
         ]);
         if (!current) return;
-        if (profile.error) throw profile.error;
-        if (docs.error) throw docs.error;
         setPersonas(p);
         setRels(r);
-        setProfileProband(profile.data?.proband_id ?? null);
-        const counts = new Map<string, number>();
-        for (const d of docs.data ?? []) {
-          const ids = Array.isArray(d.personas_mencionadas) ? d.personas_mencionadas : [];
-          for (const pid of ids) counts.set(pid, (counts.get(pid) ?? 0) + 1);
-        }
-        setDocsByPersona(counts);
+        setProfileProband(profile.data.proband_id ?? null);
         const peopleById = new Map(p.map((person) => [person.id, person]));
         setRecentPeople(getRecent().map(({ id }) => peopleById.get(id)).filter(Boolean) as PersonaLite[]);
         initialTreeLoaded.current = true;
@@ -299,6 +292,23 @@ function ArbolContent() {
     })();
     return () => { current = false; abort.abort(); window.clearTimeout(timeout); };
   }, [reloadKey, authUser?.id]);
+
+  const docsRevision = useRealtimeReload(["documentos"], categoria === "fuentes" ? authUser?.id : null);
+  useEffect(() => {
+    if (categoria !== "fuentes" || !authUser?.id) return;
+    const abort = new AbortController();
+    void (async () => {
+      const { data, error } = await supabase.from("documentos").select("personas_mencionadas").limit(5000).abortSignal(abort.signal);
+      if (abort.signal.aborted) return;
+      if (error) { toast.error("No se pudieron consultar las fuentes."); return; }
+      const counts = new Map<string, number>();
+      for (const doc of data ?? []) {
+        for (const id of doc.personas_mencionadas ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+      setDocsByPersona(counts);
+    })();
+    return () => abort.abort();
+  }, [categoria, authUser?.id, docsRevision, reloadKey]);
 
   // Exploring another branch changes only the view, never downloads the whole tree again.
   useEffect(() => {

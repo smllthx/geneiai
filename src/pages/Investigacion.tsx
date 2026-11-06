@@ -1,5 +1,6 @@
+import { lazyView as lazy } from "@/components/LazyView";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SectionHeader } from '@/components/glass';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
