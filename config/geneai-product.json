@@ -4,8 +4,8 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.13",
-  "build": 313,
+  "version": "3.0.14",
+  "build": 314,
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
@@ -13,7 +13,7 @@
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Iconos integrados en la interfaz, sin depender de archivos SVG externos.",
-    "Colores más visibles y mayor tamaño en los menús, conservando los diseños de GENEAI."
+    "Nacimiento con torta y velas dentro de un calendario; árbol con personas conectadas.",
+    "Defunción con una cruz y sepultura con una lápida, diferenciadas en fichas y cronologías."
   ]
 }

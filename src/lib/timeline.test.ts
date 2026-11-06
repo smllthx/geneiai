@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { buildTimeline, eventType, timelineDate } from "./timeline";
+import { buildTimeline, eventType, eventTypes, timelineDate } from "./timeline";
 import { countryCode, countryCodes } from "./countries";
 
 describe("archive timelines", () => {
+  it("keeps death and burial distinct, including imported Spanish aliases", () => {
+    const items = buildTimeline([{ id: "p", nombres: "Elena", defuncion_fecha: "1934-04-12", entierro_fecha: "1934-04-14" }], [
+      { id: "death", persona_id: "p", tipo: "Fallecimiento", fecha: "1934-04-12" },
+      { id: "burial", persona_id: "p", tipo: "Sepultura", fecha: "1934-04-14" },
+    ]);
+    expect(items.map(item => [item.type, eventTypes[item.type].icon])).toEqual([["defuncion", "death"], ["entierro", "burial"]]);
+    expect(eventType("Muerte")).toBe("defuncion");
+    expect(eventType("Inhumación")).toBe("entierro");
+  });
   it("keeps approximate dates and ranges without inventing a day or an age", () => {
     const items = buildTimeline([{ id: "p", nombres: "Elena", nac_fecha_aprox: "ABT 1865" }], [
       { id: "e", persona_id: "p", tipo: "inmigracion", rango_ini: 1890, rango_fin: 1896 },

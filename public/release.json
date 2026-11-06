@@ -1,10 +1,10 @@
 {
-  "version": "3.0.13",
+  "version": "3.0.14",
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "changes": [
-    "Iconos integrados en la interfaz, sin depender de archivos SVG externos.",
-    "Colores más visibles y mayor tamaño en los menús, conservando los diseños de GENEAI."
+    "Nacimiento con torta y velas dentro de un calendario; árbol con personas conectadas.",
+    "Defunción con una cruz y sepultura con una lápida, diferenciadas en fichas y cronologías."
   ],
   "nativeDistributionReady": false
 }

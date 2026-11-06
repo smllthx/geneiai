@@ -1,7 +1,8 @@
 import PersonPortrait from "@/components/PersonPortrait";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Loader2, MapPin, Calendar, Heart, Users, Briefcase, Share2 } from "@/components/icons";
+import { Loader2, MapPin, Heart, Users, Briefcase, Share2 } from "@/components/icons";
+import { GeneIcon } from "@/components/GeneIcon";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { SUPABASE_URL } from '@/integrations/supabase/client';
@@ -91,10 +92,10 @@ export default function PersonaPublica() {
 
             <div className="mt-6 grid gap-3 text-sm">
               {ficha.nacimiento.lugar || ficha.nacimiento.fecha ? (
-                <Row icon={<Calendar className="h-4 w-4" />} label="Nacimiento" value={[ficha.nacimiento.fecha, ficha.nacimiento.lugar].filter(Boolean).join(" · ")} />
+                <Row icon={<GeneIcon name="birth" size={20} />} label="Nacimiento" value={[ficha.nacimiento.fecha, ficha.nacimiento.lugar].filter(Boolean).join(" · ")} />
               ) : null}
               {ficha.defuncion.lugar || ficha.defuncion.fecha ? (
-                <Row icon={<Calendar className="h-4 w-4" />} label="Defunción" value={[ficha.defuncion.fecha, ficha.defuncion.lugar].filter(Boolean).join(" · ")} />
+                <Row icon={<GeneIcon name="death" size={20} />} label="Defunción" value={[ficha.defuncion.fecha, ficha.defuncion.lugar].filter(Boolean).join(" · ")} />
               ) : null}
               {ficha.ocupacion && <Row icon={<Briefcase className="h-4 w-4" />} label="Ocupación" value={ficha.ocupacion} />}
               {ficha.nacionalidad && <Row icon={<MapPin className="h-4 w-4" />} label="Nacionalidad" value={ficha.nacionalidad} />}

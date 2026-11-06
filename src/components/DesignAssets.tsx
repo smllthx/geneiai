@@ -7,7 +7,7 @@ import { buildTimeline } from "@/lib/timeline";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Fictional fixtures; the public preview never fetches an account's family records.
-const person = { id: "demo-elena", nombres: "Elena", apellidos: "Ríos Martínez", nac_fecha: "1865-09-08", matrimonio_fecha: "1890-09-08", defuncion_fecha: "1934-04-12", nac_lugar_id: "it", matrimonio_lugar_id: "it", defuncion_lugar_id: "cl" };
+const person = { id: "demo-elena", nombres: "Elena", apellidos: "Ríos Martínez", nac_fecha: "1865-09-08", matrimonio_fecha: "1890-09-08", defuncion_fecha: "1934-04-12", entierro_fecha: "1934-04-14", nac_lugar_id: "it", matrimonio_lugar_id: "it", defuncion_lugar_id: "cl", entierro_lugar_id: "cl" };
 const places = [{ id: "it", ciudad: "Génova", pais: "Italia" }, { id: "cl", ciudad: "Valparaíso", pais: "Chile" }];
 const items = buildTimeline([person], [
   { id: "baptism", persona_id: person.id, tipo: "bautismo", fecha: "1865-09-09", lugar_id: "it", descripcion: "Evento de ejemplo para explorar el diseño de la cronología." },
@@ -17,7 +17,7 @@ const items = buildTimeline([person], [
 const iconLabels: Record<string, string> = {
   home: "Inicio", tree: "Árbol Genealógico", archive: "Archivo familiar", compass: "Descubrimientos",
   search: "Investigación", photos: "Fotos", dna: "ADN", tools: "Herramientas y cuenta",
-  birth: "Nacimiento", marriage: "Matrimonio", baptism: "Bautismo", death: "Defunción",
+  birth: "Nacimiento", marriage: "Matrimonio", baptism: "Bautismo", death: "Defunción", burial: "Sepultura / entierro",
   ship: "Migración", work: "Profesión", people: "Familia", user: "Persona", pin: "Lugares",
   calendar: "Calendario", timeline: "Línea de tiempo", heart: "Vínculos", document: "Documentos",
   source: "Fuentes", book: "Archivo histórico", branches: "Parentescos", fan: "Abanico",
@@ -32,7 +32,7 @@ const iconLabels: Record<string, string> = {
   expand: "Ampliar", circle: "Seleccionar",
 };
 const navigationIcons = ["home", "tree", "archive", "compass", "search", "photos", "dna", "tools"];
-const eventIcons = ["birth", "marriage", "baptism", "death", "ship", "work", "people", "pin"];
+const eventIcons = ["birth", "marriage", "baptism", "death", "burial", "ship", "work", "people", "pin"];
 const iconGroups = [
   { title: "Navegación", names: navigationIcons },
   { title: "Historia familiar", names: eventIcons },

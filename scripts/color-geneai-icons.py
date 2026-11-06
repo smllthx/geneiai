@@ -120,17 +120,37 @@ def supplied_icon(name, source):
 
 
 def event_icons():
-    foot = '<path d="M6.7 8.5c-2.1-.2-3.7 1.7-3 3.9.5 1.5.9 2.7.5 4.2-.5 2 .4 3.4 2 3.5 1.9.2 2.9-1.3 2.4-3.2-.5-1.8-.2-2.8.8-4.3 1.3-2-.3-3.9-2.7-4.1Z"/><ellipse cx="8.3" cy="5.7" rx="1.35" ry="1.65"/><circle cx="5.3" cy="5.8" r="1.05"/><circle cx="3.2" cy="7.1" r=".85"/><circle cx="2.1" cy="9.1" r=".65"/><circle cx="2.1" cy="11" r=".5"/>'
-    birth = '<g transform="rotate(-13 6 13)" fill="url(#birth-glass)">' + foot + '</g><g transform="translate(23 -1) scale(-1 1) rotate(-13 6 13)" fill="url(#birth-other-glass)">' + foot + '</g>'
+    birth = ('<rect x="2" y="3.5" width="20" height="18.5" rx="3" fill="url(#birth-glass)"/>'
+             '<rect x="3.5" y="8.5" width="17" height="12" rx="1.6" fill="#f3fbff"/>'
+             '<path d="M7 2v4M17 2v4" stroke="url(#birth-ink)" stroke-width="2" stroke-linecap="round"/>'
+             '<path d="M8 13.3v2M12 13.3v2M16 13.3v2" stroke="url(#birth-cake-ink)" stroke-width="1.2" stroke-linecap="round"/>'
+             '<g fill="#f2ae35"><path d="M8 9.7c-1.9 2.2-1.3 3.2 0 3.2s1.9-1 0-3.2ZM12 9.7c-1.9 2.2-1.3 3.2 0 3.2s1.9-1 0-3.2ZM16 9.7c-1.9 2.2-1.3 3.2 0 3.2s1.9-1 0-3.2Z"/></g>'
+             '<rect x="6" y="14.8" width="12" height="4.7" rx="1.3" fill="url(#birth-cake-glass)"/>'
+             '<path d="M6.6 16.1q1.35 1.5 2.7 0 1.35 1.5 2.7 0 1.35 1.5 2.7 0 1.35 1.5 2.7 0" fill="none" stroke="#fff2f7" stroke-width="1.1" stroke-linecap="round"/>'
+             '<path d="M5.5 19.7h13" stroke="url(#birth-cake-ink)" stroke-width="1.2" stroke-linecap="round"/>')
     marriage = '<g fill="none" stroke="url(#marriage-glass)" stroke-width="2.2" stroke-linecap="round"><ellipse cx="8.5" cy="10.7" rx="5.2" ry="6.3" transform="rotate(-27 8.5 10.7)"/><ellipse cx="15.4" cy="13" rx="5.2" ry="6.3" transform="rotate(27 15.4 13)"/><path d="M8.8 16.7c2.5.7 4.4-.8 4.9-3.2"/></g><path d="M3.6 7.3q.4-2 2.2-2.8M14.6 7.1q2.1-.7 3.7.5" fill="none" stroke="#fff6db" stroke-opacity=".8" stroke-width=".65" stroke-linecap="round"/>'
     baptism = '<path d="M12 2.8C10 6.6 6.4 9.3 6.4 12.4a5.6 5.6 0 0 0 11.2 0C17.6 9.3 14 6.6 12 2.8Z" fill="url(#baptism-glass)" stroke="url(#baptism-edge)" stroke-width=".65"/><path d="M9 12.5q0 2.6 2.7 2.8" fill="none" stroke="#eefbff" stroke-opacity=".75" stroke-width="1.1" stroke-linecap="round"/><path d="M6 21h12" stroke="url(#baptism-ink)" stroke-width="1.4" stroke-linecap="round"/>'
-    death = '<path d="M6.4 20.5V9a5.6 5.6 0 0 1 11.2 0v11.5Z" fill="url(#death-glass)" stroke="url(#death-edge)" stroke-width=".65"/><path d="M4 20.5h16M10 9.5h4M10 12.8h3" fill="none" stroke="url(#death-ink)" stroke-width="1.35" stroke-linecap="round"/>'
+    death = ('<path d="M10.8 2.5h2.4a.9.9 0 0 1 .9.9V8h4.5a.9.9 0 0 1 .9.9v2.4a.9.9 0 0 1-.9.9h-4.5v8.4a.9.9 0 0 1-.9.9h-2.4a.9.9 0 0 1-.9-.9v-8.4H5.4a.9.9 0 0 1-.9-.9V8.9a.9.9 0 0 1 .9-.9h4.5V3.4a.9.9 0 0 1 .9-.9Z" fill="url(#death-glass)" stroke="url(#death-edge)" stroke-width=".6"/>'
+             '<path d="M11.1 4.1v5.1H6" fill="none" stroke="#f3e9ff" stroke-opacity=".75" stroke-width=".7" stroke-linecap="round"/>')
+    burial = ('<path d="M6.4 20V8.7a5.6 5.6 0 0 1 11.2 0V20Z" fill="url(#burial-glass)" stroke="url(#burial-edge)" stroke-width=".65"/>'
+              '<path d="M9.7 9.5h4.6M10.3 12.5h3.4" fill="none" stroke="#edf7ff" stroke-width="1.3" stroke-linecap="round"/>'
+              '<rect x="4.4" y="19" width="15.2" height="2.5" rx="1" fill="url(#burial-ink)"/>'
+              '<path d="M4.4 20v-3.3m0 1.5c-1.8-.1-2.4-1.1-2.3-2.1 1.5 0 2.3.9 2.3 2.1" fill="#28af8e" stroke="#28af8e" stroke-width=".7" stroke-linecap="round"/>')
+    tree = ('<path d="M5.5 9v3.2h13V9M12 12.2v3.2" fill="none" stroke="url(#tree-ink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+            '<rect x="2" y="1.5" width="7" height="8" rx="2" fill="url(#tree-blue-glass)"/>'
+            '<rect x="15" y="1.5" width="7" height="8" rx="2" fill="url(#tree-rose-glass)"/>'
+            '<rect x="8" y="15" width="8" height="8" rx="2.2" fill="url(#tree-glass)"/>'
+            '<g fill="#f4fbff"><circle cx="5.5" cy="4.1" r="1.15"/><path d="M3.5 7.8a2 2 0 0 1 4 0Z"/>'
+            '<circle cx="18.5" cy="4.1" r="1.15"/><path d="M16.5 7.8a2 2 0 0 1 4 0Z"/>'
+            '<circle cx="12" cy="17.7" r="1.2"/><path d="M9.8 21.4a2.2 2.2 0 0 1 4.4 0Z"/></g>')
     work = '<path d="M8.3 7V5.2a1.7 1.7 0 0 1 1.7-1.7h4a1.7 1.7 0 0 1 1.7 1.7V7" fill="none" stroke="url(#work-ink)" stroke-width="1.4"/><rect x="3" y="7" width="18" height="13.3" rx="2.8" fill="url(#work-glass)" stroke="url(#work-edge)" stroke-width=".65"/><path d="M3.6 11.8q8.4 3.4 16.8 0" fill="none" stroke="url(#work-ink)" stroke-width="1.1"/><rect x="10.6" y="11.8" width="2.8" height="3.4" rx=".9" fill="#eee4ff" fill-opacity=".85"/>'
     return {
-        'birth': gradients('birth', 'mint') + gradients('birth-other', 'coral') + birth,
+        'birth': gradients('birth', 'blue') + gradients('birth-cake', 'rose') + birth,
         'marriage': gradients('marriage', 'gold') + marriage,
         'baptism': gradients('baptism', 'blue') + baptism,
-        'death': gradients('death', 'slate') + death,
+        'death': gradients('death', 'violet') + death,
+        'burial': gradients('burial', 'blue') + burial,
+        'tree': gradients('tree', 'mint') + gradients('tree-blue', 'blue') + gradients('tree-rose', 'rose') + tree,
         'work': gradients('work', 'violet') + work,
     }
 
