@@ -22,6 +22,7 @@ import { useRealtimeReload } from "@/hooks/use-realtime-reload";
 import { getRecent } from "@/lib/recent";
 import { applyTreeScope, fetchAllPeople, fetchAllRelations, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import { familyLayers, type FamilyBranch } from "@/lib/treeRendering";
+import FamilyDiagram from "@/components/tree/FamilyDiagram";
 import { toDisplayText } from "@/lib/safeText";
 
 
@@ -150,7 +151,7 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
     const partners = conyugesDe(p.id);
     return (
       <div className="flex flex-col items-center gap-2">
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
+        <div className="flex flex-nowrap items-center justify-center gap-x-2 gap-y-2">
           <Draggable p={p}>
             <Hl p={p}>
               <PersonCard p={p} highlighted={!compact} compact={compact} onClick={() => navigate(`/personas/${p.id}`)} />
@@ -192,47 +193,6 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
       trigger={<span className="block"><EmptySlot label={label} onClick={() => {}} /></span>} />
   ); };
 
-  const CouplePair = ({ childId, padre, madre }: { childId: string; padre?: PersonaLite; madre?: PersonaLite }) => (
-    <div className="relative inline-flex items-stretch justify-center gap-1 rounded-2xl border border-border/50 bg-card/20 p-1.5">
-      <div className="pointer-events-none absolute left-[50%] top-1/2 h-px w-[calc(100%-2.5rem)] -translate-x-1/2 bg-foreground/30" />
-      <div className="relative z-10">
-        {padre ? <PersonTile p={padre} /> : <AddTile personaId={childId} tipo="padre" label="padre" />}
-      </div>
-      <div className="relative z-10">
-        {madre ? <PersonTile p={madre} /> : <AddTile personaId={childId} tipo="madre" label="madre" />}
-      </div>
-    </div>
-  );
-
-  // Recursive ascendants renderer — compact, connected, and symmetric.
-  const Ascendants = ({ node }: { node?: FamilyBranch }) => {
-    const { byId } = useContext(TreeViewContext)!;
-    if (!node?.children.length) return null;
-    const [father, mother] = [0, 1].map(side => node.children.find(child => child.side === side));
-    return <div className="inline-flex flex-col items-center">
-      <div className="flex items-end justify-center gap-3">
-        {node.children.map(child => <Ascendants key={child.side} node={child} />)}
-      </div>
-      <div className="relative mt-4"><CouplePair childId={node.id} padre={father && byId.get(father.id)} madre={mother && byId.get(mother.id)} /></div>
-      <div className="h-4 w-px bg-foreground/30" />
-    </div>;
-  };
-
-  const DescendantTree = ({ node }: { node?: FamilyBranch }) => {
-    const { byId } = useContext(TreeViewContext)!;
-    if (!node?.children.length) return null;
-    return <div className="flex flex-col items-center gap-3">
-      <div className="h-4 w-px bg-foreground/30" />
-      <div className="relative flex items-start justify-center gap-4">
-        {node.children.map(child => <div key={child.id} className="flex flex-col items-center gap-2">
-          <div className="h-3 w-px bg-foreground/30" />
-          <PartnershipStrip p={byId.get(child.id)!} compact />
-          <DescendantTree node={child} />
-        </div>)}
-      </div>
-    </div>;
-  };
-
   const SiblingBranch = ({ p }: { p: PersonaLite }) => {
     const { hijosDe } = useContext(TreeViewContext)!;
     return (
@@ -249,29 +209,18 @@ const TreeViewContext = createContext<TreeViewState | null>(null);
     </div>
   ); };
 
-  const LineageColumn = ({ label, tone, root, missingTipo }: { label: string; tone: string; root?: PersonaLite; missingTipo: "padre" | "madre" }) => {
-    const { ancestors, persona, reload, navigate } = useContext(TreeViewContext)!;
-    return (
-    <div className="flex min-w-[320px] flex-1 flex-col items-center rounded-2xl border border-border bg-card/55 p-4">
-      <div className={`mb-4 rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>
-        {label}
-      </div>
-      {root ? (
-        <>
-          <Ascendants node={ancestors?.children.find(child => child.id === root.id)} />
-          <div className="h-4 w-px bg-foreground/30" />
-          <Draggable p={root}>
-            <Hl p={root}>
-              <PersonCard p={root} compact onClick={() => navigate(`/personas/${root.id}`)} />
-            </Hl>
-          </Draggable>
-        </>
-      ) : (
-        <QuickAddRelative personaId={persona!.id} defaultTipo={missingTipo} onAdded={reload}
-          trigger={<span className="block"><EmptySlot label={missingTipo} onClick={() => {}} /></span>} />
-      )}
-    </div>
-  ); };
+  const ConnectedFamily = ({ descendantsVisible = false }: { descendantsVisible?: boolean }) => {
+    const { ancestors, descendants, byId } = useContext(TreeViewContext)!;
+    if (!ancestors) return null;
+    return <FamilyDiagram ancestors={ancestors} descendants={descendantsVisible ? descendants : undefined}
+      renderPerson={(id, kind) => {
+        const person = byId.get(id);
+        if (!person) return null;
+        return kind === "ancestor" ? <PersonTile p={person} /> : <PartnershipStrip p={person} compact={kind !== "center"} />;
+      }}
+      renderMissing={(childId, side) => <AddTile personaId={childId} tipo={side === 0 ? "padre" : "madre"} label={side === 0 ? "padre" : "madre"} />}
+    />;
+  };
 
 
 function ArbolContent() {
@@ -811,44 +760,12 @@ function ArbolContent() {
         </TreeCanvas>
       ) : vista === "lineas" ? (
         <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
-          <div
-            className="flex flex-col items-center gap-5 px-4 md:px-6"
-          >
-            {(() => {
-              const { padre, madre } = padresDe(persona.id);
-              return (
-                <>
-                  <div className="grid min-w-[720px] grid-cols-2 gap-4">
-                    <LineageColumn label="Línea paterna" tone="bg-sky-500/15 text-sky-300" root={padre} missingTipo="padre" />
-                    <LineageColumn label="Línea materna" tone="bg-rose-500/15 text-rose-300" root={madre} missingTipo="madre" />
-                  </div>
-                  <div className="flex h-8 items-start justify-center">
-                    <div className="h-8 w-px bg-foreground/30" />
-                  </div>
-                  <PartnershipStrip p={persona} />
-                  <p className="max-w-md text-center text-xs text-muted-foreground">
-                    Vista conjunta de ramas paterna y materna. Usa Editar relaciones para corregir vínculos o agregar familiares faltantes.
-                  </p>
-                </>
-              );
-            })()}
-          </div>
+          <ConnectedFamily />
         </TreeCanvas>
       ) : (
         <TreeCanvas viewport={viewport} resetKey={`${persona.id}:${vista}:${generaciones}`} editMode={editMode}>
-          <div
-            className="flex flex-col items-center gap-5 px-4 md:px-6"
-          >
-            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Ascendencia paterna y materna
-            </div>
-            {ancestors?.children.length ? <Ascendants node={ancestors} /> : <CouplePair childId={persona.id} />}
-
-            <div className="h-4 w-px bg-foreground/30" />
-            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Persona central y uniones
-            </div>
-            <PartnershipStrip p={persona} />
+          <div className="flex flex-col items-center gap-6 px-4 md:px-6">
+            <ConnectedFamily descendantsVisible />
 
             {hermanosDe(persona.id).length > 0 && (
               <>
@@ -861,14 +778,6 @@ function ArbolContent() {
               </>
             )}
 
-            <div className="rounded-full border border-border bg-card/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Descendencia
-            </div>
-            {hijosDe(persona.id).length > 0 ? (
-              <DescendantTree node={descendants} />
-            ) : (
-              <div className="text-xs text-muted-foreground">Sin hijos registrados.</div>
-            )}
             <div className="flex justify-center">
               <AddTile personaId={persona.id} tipo="hijo" label="hijo/a" />
             </div>

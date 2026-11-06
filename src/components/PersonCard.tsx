@@ -51,6 +51,7 @@ export const PersonCard = memo(function PersonCard({
 
   return (
     <button
+      data-person-card={p.id}
       onClick={onClick ?? (() => navigate(`/personas/${p.id}`))}
       className={cn(
         "group relative overflow-hidden rounded-2xl border border-border/60 bg-card text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
