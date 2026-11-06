@@ -54,7 +54,7 @@ const sections: NavSection[] = [
     { to: "/lugares", label: "Lugares", icon: MapPin },
     { to: "/linea-de-tiempo", label: "Línea de tiempo", icon: Activity },
   ] },
-  { key: "utility", label: "Herramientas y cuenta", icon: Settings, items: [
+  { key: "utility", label: "Herramientas y cuenta", icon: geneIcon("tools"), items: [
     { to: "/importar", label: "Importar y exportar", icon: Upload },
     { to: "/fusionar", label: "Fusionar duplicados", icon: Merge },
     { to: "/credenciales", label: "Credenciales", icon: Fingerprint },

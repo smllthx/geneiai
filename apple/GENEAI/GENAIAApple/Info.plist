@@ -5,9 +5,9 @@
   <key>CFBundleDisplayName</key>
   <string>GENEAI</string>
   <key>CFBundleShortVersionString</key>
-  <string>3.0.10</string>
+  <string>3.0.11</string>
   <key>CFBundleVersion</key>
-  <string>310</string>
+  <string>311</string>
   <key>GENAIA_SUPABASE_URL</key>
   <string>$(SUPABASE_URL)</string>
   <key>GENAIA_SUPABASE_PROJECT_REF</key>
