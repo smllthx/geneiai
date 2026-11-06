@@ -1,14 +1,16 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import PersonPortrait from "@/components/PersonPortrait";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Loader2, Search } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fetchAllPeople } from "@/lib/peopleData";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 import {
-  comparePeopleAlphabetically,
   filterPeopleForQuery,
   personFullName,
   personIndexLetter,
@@ -30,46 +32,57 @@ type Props = {
 
 export default function UniversalPersonSearch({ compact = false, className }: Props) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [scope, setScope] = useState<"current" | "all">("current");
+  const [trees, setTrees] = useState<Record<string, string>>({});
+  const [visibleLimit, setVisibleLimit] = useState(60);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [people, setPeople] = useState<UniversalPerson[]>([]);
   const [loading, setLoading] = useState(false);
 
   const activeLoad = useRef<AbortController>();
-  const loadPeople = async () => {
+  const loadPeople = useCallback(async () => {
     activeLoad.current?.abort();
     const controller = new AbortController();
     activeLoad.current = controller;
     setLoading(true);
+    setPeople([]);
     try {
+      const treeId = await getActiveTreeId(user?.id);
+      const { data: ownedTrees, error: treeError } = await (supabase as SupabaseClient).from("arboles").select("id,nombre").eq("user_id", user!.id).abortSignal(controller.signal);
+      if (treeError) throw treeError;
       const data = await fetchAllPeople<UniversalPerson>(
         "id,nombres,apellidos,variantes_nombre,sexo,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nacionalidad,arbol_id,foto_url",
-        { treeId: null, signal: controller.signal },
+        { treeId: scope === "all" ? null : treeId, includeUnscoped: false, signal: controller.signal },
       );
       if (controller.signal.aborted) return;
-      setPeople(data.slice().sort(comparePeopleAlphabetically));
+      setTrees(Object.fromEntries((ownedTrees ?? []).map(tree => [tree.id, tree.nombre])));
+      setPeople(scope === "current" && !treeId ? data.filter(p => !p.arbol_id) : data);
     } catch (error: any) {
       if (!controller.signal.aborted) toast.error(error?.message ?? "No pude cargar el índice de personas");
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  };
+  }, [scope, user?.id]);
 
   useEffect(() => {
-    if (!open || people.length) return;
-    loadPeople();
-  }, [open]);
+    if (!open || !user) { setPeople([]); return; }
+    void loadPeople();
+    return () => activeLoad.current?.abort();
+  }, [open, loadPeople, user?.id]);
+  useEffect(() => { setVisibleLimit(60); }, [query, scope]);
 
   useEffect(() => {
     const refresh = (event: Event) => {
       const table = (event as CustomEvent).detail?.table;
-      if (table && table !== "personas") return;
+      if (table && !["personas", "arboles", "profiles"].includes(table)) return;
       if (open) void loadPeople();
       else { activeLoad.current?.abort(); setPeople([]); }
     };
     window.addEventListener("genaia:data-changed", refresh);
     return () => { activeLoad.current?.abort(); window.removeEventListener("genaia:data-changed", refresh); };
-  }, [open]);
+  }, [open, loadPeople]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -85,20 +98,20 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
   }, []);
 
   const results = useMemo(() => {
-    const limit = query.trim() ? 160 : 700;
-    return filterPeopleForQuery(people, query, { limit }).slice().sort(comparePeopleAlphabetically);
+    return filterPeopleForQuery(people, query, { limit: Infinity });
   }, [people, query]);
 
   const grouped = useMemo(() => {
+    if (query.trim()) return [["Resultados por relevancia", results.slice(0, visibleLimit)]] as [string, UniversalPerson[]][];
     const map = new Map<string, UniversalPerson[]>();
-    for (const person of results) {
+    for (const person of results.slice(0, visibleLimit)) {
       const letter = personIndexLetter(person);
       const current = map.get(letter) ?? [];
       current.push(person);
       map.set(letter, current);
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, "es", { numeric: true }));
-  }, [results]);
+  }, [results, query, visibleLimit]);
 
   const openPerson = (id: string) => {
     setOpen(false);
@@ -137,11 +150,16 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
         <DialogHeader className="border-b border-border/70 p-4 pb-3">
           <DialogTitle>Índice universal de personas</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Busca por nombre, apellido, código, fechas o variantes. Incluye personas del árbol, importadas y no vinculadas.
+            Busca por nombre completo, variantes, código o fecha. Compara las fichas y su árbol antes de fusionarlas.
           </p>
         </DialogHeader>
 
         <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-3"><label htmlFor="person-search-scope" className="text-sm font-medium">Buscar en</label>
+            <select id="person-search-scope" value={scope} onChange={e => setScope(e.target.value as "current" | "all")} className="min-h-11 rounded-xl border bg-background/50 px-3 text-sm">
+              <option value="current">Árbol actual</option><option value="all">Todos mis árboles</option>
+            </select>
+          </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -155,7 +173,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{people.length} personas cargadas</Badge>
+              <Badge variant="secondary">{people.length} personas · {scope === "current" ? "Árbol actual" : "Todos mis árboles"}</Badge>
               <Badge variant="outline">{results.length} coincidencias</Badge>
             </div>
             <Button variant="outline" size="sm" onClick={investigateQuery} disabled={!query.trim()}>
@@ -169,7 +187,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
                 <Loader2 className="mb-2 h-5 w-5 animate-spin" />
                 Cargando índice…
               </div>
-            ) : grouped.length === 0 ? (
+            ) : results.length === 0 ? (
               <div className="px-4 py-10 text-center text-sm text-muted-foreground">
                 No encontré personas con esos criterios.
               </div>
@@ -177,7 +195,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
               grouped.map(([letter, group]) => (
                 <section key={letter} className="border-b border-border/60 last:border-b-0">
                   <div className="sticky top-0 z-10 flex h-9 items-center gap-2 bg-background/90 px-3 text-sm font-bold text-primary backdrop-blur">
-                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary/12">{letter}</span>
+                    <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary/12 px-1">{query.trim() ? "↓" : letter}</span>{query.trim() && <span>{letter}</span>}
                     <span className="text-xs font-medium text-muted-foreground">{group.length} persona(s)</span>
                   </div>
                   <div className="divide-y divide-border/60">
@@ -194,6 +212,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
                           <span className="min-w-0">
                             <span className="block truncate text-sm font-semibold">{personFullName(person)}</span>
                             <span className="block truncate text-xs text-muted-foreground">{personSearchSubtitle(person)}</span>
+                            <span className="block truncate text-xs text-primary">{person.arbol_id ? trees[person.arbol_id] || "Árbol sin nombre" : "Sin árbol asignado"}</span>
                           </span>
                         </button>
                         <Button size="sm" variant="ghost" onClick={() => investigatePerson(person)}>
@@ -207,6 +226,7 @@ export default function UniversalPersonSearch({ compact = false, className }: Pr
               ))
             )}
           </div>
+          {!loading && results.length > visibleLimit && <Button variant="outline" onClick={() => setVisibleLimit(n => n + 60)}>Mostrar más · {visibleLimit} de {results.length}</Button>}
         </div>
       </DialogContent>
     </Dialog>

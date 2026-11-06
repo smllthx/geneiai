@@ -1,6 +1,7 @@
-import { birthLabel } from "@/lib/personDates";
+import { birthLabel, personAge, ageAt } from "@/lib/personDates";
 import { useEffect, useState } from "react";
 import { ChevronDown, Lightbulb, RefreshCw } from "@/components/icons";
+import { GeneIcon } from "./GeneIcon";
 import { localPersonaInsight } from "@/lib/offlineAi";
 
 const yearOf = (d?: string | null) => (d ? new Date(d).getUTCFullYear() : null);
@@ -18,57 +19,50 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
   const [showAll, setShowAll] = useState(false);
   const insights: Insight[] = [];
   const yN = yearOf(persona?.nac_fecha);
-  if (persona && !yN && birthLabel(persona)) insights.push({ icon: "🕰️", texto: `Nacimiento registrado: ${birthLabel(persona)}.` });
+  if (persona && !yN && birthLabel(persona)) insights.push({ icon: "clock", texto: `Nacimiento registrado: ${birthLabel(persona)}.` });
   const yD = yearOf(persona?.defuncion_fecha) ?? null;
 
   if (yN) {
     const decada = `${Math.floor(yN / 10) * 10}s`;
-    insights.push({ icon: "🕰️", texto: `Nació en los ${decada}${persona?.nac_lugar ? ` en ${persona.nac_lugar}` : ""}.` });
+    insights.push({ icon: "clock", texto: `Nació en los ${decada}${persona?.nac_lugar ? ` en ${persona.nac_lugar}` : ""}.` });
   }
-  if (yN && yD) {
-    const vivio = yD - yN;
-    insights.push({ icon: vivio >= 90 ? "🌟" : "⌛", texto: `Vivió ${vivio} años${vivio >= 90 ? " — longevidad excepcional para su época." : "."}` });
-  }
-  if (yN && persona?.viva === "si") {
-    const edad = new Date().getUTCFullYear() - yN;
-    insights.push({ icon: "💚", texto: `Persona viva, ${edad} años aproximadamente.` });
-  }
+  const age = personAge(persona);
+  if (age) insights.push({ icon: persona?.viva === "si" ? "heart" : "clock", texto: persona?.viva === "si" ? `Persona viva, ${age}.` : `Vivió ${age}.` });
+  if (persona?.viva === "si" && persona?.defuncion_fecha) insights.push({ icon: "checklist", texto: "Revisar estado vital: marcada como viva con una fecha de defunción. Se mantiene su protección de privacidad." });
   if (fam.hijos?.length) {
-    insights.push({ icon: "👶", texto: `Tuvo ${fam.hijos.length} hijo${fam.hijos.length === 1 ? "" : "s"} registrado${fam.hijos.length === 1 ? "" : "s"}.` });
+    insights.push({ icon: "birth", texto: `Tuvo ${fam.hijos.length} hijo${fam.hijos.length === 1 ? "" : "s"} registrado${fam.hijos.length === 1 ? "" : "s"}.` });
   }
   if (fam.hermanos?.length >= 5) {
-    insights.push({ icon: "👨‍👩‍👧‍👦", texto: `Familia numerosa: ${fam.hermanos.length + 1} hermanos.` });
+    insights.push({ icon: "people", texto: `Familia numerosa: ${fam.hermanos.length + 1} hermanos.` });
   }
-  const matrimonio = yearOf(persona?.matrimonio_fecha);
-  if (yN && matrimonio) {
-    insights.push({ icon: "💍", texto: `Se casó a los ${matrimonio - yN} años.` });
-  }
+  const marriageAge = ageAt(persona, persona?.matrimonio_fecha);
+  if (marriageAge) insights.push({ icon: "marriage", texto: `Edad al casarse: ${marriageAge}.` });
   if (persona?.nacionalidad) {
-    insights.push({ icon: "🌍", texto: `Origen: ${persona.nacionalidad}.` });
+    insights.push({ icon: "globe", texto: `Origen: ${persona.nacionalidad}.` });
   }
   if (persona?.ocupacion) {
-    insights.push({ icon: "💼", texto: `Oficio conocido: ${persona.ocupacion}.` });
+    insights.push({ icon: "work", texto: `Oficio conocido: ${persona.ocupacion}.` });
   }
   if (fam.padres?.length === 2) {
     const padre = fam.padres.find((x: any) => x.sexo === "masculino");
     const madre = fam.padres.find((x: any) => x.sexo === "femenino");
     const yp = yearOf(padre?.nac_fecha);
     const ym = yearOf(madre?.nac_fecha);
-    if (yN && yp) insights.push({ icon: "👨", texto: `Su padre tenía ~${yN - yp} años cuando nació.` });
-    if (yN && ym) insights.push({ icon: "👩", texto: `Su madre tenía ~${yN - ym} años cuando nació.` });
+    if (yN && yp) insights.push({ icon: "user", texto: `Su padre tenía ~${yN - yp} años cuando nació.` });
+    if (yN && ym) insights.push({ icon: "user", texto: `Su madre tenía ~${yN - ym} años cuando nació.` });
   }
   if (eventos?.length >= 3) {
-    insights.push({ icon: "📜", texto: `${eventos.length} hechos vitales documentados en su vida.` });
+    insights.push({ icon: "document", texto: `${eventos.length} hechos vitales documentados en su vida.` });
   }
   if (yN) {
     const siglo = Math.floor((yN - 1) / 100) + 1;
-    insights.push({ icon: "🏛️", texto: `Vivió en el siglo ${siglo}.` });
+    insights.push({ icon: "building", texto: `Vivió en el siglo ${siglo}.` });
   }
 
   // Curiosidad extra local: no llama a IA externa.
   useEffect(() => {
     if (!persona?.id) return;
-    setExtra([{ icon: "✨", texto: localPersonaInsight(persona) }]);
+    setExtra([{ icon: "spark", texto: localPersonaInsight(persona) }]);
   }, [persona?.id, persona?.updated_at, refreshTick]);
 
   useEffect(() => {
@@ -109,7 +103,7 @@ export default function PersonaSmartInsights({ persona, eventos = [], fam }: { p
       <ul className="smart-insights-grid grid gap-2 sm:grid-cols-2">
         {visible.map((i, idx) => (
           <li key={idx} className="flex items-start gap-2 rounded-2xl bg-card/50 px-3 py-2 text-[14px] leading-snug">
-            <span className="shrink-0 text-base">{i.icon ?? "•"}</span>
+            <GeneIcon name={i.icon || "spark"} size={20} className="mt-0.5 shrink-0" />
             <span>{i.texto}</span>
           </li>
         ))}

@@ -45,3 +45,35 @@ export function lifeDates(p: LifeFields): string {
   if (died) return `f. ${died}`;
   return p.viva === "si" ? "Vive" : "";
 }
+
+function exactParts(value?: string | null): [number, number, number] | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!match) return null;
+  const parts = match.slice(1).map(Number) as [number, number, number];
+  const date = new Date(`${value}T12:00:00Z`);
+  return date.getUTCFullYear() === parts[0] && date.getUTCMonth() + 1 === parts[1] && date.getUTCDate() === parts[2] ? parts : null;
+}
+
+/** Completed years for full dates; explicit approximation for partial dates. */
+export function ageAt(person: BirthFields, end?: string | null): string | null {
+  const birth = exactParts(person.nac_fecha), finish = exactParts(end);
+  if (birth && finish) {
+    const years = finish[0] - birth[0] - Number(finish[1] < birth[1] || (finish[1] === birth[1] && finish[2] < birth[2]));
+    return years < 0 ? null : `${years} años`;
+  }
+  const endYear = end?.match(/^\d{3,4}(?=$|[- ])/);
+  if (!endYear) return null;
+  const raw = person.nac_fecha || person.nac_fecha_aprox || "";
+  if (/^(BEF|AFT)|antes|después|desde|hasta/i.test(raw.trim())) return null;
+  const years = raw.match(/\b\d{3,4}\b/g)?.map(Number) || [];
+  if (person.nac_rango_ini != null) years.push(person.nac_rango_ini);
+  if (person.nac_rango_fin != null) years.push(person.nac_rango_fin);
+  if (!years.length) return null;
+  const low = Number(endYear[0]) - Math.max(...years), high = Number(endYear[0]) - Math.min(...years);
+  return low < 0 ? null : `aprox. ${low === high ? high : `${low}–${high}`} años`;
+}
+
+export function personAge(person: LifeFields, today = new Date().toISOString().slice(0, 10)): string | null {
+  if (person.viva === "si" && person.defuncion_fecha) return null;
+  return ageAt(person, person.defuncion_fecha || (person.viva === "si" ? today : null));
+}

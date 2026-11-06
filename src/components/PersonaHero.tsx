@@ -1,4 +1,4 @@
-import { lifeDates } from "@/lib/personDates";
+import { lifeDates, personAge } from "@/lib/personDates";
 import PersonPortrait from "@/components/PersonPortrait";
 import { savePersonPortrait } from "@/lib/portraits";
 import { withTreeScope } from "@/lib/peopleData";
@@ -24,10 +24,8 @@ const originTheme = (origin?: string | null) => {
 };
 
 export default function PersonaHero({ p, onUpdated }: { p: any; onUpdated?: (patch: any) => void }) {
-  const yN = yearOf(p?.nac_fecha);
-  const yD = yearOf(p?.defuncion_fecha) ?? null;
   const lifespan = lifeDates(p);
-  const edad = yN && yD ? `${yD - yN} años` : (yN && p?.viva === "si" ? `${new Date().getUTCFullYear() - yN} años` : null);
+  const edad = personAge(p);
   const sexoIcon = p?.sexo === "femenino" ? "♀" : p?.sexo === "masculino" ? "♂" : "";
   const ring = p?.sexo === "femenino" ? "ring-pink-400/50"
     : p?.sexo === "masculino" ? "ring-sky-400/50"

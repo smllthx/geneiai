@@ -1,0 +1,45 @@
+/* GeneAI crystal surfaces: original navy, mint, blue and coral; system typography. */
+:root { --crystal-fill: .64; --crystal-edge: 0 0% 100% / .65; --crystal-shadow: 214 50% 18% / .09; }
+.dark { --crystal-fill: .58; --crystal-edge: 210 65% 88% / .17; --crystal-shadow: 220 65% 3% / .3; }
+body {
+  background: radial-gradient(ellipse at 6% 5%, hsl(210 73% 64% / .16), transparent 48%),
+    radial-gradient(ellipse at 96% 30%, hsl(162 55% 63% / .13), transparent 45%),
+    radial-gradient(ellipse at 65% 100%, hsl(286 62% 70% / .1), transparent 50%), hsl(var(--background));
+  background-attachment: fixed;
+}
+.app-sidebar { width: 254px; padding: 12px 4px 12px 12px; border: 0; }
+.sidebar-surface, .toolbar-capsule, .gene-glass,
+.home-tree-card, .home-surface, .home-discover, .home-shortcuts, .archivo-card, .gene-timeline {
+  background: linear-gradient(145deg, hsl(0 0% 100% / .07), transparent 65%), hsl(var(--card) / var(--crystal-fill));
+  border: 1px solid hsl(var(--crystal-edge));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / .1), 0 8px 30px -14px hsl(var(--crystal-shadow));
+  backdrop-filter: saturate(140%) blur(22px);
+  -webkit-backdrop-filter: saturate(140%) blur(22px);
+}
+.sidebar-surface { border-radius: 26px; }
+.sidebar-brand { padding-top: 22px; padding-bottom: 26px; }
+.desktop-toolbar { border: 0; margin-bottom: 26px; padding-bottom: 0; }
+.toolbar-capsule { border-radius: 999px; padding: 6px 10px; }
+.home-tree-card { border-radius: 26px; }
+.home-surface, .home-discover, .home-shortcuts, .archivo-card, .gene-timeline { border-radius: 22px; }
+.home-primary { border-radius: 999px; box-shadow: inset 0 1px 0 #ffffff60, 0 4px 14px -8px #8ed4c0; }
+.nav-item-active { background: hsl(var(--primary) / .16); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .12); }
+.timeline-switch { border-radius: 999px; background: hsl(var(--background) / .4); padding: 4px; }
+.timeline-switch button { border-radius: 999px; }
+.timeline-switch button[aria-pressed=true] { background: hsl(var(--card) / .9); box-shadow: 0 2px 8px hsl(var(--crystal-shadow)); }
+.timeline-event-icon { background: hsl(var(--background) / .6); border-color: hsl(var(--crystal-edge)); border-radius: 14px; }
+.timeline-detail { background: hsl(var(--background) / .45); border-radius: 18px; }
+.timeline-filters input, .timeline-filters select { background: hsl(var(--background) / .45); border-radius: 14px; }
+.icon-catalog > div, .flag-catalog > div { background: hsl(var(--card) / .55); border-color: hsl(var(--crystal-edge)); border-radius: 18px; }
+.mobile-app-header, .mobile-bottom-nav { background: hsl(var(--card) / .72); border-color: hsl(var(--crystal-edge)); backdrop-filter: saturate(160%) blur(22px); -webkit-backdrop-filter: saturate(160%) blur(22px); box-shadow: inset 0 1px 0 hsl(0 0% 100% / .12), 0 6px 24px hsl(var(--crystal-shadow)); }
+/* Keep text legible and avoid stacked blur while scrolling a long mobile list. */
+@media (max-width: 767px) {
+  .gene-glass, .home-surface, .home-discover, .home-shortcuts, .archivo-card, .gene-timeline { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: hsl(var(--card) / .82); }
+  .home-tree-copy { padding: 24px 0 24px 20px; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .sidebar-surface, .toolbar-capsule, .gene-glass, .home-tree-card, .home-surface, .home-discover, .home-shortcuts, .archivo-card, .gene-timeline, .mobile-app-header, .mobile-bottom-nav, .timeline-event-icon, .timeline-detail { background: hsl(var(--card)); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: hsl(var(--border)); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar-surface, .toolbar-capsule, .gene-glass, .home-tree-card, .home-surface, .home-discover, .home-shortcuts, .archivo-card, .gene-timeline, .mobile-app-header, .mobile-bottom-nav { background: hsl(var(--card) / .97); }
+}

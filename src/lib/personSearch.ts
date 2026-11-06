@@ -1,6 +1,6 @@
 import { lifeDates, birthSortYear } from "@/lib/personDates";
 import { matchesCode, personaCode } from "@/lib/personaCode";
-import { norm, rankResults } from "@/lib/search/fuzzy";
+import { norm, fuzzyScore } from "@/lib/search/fuzzy";
 
 export type SearchablePerson = {
   id: string;
@@ -90,23 +90,33 @@ export function filterPeopleForQuery<T extends SearchablePerson>(
       .slice(0, limit);
   }
 
-  const qNorm = norm(q);
-  const exact = pool
-    .filter((p) => matchesCode(q, p.id) || personSearchText(p).toLowerCase().includes(q.toLowerCase()) || norm(personSearchText(p)).includes(qNorm))
-    .map((item) => ({ item, score: matchesCode(q, item.id) ? 2 : 1.15 })) as Array<{ item: T; score: number }>;
-  const fuzzy = rankResults(pool, q, personSearchText) as Array<{ item: T; score: number }>;
-  const byId = new Map<string, { item: T; score: number }>();
+  return pool.map(item => ({ item, score: personQueryScore(item, q) }))
+    .filter(result => result.score > 0)
+    .sort((a, b) => b.score - a.score || comparePeopleAlphabetically(a.item, b.item))
+    .slice(0, limit).map(result => result.item);
+}
 
-  [...exact, ...fuzzy].forEach((result) => {
-    const current = byId.get(result.item.id);
-    if (!current || result.score > current.score) byId.set(result.item.id, result);
+/** Name relevance is retained by every person picker; missing tokens are not matches. */
+export function personQueryScore(person: SearchablePerson, query: string): number {
+  const q = norm(query);
+  if (!q) return 0;
+  if (matchesCode(query, person.id) || (person.codigo && norm(person.codigo) === q)) return 20;
+  const name = norm(personFullName(person));
+  const aliases = (person.variantes_nombre ?? []).flatMap(alias => {
+    const value = norm(alias);
+    return [value, norm(`${alias} ${person.apellidos || ""}`)];
+  }).filter(Boolean);
+  if (name === q) return 10;
+  if (aliases.includes(q)) return 9;
+  if (name.startsWith(q)) return 8;
+  const tokens = q.split(" ");
+  const scores = [name, ...aliases].map(form => {
+    const individual = tokens.map(token => fuzzyScore(token, form));
+    return individual.every(score => score >= .7)
+      ? individual.reduce((a, b) => a + b, 0) / individual.length * 5 : 0;
   });
-
-  return [...byId.values()]
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return comparePeopleAlphabetically(a.item, b.item);
-    })
-    .slice(0, limit)
-    .map((r) => r.item);
+  const best = Math.max(0, ...scores);
+  if (best) return best;
+  // Dates, origin and code are searchable without overpowering an exact name.
+  return norm(personSearchText(person)).includes(q) ? 2 : 0;
 }

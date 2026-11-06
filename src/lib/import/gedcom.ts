@@ -36,7 +36,13 @@ const child = (n: Node | undefined, type: string): Node | undefined =>
   n?.children?.find((c) => c.type === type);
 const childrenOf = (n: Node | undefined, type: string): Node[] =>
   n?.children?.filter((c) => c.type === type) ?? [];
-const v = (n: Node | undefined): string => (n?.value ?? "").toString().trim();
+const nodeText = (n: Node | undefined): string => {
+  if (!n) return "";
+  return ((n.value ?? n.data?.pointer ?? "").toString() + (n.children ?? []).filter(c => c.type === "CONT" || c.type === "CONC")
+    .map(c => (c.type === "CONT" ? "\n" : "") + nodeText(c)).join(""));
+};
+
+const v = (n: Node | undefined) => nodeText(n).trim();
 
 function normDate(s: string): string | null {
   if (!s) return null;

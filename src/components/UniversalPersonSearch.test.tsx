@@ -1,0 +1,23 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { it, expect, vi } from "vitest";
+import UniversalPersonSearch from "./UniversalPersonSearch";
+const mocks=vi.hoisted(()=>({fetch:vi.fn(),trees:[{id:"a",nombre:"Familia italiana"},{id:"b",nombre:"Familia chilena"}]}));
+vi.mock("@/contexts/AuthContext",()=>({useAuth:()=>({user:{id:"owner"}})}));
+vi.mock("@/lib/peopleData",()=>({getActiveTreeId:async()=>"a",fetchAllPeople:(...args:any[])=>mocks.fetch(...args)}));
+vi.mock("@/integrations/supabase/client",()=>({supabase:{from:()=>{const q:any={select:()=>q,eq:()=>q,abortSignal:async()=>({data:mocks.trees,error:null})};return q;}}}));
+it("switches scope, identifies the tree and keeps exact full names first",async()=>{
+  const people=[{id:"one",nombres:"Antonio",apellidos:"Sanguineti",arbol_id:"a"},{id:"two",nombres:"Francesco",apellidos:"Sanguineti",arbol_id:"a"},{id:"three",nombres:"Francesco",apellidos:"Sanguineti",arbol_id:"b"}];
+  mocks.fetch.mockImplementation(async(_select,options)=>options.treeId?people.filter(p=>p.arbol_id===options.treeId):people);
+  render(<MemoryRouter><UniversalPersonSearch/></MemoryRouter>);
+  fireEvent.click(screen.getByLabelText("Abrir buscador universal de personas"));
+  expect(await screen.findByText("2 personas · Árbol actual")).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText("Buscar por apellido, nombre, código, año o lugar"),{target:{value:"Francesco Sanguineti"}});
+  expect(screen.getByText("1 coincidencias")).toBeInTheDocument();
+  expect(screen.queryByText("Antonio Sanguineti")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Buscar en"),{target:{value:"all"}});
+  expect(await screen.findByText("3 personas · Todos mis árboles")).toBeInTheDocument();
+  expect(screen.getByText("2 coincidencias")).toBeInTheDocument();
+  expect(screen.getByText("Familia italiana")).toBeInTheDocument();expect(screen.getByText("Familia chilena")).toBeInTheDocument();
+  await waitFor(()=>expect(mocks.fetch.mock.calls.at(-1)?.[1]).toMatchObject({treeId:null,includeUnscoped:false}));
+});

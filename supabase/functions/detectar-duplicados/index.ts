@@ -1,101 +1,112 @@
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { createClient } from 'npm:@supabase/supabase-js@2'
-import { pickAiTarget as _pickAiTarget, prepareEconomyChatBody as _prepareEconomyChatBody } from "../_shared/userAi.ts";
+import { findIdentityCandidates } from "../_shared/identityCandidates.ts";
+import { collectRows } from "../_shared/collectRows.ts";
+import { rejectUnauthenticated } from "../_shared/auth.ts";
+import { corsHeaders } from 'npm:@supabase/supabase-js@2.115.0/cors'
+import { createClient } from 'npm:@supabase/supabase-js@2.115.0'
 
-// === user-AI helper (auto-inyectado) ===
-async function _aiFetch(req: Request, body: any) {
-  const auth = req.headers.get("Authorization");
-  const target = await _pickAiTarget(auth, body?.model);
-  const finalBody = _prepareEconomyChatBody(body, target.model);
-  return fetch(target.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${target.key}` },
-    body: JSON.stringify(finalBody),
-  });
-}
-// =======================================
-
-
-function norm(s: string) {
-  return (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
-}
 
 Deno.serve(async (req) => {
+  const geneaiAccessRejection = await rejectUnauthenticated(req);
+  if (geneaiAccessRejection) return geneaiAccessRejection;
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Método no permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', Allow: 'POST, OPTIONS' },
+    })
+  }
   try {
     const auth = req.headers.get('Authorization') ?? ''
     const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: auth } },
     })
-    const { data: { user } } = await supa.auth.getUser()
+    const { data: { user }, error: authError } = await supa.auth.getUser()
+    if (authError) throw authError
     if (!user) return new Response(JSON.stringify({ error: 'no auth' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-    const { data: personas } = await supa.from('personas').select('id,nombres,apellidos,nac_fecha,nac_rango_ini,sexo,variantes_nombre')
-    if (!personas) return new Response(JSON.stringify({ pares: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-
-    // Pre-agrupar por clave normalizada (nombre+apellido) para reducir el espacio
-    const buckets = new Map<string, any[]>()
-    for (const p of personas) {
-      const k = norm(`${p.nombres} ${p.apellidos}`)
-      if (!k) continue
-      const arr = buckets.get(k) ?? []
-      arr.push(p); buckets.set(k, arr)
-    }
-    const candidatos: any[] = []
-    for (const [, arr] of buckets) {
-      if (arr.length < 2) continue
-      for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) {
-        const a = arr[i], b = arr[j]
-        const yA = a.nac_fecha ? new Date(a.nac_fecha).getUTCFullYear() : a.nac_rango_ini
-        const yB = b.nac_fecha ? new Date(b.nac_fecha).getUTCFullYear() : b.nac_rango_ini
-        const yearOk = !yA || !yB || Math.abs(yA - yB) <= 3
-        const sexOk = !a.sexo || !b.sexo || a.sexo === b.sexo
-        const score = (yearOk ? 50 : 10) + (sexOk ? 30 : 0) + 20
-        candidatos.push({ a, b, score, motivo: `Mismo nombre normalizado${yearOk && yA && yB ? ` · año cercano (${yA} vs ${yB})` : ''}` })
-      }
+    const { data: profile, error: profileError } = await supa
+      .from('profiles')
+      .select('active_arbol_id')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (profileError) throw profileError
+    const treeId = profile?.active_arbol_id as string | null
+    if (!treeId) {
+      return new Response(JSON.stringify({ error: 'Selecciona un archivo familiar antes de buscar duplicados.' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Si hay <= 25 candidatos, dejamos a la IA validar/scorear
-    let resultado = candidatos
-    if (candidatos.length && candidatos.length <= 25) {
-      try {
-        const aiRes = await _aiFetch(req, {
-            model: 'openai/gpt-4o-mini',
-            messages: [
-              { role: 'system', content: 'Eres genealogista. Decide si dos fichas son la MISMA persona. Responde JSON.' },
-              { role: 'user', content: `Analiza estos pares (a y b son fichas distintas) y devuelve JSON { "pares": [{ "a_id": "...", "b_id": "...", "probabilidad": 0-100, "razon": "breve" }] }. Incluye SOLO pares con probabilidad ≥ 60.
-
-PARES:
-${JSON.stringify(candidatos.map(c => ({ a: c.a, b: c.b })), null, 2)}` },
-            ],
-            response_format: { type: 'json_object' },
-        })
-        if (aiRes.ok) {
-          const ai = await aiRes.json()
-          const j = JSON.parse(ai.choices[0].message.content)
-          const byKey = new Map<string, any>()
-          for (const c of candidatos) byKey.set(`${c.a.id}:${c.b.id}`, c)
-          resultado = (j.pares ?? []).map((p: any) => {
-            const c = byKey.get(`${p.a_id}:${p.b_id}`) ?? byKey.get(`${p.b_id}:${p.a_id}`)
-            if (!c) return null
-            return { ...c, score: p.probabilidad ?? c.score, motivo: p.razon ?? c.motivo, ia: true }
-          }).filter(Boolean)
-        }
-      } catch (_) {}
+    const { data: ownedTree, error: treeError } = await supa
+      .from('arboles')
+      .select('id')
+      .eq('id', treeId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (treeError) throw treeError
+    if (!ownedTree) {
+      return new Response(JSON.stringify({ error: 'El archivo familiar activo no pertenece a esta cuenta.' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Persistir como coincidencias pendientes
-    const rows = resultado.slice(0, 50).map((c: any) => ({
-      user_id: user.id, tipo: 'duplicado',
-      ref_a: c.a.id, ref_b: c.b.id, score: c.score,
-      razones: [{ motivo: c.motivo, ia: !!c.ia }],
+    const [personas, equivalents] = await Promise.all([
+      collectRows((from,to) => supa.from('personas').select('id,nombres,apellidos,variantes_nombre,nac_fecha,nac_fecha_aprox,nac_rango_ini,nac_rango_fin,defuncion_fecha,nac_lugar_id,sexo').eq('user_id',user.id).eq('arbol_id',treeId).is('fusionado_en',null).order('id').range(from,to)),
+      collectRows((from,to) => supa.from('equivalencias_nombre').select('nombre_base,equivalente').eq('user_id',user.id).order('id').range(from,to)),
+    ]);
+    const candidatos = findIdentityCandidates(personas, equivalents);
+
+    // Esta preselección es deliberadamente determinista: no decide identidad ni asigna
+    // probabilidades. Cada par queda como candidato para comparación documental humana.
+    const resultado = candidatos.slice(0, 50)
+
+    // `coincidencias` no tiene arbol_id en el esquema actual. Guardamos en la
+    // bandeja de sugerencias, que sí permite aislar cada revisión por árbol.
+    const { error: clearError } = await supa
+      .from('sugerencias')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('arbol_id', treeId)
+      .eq('origen', 'detectar-duplicados')
+      .eq('estado', 'pendiente')
+    if (clearError) throw clearError
+
+    const rows = resultado.map((c: any) => ({
+      user_id: user.id,
+      arbol_id: treeId,
+      tipo: 'posible_duplicado',
+      titulo: `Comparar posible duplicado: ${[c.a.nombres, c.a.apellidos].filter(Boolean).join(' ')} / ${[c.b.nombres, c.b.apellidos].filter(Boolean).join(' ')}`.slice(0, 200),
+      descripcion: 'Dos fichas del archivo comparten nombres o variantes registradas. Revisa las fuentes originales antes de fusionar o corregir.',
+      persona_id: c.a.id,
+      confianza: 0,
+      origen: 'detectar-duplicados',
+      estado: 'pendiente',
+      payload: {
+        ref_a: c.a.id,
+        ref_b: c.b.id,
+        ficha_a: c.a,
+        ficha_b: c.b,
+        indicios: c.indicios,
+        contradicciones: c.contradicciones,
+        clasificacion_evidencia: 'candidato',
+        verificacion: 'sin_verificar',
+        fusion_automatica: false,
+      },
     }))
     if (rows.length) {
-      await supa.from('coincidencias').delete().eq('user_id', user.id).eq('tipo', 'duplicado').eq('estado', 'pendiente')
-      await supa.from('coincidencias').insert(rows)
+      const { error: insertError } = await supa.from('sugerencias').insert(rows)
+      if (insertError) throw insertError
     }
 
-    return new Response(JSON.stringify({ pares: resultado.slice(0, 50) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({
+      propuestas_creadas: rows.length,
+      candidatos_totales: candidatos.length,
+      truncado: candidatos.length > resultado.length,
+      estado: 'sin_verificar',
+      review_path: '/sugerencias',
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }

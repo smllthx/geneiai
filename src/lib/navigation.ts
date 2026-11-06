@@ -35,6 +35,7 @@ const sections: NavSection[] = [
     { to: "https://www.myheritage.es/live-memory", label: "LiveMemory™", icon: Sparkles, external: true },
   ] },
   { key: "research", label: "Investigación", icon: FileSearch, items: [
+    { to: "/motor-identidad", label: "Motor de identidad", icon: Sparkles },
     { to: "/investigacion", label: "Centro de investigación", icon: FileSearch },
     { to: "/documentos", label: "Documentos", icon: FileText },
     { to: "/fuentes", label: "Fuentes", icon: BookOpen },

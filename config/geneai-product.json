@@ -4,18 +4,18 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.9",
-  "build": 309,
-  "publishedAt": "2026-11-05",
+  "version": "3.0.10",
+  "build": 310,
+  "publishedAt": "2026-11-06",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
   "legacyTauriBundleIdentifier": "com.geneai.geneai",
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Diseños de los ZIP integrados con el logo y tipografía originales de GENEAI.",
-    "Iconos propios rellenos de color, argollas entrelazadas y banderas SVG del mundo.",
-    "Cronologías horizontal y vertical con detalles, fuentes y fechas aproximadas.",
-    "Menús agrupados y selector de español, inglés e italiano guardado por cuenta."
+    "Paneles de cristal más transparentes, huellas de bebé e iconos a color actualizados.",
+    "Buscador con prioridad por nombre completo y selector de árbol; edad y contadores de parentesco corregidos.",
+    "GEDCOM conserva cada familia, progenitores sin pareja y fechas aproximadas; protección de personas vivas reforzada.",
+    "Motor de identidad en la nube con comparación de fichas, variantes y revisión de propuestas."
   ]
 }
