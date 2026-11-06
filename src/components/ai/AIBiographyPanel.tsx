@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Save, Sparkles } from "lucide-react";
+import { Loader2, Save, Sparkles } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

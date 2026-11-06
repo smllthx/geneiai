@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Image as ImageIcon, Upload, X, Tag, Trash2, Sparkles, MapPin, Users, Album } from "lucide-react";
+import { Image as ImageIcon, Upload, X, Tag, Trash2, Sparkles, MapPin, Users, Album } from "@/components/icons";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, CircleMarker, Tooltip as LTooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";

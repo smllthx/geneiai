@@ -1,3 +1,4 @@
+import CountryFlag from "@/components/CountryFlag";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSearchParams, Link } from "react-router-dom";
 import { catalogUrl } from "@/lib/researchSearch";
-import { Trash2, ExternalLink, Library, Search } from "lucide-react";
+import { Trash2, ExternalLink, Library, Search } from "@/components/icons";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -59,7 +60,7 @@ export default function Lugares() {
         </div>
       </div>
       {selectedPlace && <div className="glass-card p-4">
-        <p className="font-semibold">{selectedLabel}</p>
+        <p className="flex items-center gap-2 font-semibold"><CountryFlag country={selectedPlace.pais} />{selectedLabel}</p>
         <div className="mt-2 flex flex-wrap gap-3">
           <a href={catalogUrl({ place: selectedLabel })} target="_blank" rel="noopener noreferrer" data-external-browser="true" className="inline-flex min-h-11 items-center gap-2 text-sm text-primary"><Library className="h-4 w-4" /> Catálogo de FamilySearch <ExternalLink className="h-3 w-3" /></a>
           <Link to={`/buscar?modo=catalogo&lugar=${encodeURIComponent(selectedLabel)}`} className="inline-flex min-h-11 items-center gap-2 text-sm text-primary"><Search className="h-4 w-4" /> Investigar este lugar</Link>
@@ -72,7 +73,7 @@ export default function Lugares() {
       </CardContent></Card>
       <div className="grid gap-2">{items.map((l) => (
         <Card key={l.id} className="archivo-card"><CardContent className="flex items-center justify-between pt-4 text-sm">
-          <button type="button" className="min-h-11 text-left" onClick={() => setSelected(l.id)}>{[l.ciudad, l.provincia, l.region, l.pais].filter(Boolean).join(", ")}{l.parroquia && ` · ${l.parroquia}`}</button>
+          <button type="button" className="flex min-h-11 items-center gap-3 text-left" onClick={() => setSelected(l.id)}><CountryFlag country={l.pais} />{[l.ciudad, l.provincia, l.region, l.pais].filter(Boolean).join(", ")}{l.parroquia && ` · ${l.parroquia}`}</button>
           <Button size="sm" variant="ghost" onClick={() => del(l.id)}><Trash2 className="h-4 w-4" /></Button>
         </CardContent></Card>
       ))}</div>

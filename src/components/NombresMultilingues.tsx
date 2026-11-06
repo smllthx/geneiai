@@ -1,8 +1,9 @@
+import { GeneIcon } from "./GeneIcon";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Languages, Loader2, Copy, Check } from "lucide-react";
+import { Languages, Loader2, Copy, Check } from "@/components/icons";
 import { toast } from "sonner";
 
 interface Props {
@@ -14,7 +15,6 @@ interface Props {
 }
 
 const LABEL: Record<string, string> = { es: "Español", it: "Italiano", de: "Alemán", en: "Inglés" };
-const FLAG: Record<string, string> = { es: "🇪🇸", it: "🇮🇹", de: "🇩🇪", en: "🇬🇧" };
 
 export default function NombresMultilingues({ nombres, apellidos, origen, nacionalidad, onApply }: Props) {
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ export default function NombresMultilingues({ nombres, apellidos, origen, nacion
               return (
                 <li key={v.idioma} className={`flex items-center justify-between gap-2 rounded-md border px-2 py-1.5 ${v.idioma === principal ? "border-primary/60 bg-primary/5" : "border-border/60"}`}>
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-muted-foreground">{FLAG[v.idioma]} {LABEL[v.idioma] ?? v.idioma}{v.idioma === principal ? " · principal" : ""}</div>
+                    <div className="text-xs text-muted-foreground"><GeneIcon name="language" size={16} className="mr-1 inline" /> {LABEL[v.idioma] ?? v.idioma}{v.idioma === principal ? " · principal" : ""}</div>
                     <div className="font-medium truncate">{txt}</div>
                     {v.notas && <div className="text-[11px] text-muted-foreground truncate">{v.notas}</div>}
                   </div>

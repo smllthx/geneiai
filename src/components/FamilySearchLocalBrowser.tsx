@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Laptop, Loader2, RefreshCw, LogOut, Search, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Laptop, Loader2, RefreshCw, LogOut, Search, ExternalLink, ShieldCheck, AlertTriangle } from "@/components/icons";
 import { authorizeFamilySearch } from "@/lib/familySearchBrowser";
 
 const COMPANION = "http://127.0.0.1:8787";

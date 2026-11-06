@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
-import { Sparkles, GitMerge, X, Check, Users } from "lucide-react";
+import { Sparkles, GitMerge, X, Check, Users } from "@/components/icons";
 import { toast } from "sonner";
 import { toDisplayTextList } from "@/lib/safeText";
 

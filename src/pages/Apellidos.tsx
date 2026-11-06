@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GitBranch } from "lucide-react";
+import { GitBranch } from "@/components/icons";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";

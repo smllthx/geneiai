@@ -1,4 +1,4 @@
-import { Filter, Home, Maximize2, Minus, Plus, ScanSearch } from "lucide-react";
+import { Filter, Home, Maximize2, Minus, Plus, ScanSearch } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import TreeViewSelector from "./TreeViewSelector";
 import type { TreeViewMode } from "./types";

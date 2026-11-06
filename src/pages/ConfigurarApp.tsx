@@ -1,7 +1,8 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Wand2, Loader2, CheckCircle2 } from "lucide-react";
+import { Wand2, Loader2, CheckCircle2 } from "@/components/icons";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -31,6 +32,7 @@ const ACENTOS = [
 const REGIONES = ["Argentina", "Italia (Liguria)", "Suiza", "España", "Francia", "Alemania", "Brasil", "Uruguay", "Otra"];
 
 export default function ConfigurarApp() {
+  const { language } = useLanguage();
   const [step, setStep] = useState(0);
   const [stats, setStats] = useState({ personas: 0, documentos: 0, eventos: 0 });
   const [cfg, setCfg] = useState<Config>({
@@ -74,6 +76,7 @@ export default function ConfigurarApp() {
     try {
       const { error } = await supabase.from("app_config").upsert({
         ...cfg,
+        idioma: language,
         proveedor_default: "openai",
         modelo_default: "openai/gpt-4o-mini",
         proveedores_activos: ["openai"],

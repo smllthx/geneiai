@@ -1,3 +1,6 @@
+import LanguagePicker from "./LanguagePicker";
+import SectionNav from "./SectionNav";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +10,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import {
   LogOut, ChevronDown, Menu, ChevronLeft, ChevronRight, GripVertical, RefreshCw, ExternalLink,
   PanelRightOpen, ArrowLeft, EyeOff, Settings2, MousePointerClick, Search, Bell,
-} from "lucide-react";
+} from "@/components/icons";
 import { cn } from "@/lib/utils";
 import SectionPlaceholder from "@/components/SectionPlaceholder";
 import SiriAssistant from "@/components/SiriAssistant";
@@ -34,6 +37,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 
 function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey: string; items: NavItem[]; direct?: boolean; customize: boolean; onNavigate?: () => void }) {
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
   const previewHome = useLocation().pathname === "/diseno";
   const navigate = useNavigate();
@@ -81,9 +85,9 @@ function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey
         const { to, label, icon: Icon } = item;
         if (item.external) return (
           <a key={to} href={to} target="_blank" rel="noopener noreferrer" data-external-browser="true"
-            onClick={onNavigate} aria-label={`${label} (MyHeritage, nueva pestaña)`}
+            onClick={onNavigate} aria-label={`${t(label)} (MyHeritage, nueva pestaña)`}
             className={cn("flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 hover:bg-foreground/5", direct ? "font-semibold" : "text-sm")}>
-            <Icon className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1">{label}<small className="block text-xs font-normal text-muted-foreground">MyHeritage</small></span><ExternalLink size={14} aria-hidden="true" />
+            <Icon className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1">{t(label)}<small className="block text-xs font-normal text-muted-foreground">MyHeritage</small></span><ExternalLink size={14} aria-hidden="true" />
           </a>
         );
         return (
@@ -113,23 +117,23 @@ function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey
               }
             >
               {customize && !isMobile && <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition group-hover/row:opacity-100" />}
-              <Icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 break-words">{label}</span>
+              <Icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 break-words">{t(label)}</span>
             </NavLink>
             {customize && <DropdownMenu open={options === to} onOpenChange={(open) => setOptions(open ? to : null)}>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="nav-row-options grid h-9 w-8 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${label}`}>
+                <button type="button" className="nav-row-options grid h-9 w-8 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-foreground/5" aria-label={`Opciones de ${t(label)}`}>
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side={isMobile ? "bottom" : "right"} align="start" collisionPadding={12} className="nav-options w-72 rounded-2xl p-2">
-                <DropdownMenuLabel className="whitespace-normal break-words">{label}</DropdownMenuLabel>
+                <DropdownMenuLabel className="whitespace-normal break-words">{t(label)}</DropdownMenuLabel>
                 <DropdownMenuItem onSelect={() => { navigate(to); onNavigate?.(); }}>
                   <MousePointerClick className="mr-2 h-4 w-4 shrink-0" /> Abrir aquí
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { openWindow(item); onNavigate?.(); }}>
                   <PanelRightOpen className="mr-2 h-4 w-4 shrink-0" /> Abrir en ventana
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => { toggleHidden(groupKey, to); toast.success(`${label} se ocultó del menú`); }}>
+                <DropdownMenuItem onSelect={() => { toggleHidden(groupKey, to); toast.success(`${t(label)} se ocultó del menú`); }}>
                   <EyeOff className="mr-2 h-4 w-4 shrink-0" /> Ocultar del menú
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => { openMenuSettings(); onNavigate?.(); }}>
@@ -147,6 +151,7 @@ function NavItems({ groupKey, items, direct, customize, onNavigate }: { groupKey
 }
 
 function SectionMenu({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useLanguage();
   const { pathname } = useLocation();
   const active = navigationGroups.find(section => section.items.some(item =>
     !item.external && (pathname === item.to || pathname.startsWith(item.to + "/"))
@@ -162,7 +167,7 @@ function SectionMenu({ onNavigate }: { onNavigate?: () => void }) {
           <button type="button" onClick={() => setOpen(current => current === key ? undefined : key)}
             aria-expanded={open === key} aria-controls={`${menuId}-${key}`}
             className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-foreground/5">
-            <Icon className="h-5 w-5 shrink-0" /><span className="flex-1">{label}</span>
+            <Icon className="h-5 w-5 shrink-0" /><span className="flex-1">{t(label)}</span>
             <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open === key && "rotate-180")} />
           </button>
           <div id={`${menuId}-${key}`} hidden={open !== key} className="ml-3 border-l border-border/60 pl-1">
@@ -172,12 +177,14 @@ function SectionMenu({ onNavigate }: { onNavigate?: () => void }) {
     )}
     <button type="button" className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs text-muted-foreground hover:bg-foreground/5"
       aria-pressed={customize} onClick={() => setCustomize(!customize)}>
-      <Settings2 size={15} /> {customize ? "Terminar de organizar" : "Organizar menú"}
+      <Settings2 size={15} /> {t(customize ? "Terminar de organizar" : "Organizar menú")}
     </button>
+    <LanguagePicker />
   </nav>;
 }
 
 export default function AppLayout({ preview = false, children }: { preview?: boolean; children?: ReactNode }) {
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -259,13 +266,13 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
         <div className="glass-strong sidebar-surface flex h-full flex-col rounded-3xl">
           <div className="sidebar-brand px-4 pt-5 pb-6">
             <div className="flex items-center gap-3">
-              <BrandLogo className="min-w-0 flex-1" size={34} showText subtitle="Historias que conectan" />
+              <BrandLogo className="min-w-0 flex-1" size={34} showText subtitle={t("Historias que conectan")} />
               <div className="ml-auto flex items-center gap-1">
                 <button
                   onClick={() => setSidebarCollapsed(true)}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
-                  aria-label="Ocultar menú"
-                  title="Ocultar menú"
+                  aria-label={t("Ocultar menú")}
+                  title={t("Ocultar menú")}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -274,12 +281,12 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2"><SectionMenu /></div>
           <div className="m-2 rounded-2xl bg-foreground/5 p-3">
-            <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? "Archivo de ejemplo" : user?.email}</p>
+            <p className="mb-2 truncate text-xs text-muted-foreground">{preview ? t("Archivo de ejemplo") : user?.email}</p>
             <Button variant="ghost" size="sm" className="mb-1 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
-              <RefreshCw className="h-4 w-4" /> Actualizar datos
+              <RefreshCw className="h-4 w-4" /> {t("Actualizar datos")}
             </Button>
             <Button variant="ghost" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
-              <LogOut className="h-4 w-4" /> {preview ? "Abrir mi archivo" : "Cerrar sesión"}
+              <LogOut className="h-4 w-4" /> {t(preview ? "Abrir mi archivo" : "Cerrar sesión")}
             </Button>
           </div>
         </div>
@@ -288,8 +295,8 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
       {/* Floating re-open arrow when sidebar is collapsed (desktop only) */}
       {!isMobile && !isWindowFrame && <button
         onClick={() => setSidebarCollapsed(false)}
-        aria-label="Mostrar menú"
-        title="Mostrar menú GENEAI"
+        aria-label={t("Mostrar menú")}
+        title={t("Mostrar menú")}
         className={cn(
           "fixed left-0 top-1/2 z-40 hidden -translate-y-1/2 items-center justify-center rounded-r-2xl border border-l-0 border-border bg-card/90 px-1.5 py-3 text-foreground/70 shadow-md backdrop-blur-md transition-all duration-300 hover:bg-card hover:text-foreground hover:px-2 md:flex",
           sidebarCollapsed ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none",
@@ -302,7 +309,7 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
         {isMobile && !isWindowFrame && <div ref={headerRef} className="mobile-app-header glass-strong fixed z-40 flex items-center justify-between gap-1 rounded-2xl p-2">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label="Abrir menú">
+              <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label={t("Abrir menú")}>
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -313,14 +320,14 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             >
               <SheetTitle className="sr-only">Menú principal de GENEAI</SheetTitle>
               <div className="mb-4 flex items-center gap-3 pr-8">
-                <BrandLogo size={58} showText subtitle={preview ? "Archivo de ejemplo" : user?.email ?? "Archivo familiar privado"} />
+                <BrandLogo size={58} showText subtitle={preview ? t("Archivo de ejemplo") : user?.email ?? t("Archivo familiar privado")} />
               </div>
               <SectionMenu onNavigate={() => setMobileMenuOpen(false)} />
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={refreshVisibleData}>
-                <RefreshCw className="h-4 w-4" /> Actualizar datos
+                <RefreshCw className="h-4 w-4" /> {t("Actualizar datos")}
               </Button>
               <Button variant="ghost" size="sm" className="mt-4 w-full justify-start gap-2 rounded-xl" onClick={preview ? () => navigate("/inicio") : handleLogout}>
-                <LogOut className="h-4 w-4" /> {preview ? "Abrir mi archivo" : "Cerrar sesión"}
+                <LogOut className="h-4 w-4" /> {t(preview ? "Abrir mi archivo" : "Cerrar sesión")}
               </Button>
             </SheetContent>
           </Sheet>
@@ -328,25 +335,26 @@ export default function AppLayout({ preview = false, children }: { preview?: boo
             <BrandLogo className="min-w-0" size={36} showText />
           </NavLink>
           <div className="flex items-center gap-1">
-            {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+            {preview ? <button className="toolbar-control" aria-label={t("Abrir buscador universal de personas")} onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
             <AdaptiveViewport inline />
-            {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
+            {preview ? <button className="toolbar-control" aria-label={t("Notificaciones")} onClick={() => toast.info(t("El archivo de ejemplo no tiene notificaciones."))}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
           </div>
         </div>}
         <main className={cn("app-main min-w-0 flex-1", isWindowFrame && "app-window-main")}>
           {!isMobile && !isWindowFrame && <div className="desktop-toolbar">
             <div className="flex min-w-0 items-center gap-2">
               {location.pathname !== "/inicio" && !preview && <Button variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-full" onClick={goBack}><ArrowLeft className="h-4 w-4" /><span className="sr-only">Volver</span></Button>}
-              <span className="toolbar-context">{preview ? "Archivo de ejemplo" : "Mi archivo familiar"}</span>
+              <span className="toolbar-context">{t(preview ? "Archivo de ejemplo" : "Mi archivo familiar")}</span>
             </div>
             <div className="toolbar-capsule glass-strong">
-              {preview ? <button className="toolbar-control" aria-label="Abrir buscador universal de personas" onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
+              {preview ? <button className="toolbar-control" aria-label={t("Abrir buscador universal de personas")} onClick={() => document.getElementById("home-query")?.focus()}><Search size={20} /></button> : <UniversalPersonSearch compact />}
               <SiriAssistant inline />
-              {preview ? <button className="toolbar-control" aria-label="Notificaciones" onClick={() => toast.info("El archivo de ejemplo no tiene notificaciones.")}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
+              {preview ? <button className="toolbar-control" aria-label={t("Notificaciones")} onClick={() => toast.info(t("El archivo de ejemplo no tiene notificaciones."))}><Bell size={20} /></button> : location.pathname !== "/bandeja-de-entrada" && <NotificationBell />}
               <span className="toolbar-divider" />
               <AdaptiveViewport inline />
             </div>
           </div>}
+          {!isWindowFrame && <SectionNav />}
           <Suspense fallback={<SectionPlaceholder />}>
             {children ?? <Outlet />}
           </Suspense>

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SectionHeader } from '@/components/glass';
@@ -32,6 +33,7 @@ const groups: { key: string; label: string; pages: PageKey[] }[] = [
 ];
 
 export default function Investigacion() {
+  const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
   const requested = params.get('tab') ?? 'hub';
   const current: PageKey = Object.prototype.hasOwnProperty.call(pages, requested) ? requested as PageKey : 'hub';
@@ -42,14 +44,15 @@ export default function Investigacion() {
   };
   return <div>
     <SectionHeader title="Investigación" subtitle="Busca fuentes, trabaja con IA y revisa cada hallazgo en un solo lugar." />
+    {params.get("pista") && <aside className="mb-5 rounded-xl border bg-card p-4"><p className="text-sm font-semibold">{t("Pista seleccionada")} · {params.get("q")}</p><p className="mt-2 text-sm text-muted-foreground">{params.get("pista")}</p></aside>}
     <Tabs value={group.key} onValueChange={key => changePage(groups.find(group => group.key === key)!.pages[0])}>
       <TabsList className="research-tabs mb-4 grid h-auto w-full max-w-lg grid-cols-4 p-1">
-        {groups.map(group => <TabsTrigger key={group.key} value={group.key} className="min-h-11">{group.label}</TabsTrigger>)}
+        {groups.map(group => <TabsTrigger key={group.key} value={group.key} className="min-h-11">{t(group.label)}</TabsTrigger>)}
       </TabsList>
       <TabsContent value={group.key} className="mt-0">
-        {group.pages.length > 1 && <label className="mb-5 flex flex-wrap items-center gap-3 text-sm font-medium">{group.label === 'Revisar' ? 'Qué revisar' : 'Herramienta'}
+        {group.pages.length > 1 && <label className="mb-5 flex flex-wrap items-center gap-3 text-sm font-medium">{t(group.label === 'Revisar' ? 'Qué revisar' : 'Herramienta')}
           <select aria-label="Herramienta de investigación" value={current} onChange={event => changePage(event.target.value as PageKey)} className="min-h-11 max-w-full rounded-xl border bg-card px-3 text-base">
-            {group.pages.map(key => <option key={key} value={key}>{pages[key].label}</option>)}
+            {group.pages.map(key => <option key={key} value={key}>{t(pages[key].label)}</option>)}
           </select>
         </label>}
         <Suspense fallback={<SectionPlaceholder />}><ActivePage /></Suspense>

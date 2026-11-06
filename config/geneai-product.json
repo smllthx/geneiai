@@ -4,8 +4,8 @@
   "repository": "smllthx/geneiai",
   "publicOrigin": "https://geneiai.vercel.app",
   "backendProjectRef": "camdtylwddleifaegzaf",
-  "version": "3.0.8",
-  "build": 308,
+  "version": "3.0.9",
+  "build": 309,
   "publishedAt": "2026-11-05",
   "channel": "stable",
   "appleBundleIdentifier": "com.genaia.app",
@@ -13,9 +13,9 @@
   "apiContractVersion": 1,
   "nativeDistributionReady": false,
   "changes": [
-    "Los cambios guardados en una ficha se reflejan en los listados y el árbol abiertos.",
-    "Las vistas comparten las fechas de nacimiento exactas, aproximadas y por intervalo.",
-    "El árbol permite elegir la cantidad de generaciones o mostrar todas las registradas.",
-    "El menú reúne Árbol Genealógico, Descubrimientos, ADN, Fotos e Investigación."
+    "Diseños de los ZIP integrados con el logo y tipografía originales de GENEAI.",
+    "Iconos propios rellenos de color, argollas entrelazadas y banderas SVG del mundo.",
+    "Cronologías horizontal y vertical con detalles, fuentes y fechas aproximadas.",
+    "Menús agrupados y selector de español, inglés e italiano guardado por cuenta."
   ]
 }

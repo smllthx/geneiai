@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import BrandLogo from "@/components/BrandLogo";
-import { Mail, Phone, ShieldCheck } from "lucide-react";
+import { Mail, Phone, ShieldCheck } from "@/components/icons";
 import {
   authenticateDevicePasskey,
   hasDevicePasskey,

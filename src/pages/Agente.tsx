@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, Search, AlertTriangle, ArrowRight } from "lucide-react";
+import { Sparkles, Search, AlertTriangle, ArrowRight } from "@/components/icons";
 
 type Prioridad = { id: string; nombre: string; faltantes: string[]; score: number };
 

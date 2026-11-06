@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import PersonPortrait from "@/components/PersonPortrait";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import CertezaBadge from "@/components/CertezaBadge";
-import { Plus, MoreHorizontal, EyeOff, Sparkles, GitMerge, ListOrdered, Link2, RefreshCw } from "lucide-react";
+import { Plus, MoreHorizontal, EyeOff, Sparkles, GitMerge, ListOrdered, Link2, RefreshCw } from "@/components/icons";
 import { personaCode } from "@/lib/personaCode";
 import { toast } from "sonner";
 import { suggestSurnameRelationships } from "@/lib/personAutoRules";

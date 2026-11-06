@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SectionHeader, GlassCard, EmptyState } from "@/components/glass";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ExternalLink, FileText, Link as LinkIcon } from "lucide-react";
+import { BookOpen, ExternalLink, FileText, Link as LinkIcon } from "@/components/icons";
 import { useNavigate } from "react-router-dom";
 
 export default function Fuentes() {

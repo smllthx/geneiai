@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDevice } from "@/hooks/use-device";
-import { Settings2, Minus, Plus, RotateCcw, Trash2, Bug } from "lucide-react";
+import { Settings2, Minus, Plus, RotateCcw, Trash2, Bug } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AppearancePicker from "@/components/AppearancePicker";
 import { cn } from "@/lib/utils";

@@ -1,7 +1,7 @@
 import PageHeader from "@/components/PageHeader";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Check, Sparkles, FileText, Lightbulb, ListChecks } from "lucide-react";
+import { Bell, Check, Sparkles, FileText, Lightbulb, ListChecks } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

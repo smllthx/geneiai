@@ -1,5 +1,5 @@
 import PersonPortrait from "@/components/PersonPortrait";
-import { Brain, Pencil, X } from "lucide-react";
+import { Brain, Pencil, X } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import type { GenealogyPerson } from "./types";
 

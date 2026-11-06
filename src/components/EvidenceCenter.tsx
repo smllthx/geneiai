@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, FileText, HelpCircle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, HelpCircle, ShieldCheck } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

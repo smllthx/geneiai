@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical, Calculator, RefreshCw } from "lucide-react";
+import { Dna, Plus, AlertTriangle, Trash2, List, Map as MapIcon, Upload, Sparkles, GitBranch, FlaskConical, Calculator, RefreshCw } from "@/components/icons";
 import { toast } from "sonner";
 import { findRegion } from "@/lib/dna-regions";
 import { guardarEtnicidadArbol } from "@/lib/etnicidadArbol";

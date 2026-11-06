@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Sparkles, User } from "lucide-react";
+import { Sparkles, User } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 

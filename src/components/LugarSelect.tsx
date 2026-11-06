@@ -1,9 +1,10 @@
+import CountryFlag from "./CountryFlag";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MapPin, Plus, X, Loader2, Globe2 } from "lucide-react";
+import { MapPin, Plus, X, Loader2, Globe2 } from "@/components/icons";
 import { toast } from "sonner";
 
 type NomSuggestion = {
@@ -131,7 +132,7 @@ export default function LugarSelect({ value, onChange, lugares, onLugaresChange,
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full justify-between font-normal" type="button">
           <span className="flex items-center gap-2 truncate">
-            <MapPin className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            <CountryFlag country={selected?.pais} decorative />
             <span className="truncate">{selected ? lugarLabel(selected) : placeholder}</span>
           </span>
           {selected && (
@@ -174,7 +175,7 @@ export default function LugarSelect({ value, onChange, lugares, onLugaresChange,
                 <button key={l.id} type="button"
                   onClick={() => { onChange(l.id); setOpen(false); }}
                   className="block w-full truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-foreground/5">
-                  <MapPin className="mr-1.5 inline h-3 w-3 opacity-50" />{lugarLabel(l)}
+                  <CountryFlag country={l.pais} decorative className="mr-1.5" />{lugarLabel(l)}
                 </button>
               ))}
             </>

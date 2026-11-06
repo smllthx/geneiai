@@ -7,7 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, GitMerge, Trash2, ArrowLeftRight, Clock, Hash, ArrowRight } from "lucide-react";
+import { Sparkles, GitMerge, Trash2, ArrowLeftRight, Clock, Hash, ArrowRight } from "@/components/icons";
 import { toast } from "sonner";
 import { personaCode } from "@/lib/personaCode";
 import { fusionarPersonas } from "@/lib/mergePersonas";

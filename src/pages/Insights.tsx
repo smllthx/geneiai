@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Sparkles, AlertTriangle, BookOpen, Lightbulb, RefreshCw, Loader2, Globe2, ExternalLink, Brain } from "lucide-react";
+import { Sparkles, AlertTriangle, BookOpen, Lightbulb, RefreshCw, Loader2, Globe2, ExternalLink, Brain } from "@/components/icons";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 import { toDisplayText } from "@/lib/safeText";
 

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, User, Globe2, Search, Link2, Loader2, ExternalLink, Check, X, Lightbulb } from "lucide-react";
+import { Sparkles, User, Globe2, Search, Link2, Loader2, ExternalLink, Check, X, Lightbulb } from "@/components/icons";
 import { applyTreeScope, fetchAllPeople, getActiveTreeId } from "@/lib/peopleData";
 import { toDisplayText } from "@/lib/safeText";
 

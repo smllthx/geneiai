@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Check, X, FileText, Loader2, Sparkles, Search, Users, ChevronDown } from "lucide-react";
+import { Check, X, FileText, Loader2, Sparkles, Search, Users, ChevronDown } from "@/components/icons";
 import { applyTreeScope, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import { toDisplayText } from "@/lib/safeText";
 

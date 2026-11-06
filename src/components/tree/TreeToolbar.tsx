@@ -1,4 +1,4 @@
-import { Crosshair, Search, UserPlus } from "lucide-react";
+import { Crosshair, Search, UserPlus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { TreeFilters } from "./types";

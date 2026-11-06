@@ -68,11 +68,13 @@ describe("navigation shell", () => {
     fireEvent.click(menu.getByRole("button", { name: "ADN" }));
     expect(menu.queryByRole("link", { name: "Mi árbol familiar" })).toBeNull();
     expect(menu.getByRole("link", { name: "Estimación Étnica" })).toHaveAttribute("href", "/estimacion-etnica");
-    for (const name of ["Coincidencias de ADN", "Orígenes Antiguos", "Activar kit de ADN", "Administrar kits de ADN", "Ordenar kits de ADN", "LiveMemory™"]) {
+    for (const name of ["Coincidencias de ADN", "Orígenes Antiguos", "Activar kit de ADN", "Administrar kits de ADN", "Ordenar kits de ADN"]) {
       const link = menu.getByRole("link", { name: `${name} (MyHeritage, nueva pestaña)` });
       expect(link).toHaveAttribute("target", "_blank");
       expect(link.getAttribute("href")).toMatch(/^https:\/\/www\.myheritage\.es\//);
     }
+    fireEvent.click(menu.getByRole("button", { name: "Fotos" }));
+    expect(menu.getByRole("link", { name: "LiveMemory™ (MyHeritage, nueva pestaña)" })).toHaveAttribute("href", "https://www.myheritage.es/live-memory");
     expect(menu.getByRole("link", { name: "Bandeja de entrada" })).toHaveAttribute("href", "/bandeja-de-entrada");
   });
 

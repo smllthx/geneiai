@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Dna, MapPinned, Sparkles } from "lucide-react";
+import { BarChart3, Dna, MapPinned, Sparkles } from "@/components/icons";
 import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus } from "lucide-react";
+import { UserPlus } from "@/components/icons";
 import { inferSexFromName } from "@/lib/personAutoRules";
 import { fetchAllPeople, getActiveTreeId, withTreeScope } from "@/lib/peopleData";
 import PersonSearchSelect from "@/components/PersonSearchSelect";

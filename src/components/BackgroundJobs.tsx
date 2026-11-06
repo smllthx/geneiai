@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Sparkles } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { toDisplayText } from "@/lib/safeText";

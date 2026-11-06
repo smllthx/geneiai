@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PersonCard, EmptySlot, type PersonaLite } from "@/components/PersonCard";
 import QuickAddRelative from "@/components/QuickAddRelative";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Pencil, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "lucide-react";
+import { Pencil, Undo2, GitBranch, LayoutGrid, Sparkles, Maximize2, Minimize2, FileDown, Trash2, X, ShieldCheck, Rocket, CheckCircle2, AlertCircle, SlidersHorizontal, ListChecks, Clock3, MoreHorizontal, Columns2, RefreshCw } from "@/components/icons";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import TreeCanvas, { TreeZoomControls } from "@/components/tree/TreeCanvas";
 import { createTreeViewport } from "@/components/tree/treeViewport";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Eye, Loader2, Sparkles, X } from "lucide-react";
+import { Check, Eye, Loader2, Sparkles, X } from "@/components/icons";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
