@@ -86,6 +86,18 @@ export function createTreeViewport() {
       minScale = TREE_MIN_SCALE;
       return INITIAL;
     }
+    const focus = element.querySelector<HTMLElement>('[data-tree-focus]');
+    const content = element.querySelector<HTMLElement>('[data-tree-content]');
+    if (focus && content?.offsetWidth && content.offsetHeight) {
+      const width = Math.max(1, element.clientWidth - 32), height = Math.max(1, element.clientHeight - 80);
+      const fit = Math.min(width / content.offsetWidth, height / content.offsetHeight);
+      minScale = Math.min(fit, TREE_MIN_SCALE);
+      if (!readable || (element.clientWidth >= 600 && fit >= .45)) return { x: 0, y: 0, scale: Math.min(fit, 1.1) };
+      let x = 0, y = 0, node: HTMLElement | null = focus;
+      while (node && node !== content) { x += node.offsetLeft; y += node.offsetTop; node = node.offsetParent as HTMLElement | null; }
+      return { x: -(x - content.offsetWidth / 2) * INITIAL.scale,
+        y: height * .2 - (y - content.offsetHeight / 2) * INITIAL.scale, scale: INITIAL.scale };
+    }
     const height = Math.max(1, element.clientHeight - 48);
     const fit = Math.min(Math.max(1, element.clientWidth - 16) / fan.offsetWidth, height / fan.offsetHeight);
     minScale = Math.min(fit, TREE_MIN_SCALE);
@@ -251,12 +263,14 @@ export function createTreeViewport() {
       document.addEventListener("visibilitychange", visibility);
       let previousHome = homeCamera(true);
       const resize = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => {
-        const wasCentered = camera.x === 0 && Math.abs(camera.y - previousHome.y) < 0.5 && Math.abs(camera.scale - previousHome.scale) < 0.001;
+        const wasCentered = Math.abs(camera.x - previousHome.x) < 0.5 && Math.abs(camera.y - previousHome.y) < 0.5 && Math.abs(camera.scale - previousHome.scale) < 0.001;
         cancelGesture();
         previousHome = homeCamera(true);
         if (wasCentered) update(previousHome);
       }) : null;
       resize?.observe(surface);
+      const content = surface.querySelector<HTMLElement>('[data-tree-content]');
+      if (content) resize?.observe(content);
       detach = () => {
         cancelGesture();
         cancelAnimationFrame(frame); frame = 0;

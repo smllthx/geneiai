@@ -1,11 +1,11 @@
 {
-  "version": "3.0.11",
+  "version": "3.0.12",
   "publishedAt": "2026-11-06",
   "channel": "stable",
   "changes": [
-    "Iconos recuperados del primer paquete de diseño, con formas simples, colores por sección y acabado de cristal.",
-    "Argollas entrelazadas más finas, huellas de nacimiento y símbolos de eventos con el mismo estilo.",
-    "Catálogo visual organizado por navegación, historia familiar y herramientas."
+    "Árbol en Retrato y Ramas con generaciones alineadas y líneas que conectan las fichas correspondientes.",
+    "Distribución adaptable a ramas desiguales, progenitores sin pareja y antepasados compartidos.",
+    "Centrado en la persona principal y ajuste al árbol completo al cambiar el tamaño de pantalla."
   ],
   "nativeDistributionReady": false
 }

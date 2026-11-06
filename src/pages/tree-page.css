@@ -1,4 +1,5 @@
 /* Allocate the remaining height after the app toolbar and device safe areas. */
+.family-diagram [data-person-card] { transform: none; }
 .app-main:has(> .family-tree-page) {
   display: flex;
   flex-direction: column;

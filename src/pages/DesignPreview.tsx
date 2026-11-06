@@ -1,4 +1,5 @@
 import DesignAssets from "@/components/DesignAssets";
+import TreeDesignPreview from "@/components/tree/TreeDesignPreview";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, Laptop, Smartphone, Tablet } from "lucide-react";
@@ -50,7 +51,7 @@ export default function DesignPreview() {
     return () => observer.disconnect();
   }, [canvas]);
 
-  if (canvas) return <AppLayout preview>{view === "timeline" || view === "icons" || view === "flags" ? <DesignAssets view={view} /> : <DashboardView {...example} />}</AppLayout>;
+  if (canvas) return <AppLayout preview>{view === "tree" ? <TreeDesignPreview /> : view === "timeline" || view === "icons" || view === "flags" ? <DesignAssets view={view} /> : <DashboardView {...example} />}</AppLayout>;
 
   const changeDevice = (value: Device) => setParams({ device: value, mode: installed ? "app" : "web", view });
   return <div className="design-gallery">
@@ -61,7 +62,7 @@ export default function DesignPreview() {
       <div className="design-mode-picker" role="group" aria-label="Versión"><button aria-pressed={!installed} onClick={() => setParams({ device, mode: "web", view })}>Navegador</button><button aria-pressed={installed} onClick={() => setParams({ device, mode: "app", view })}>App web</button></div>
       <AppearancePicker />
     </div>
-    <div className="design-device-picker my-4 flex flex-wrap justify-center gap-2" role="group" aria-label="Vista de diseño">{[["home", "Inicio"], ["timeline", "Cronología"], ["icons", "Iconos"], ["flags", "Banderas"]].map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => setParams({ device, mode: installed ? "app" : "web", view: key })}>{label}</button>)}</div>
+    <div className="design-device-picker my-4 flex flex-wrap justify-center gap-2" role="group" aria-label="Vista de diseño">{[["home", "Inicio"], ["tree", "Árbol"], ["timeline", "Cronología"], ["icons", "Iconos"], ["flags", "Banderas"]].map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => setParams({ device, mode: installed ? "app" : "web", view: key })}>{label}</button>)}</div>
     <p className="design-example-note">Vista de diseño con datos ficticios. Los accesos del archivo requieren iniciar sesión.</p>
     <div className="design-stage" ref={stageRef}>
       <div className={`design-device-frame design-device-${device}`} style={{ width: size.width * scale, height: (size.height + (installed ? 0 : 40)) * scale }}>
